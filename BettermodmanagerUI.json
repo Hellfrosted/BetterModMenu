@@ -1,0 +1,13 @@
+{
+  "id": "BettermodmanagerUI",
+  "name": "Better mods manager UI",
+  "author": "Crunch",
+  "description": "Adds profile and grouping functionality to the Slay the Spire 2 mod manager.",
+  "version": "0.0.1",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": false,
+  "dependencies": [
+    "BaseLib"
+  ]
+}

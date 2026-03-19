@@ -1,0 +1,37 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot-specific ignores
+.import/
+export.cfg
+export_presets.cfg
+export_credentials.cfg
+
+# Imported translations (if not stored within the project)
+*.translation
+
+# Mono/C# specific ignores
+.mono/
+GodotSharp/
+data_*/
+mono_crash.*.json
+
+# .NET / C# / IDEs
+bin/
+obj/
+.vs/
+.idea/
+.rider/
+*.user
+*.user.*
+*.suo
+
+# Build and export logs
+build/
+export/
+*.log
+
+# STS2 specific
+sts2.dll
+decompiled/
