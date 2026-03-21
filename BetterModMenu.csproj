@@ -8,7 +8,6 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);decompiled\**</DefaultItemExcludes>
   </PropertyGroup>
 
-  <!-- Replace the path below with your actual STS2 path if it is different -->
   <ItemGroup>
     <Reference Include="sts2">
       <HintPath>.\sts2.dll</HintPath>
