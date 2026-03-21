@@ -18,4 +18,34 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
+  <!-- Custom Target to run after Build -->
+  <Target Name="PackageMod" AfterTargets="Build">
+    <PropertyGroup>
+      <ModStagingDir>$(ProjectDir)ModStaging\</ModStagingDir>
+      <!-- Extract version from JSON to use in zip file name -->
+      <JsonFileContent>$([System.IO.File]::ReadAllText('$(ProjectDir)BetterModMenu.json'))</JsonFileContent>
+      <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
+      <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
+      <ZipFilePath>$(ProjectDir)$(AssemblyName)_v$(ModVersion).zip</ZipFilePath>
+    </PropertyGroup>
+
+    <!-- 1. Copy the compiled DLL to the main project folder -->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)" />
+
+    <!-- 2. Prepare the staging directory for the zip -->
+    <RemoveDir Directories="$(ModStagingDir)" />
+    <MakeDir Directories="$(ModStagingDir)" />
+
+    <!-- 3. Copy the DLL and JSON file to the staging directory -->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModStagingDir)" />
+    <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModStagingDir)" />
+
+    <!-- 4. Create the zip file -->
+    <ZipDirectory SourceDirectory="$(ModStagingDir)" DestinationFile="$(ZipFilePath)" Overwrite="true" />
+    
+    <!-- 5. Clean up the staging directory -->
+    <RemoveDir Directories="$(ModStagingDir)" />
+    
+    <Message Text="Successfully copied DLL and packaged $(AssemblyName)_v$(ModVersion).zip in the main folder!" Importance="High" />
+  </Target>
 </Project>

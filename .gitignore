@@ -37,4 +37,7 @@ export/
 # STS2 specific
 sts2.dll
 decompiled/
-BetterModMenu v0.0.1.7z
+
+# Ignore built mod outputs in the root folder
+BetterModMenu.dll
+*.zip
