@@ -1,87 +1,62 @@
 using HarmonyLib;
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
-using MegaCrit.Sts2.Core.Modding;
-using MegaCrit.Sts2.Core.Saves;
-using BettermodmanagerUI.Data;
-using System.Collections.Generic;
+using System;
 
-namespace BettermodmanagerUI.Patches;
+namespace BetterModMenu.Patches;
 
 [HarmonyPatch(typeof(NModMenuRow))]
 public static class NModMenuRowPatch
 {
+    // When true, the vanilla OnTickboxToggled handler is completely blocked.
+    // This prevents deferred IsTicked changes from writing back mod.IsEnabled during profile switches.
+    public static bool SuppressTickboxHandler = false;
+
+    [HarmonyPatch("OnTickboxToggled")]
+    [HarmonyPrefix]
+    public static bool Prefix_OnTickboxToggled()
+    {
+        // Return false = skip the original method entirely
+        return !SuppressTickboxHandler;
+    }
+
     [HarmonyPatch(nameof(NModMenuRow._Ready))]
     [HarmonyPostfix]
     public static void Postfix_Ready(NModMenuRow __instance)
     {
         if (__instance.Mod == null || __instance.Mod.manifest == null) return;
 
-        // Container for custom controls on the row
-        var container = new HBoxContainer();
+        var container = new HBoxContainer { Name = "RowCustomControls" };
         __instance.AddChild(container);
-        
+
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
         var modId = __instance.Mod.manifest.id;
-        upBtn.Pressed += () => MoveModOrder(modId, -1);
+        upBtn.Pressed += () => Godot.Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
         container.AddChild(upBtn);
 
         var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(40, 40) };
-        downBtn.Pressed += () => MoveModOrder(modId, 1);
+        downBtn.Pressed += () => Godot.Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1, __instance)).CallDeferred();
         container.AddChild(downBtn);
 
-        // Group Assignment Dropdown
-        var groupDropdown = new OptionButton();
-        groupDropdown.AddItem("No Group", 0);
-        groupDropdown.AddItem("Gameplay", 1);
-        groupDropdown.AddItem("QoL", 2);
-        groupDropdown.AddItem("Libraries", 3);
-        
-        // Restore currently selected group from Profile
-        var profile = ProfileManager.CurrentProfile;
-        if (profile.ModGroups.TryGetValue(modId, out string group))
-        {
-            if (group == "Gameplay") groupDropdown.Select(1);
-            else if (group == "QoL") groupDropdown.Select(2);
-            else if (group == "Libraries") groupDropdown.Select(3);
-        }
+        var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(180, 0) };
 
         groupDropdown.ItemSelected += (idx) =>
         {
-            var p = ProfileManager.CurrentProfile;
-            if (idx == 0) p.ModGroups.Remove(modId);
-            else if (idx == 1) p.ModGroups[modId] = "Gameplay";
-            else if (idx == 2) p.ModGroups[modId] = "QoL";
-            else if (idx == 3) p.ModGroups[modId] = "Libraries";
-            ProfileManager.SaveProfiles();
+            var selectedText = groupDropdown.GetItemText((int)idx);
+
+            if (selectedText == "Unassigned")
+                Data.ProfileManager.ModGroups.Remove(modId);
+            else
+                Data.ProfileManager.ModGroups[modId] = selectedText;
+
+            Data.ProfileManager.SaveProfiles();
+            Godot.Callable.From(() => NModdingScreenPatch.RefreshGroupsUI()).CallDeferred();
         };
 
         container.AddChild(groupDropdown);
 
-        container.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterRight);
-        var pos = container.Position;
-        pos.X -= 300;
-        container.Position = pos;
-    }
-
-    private static void MoveModOrder(string modId, int direction)
-    {
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
-        if (options == null) return;
-
-        var list = options.ModList;
-        int index = list.FindIndex(m => m.Id == modId);
-        if (index == -1) return;
-
-        int newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < list.Count)
-        {
-            var temp = list[index];
-            list[index] = list[newIndex];
-            list[newIndex] = temp;
-            SaveManager.Instance.SaveSettings();
-            
-            // To see visual changes without restart, we would need to refresh NModdingScreen list.
-        }
+        container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
+        container.OffsetRight = -150;
+        container.GrowHorizontal = Control.GrowDirection.Begin;
     }
 }

@@ -4,11 +4,12 @@
 
 # Godot-specific ignores
 .import/
+*.uid
 export.cfg
 export_presets.cfg
 export_credentials.cfg
 
-# Imported translations (if not stored within the project)
+# Imported translations
 *.translation
 
 # Mono/C# specific ignores
@@ -27,11 +28,13 @@ obj/
 *.user.*
 *.suo
 
-# Build and export logs
+# Build, export, and temp files
 build/
 export/
 *.log
+*.tmp
 
 # STS2 specific
 sts2.dll
 decompiled/
+BetterModMenu v0.0.1.7z
