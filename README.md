@@ -1,6 +1,6 @@
 # Better Mod Menu
 
-A UI enhancement for [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) that adds management features to the built-in mod menu.
+A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) that adds management features to the built-in mod menu.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-0.0.2-green.svg)
