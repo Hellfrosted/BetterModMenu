@@ -1,34 +1,44 @@
 # Better Mod Menu
 
-A UI enhancement for [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) that fix bug and adds advanced management features to the built-in mod menu.
+A UI enhancement for [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) that adds management features to the built-in mod menu.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-0.0.2-green.svg)
 
 ## Features
 
-- **Mod Profiles** — Create, save, and switch between multiple mod configurations (e.g., "Vanilla+", "Total Conversion", "Testing").
-- **Custom Groups** — Organize mods into collapsible, named groups to keep your list manageable.
-- **Enable/Disable All** — Toggle all mods in a group with a single click.
-- **Reordering** — Reorder your mod list in game.
-- **Auto-Save** — Your configuration and load order are saved automatically to `settings.save`.
+- **UI Bug Fixes**: Fixes a vanilla game bug where the mod list visually spills outside of the menu window when you have many mods installed.
+- **Mod Profiles**: Create, rename, delete, and switch between mod loadouts.
+- **Custom Groups**: Organize mods into collapsible, named groups.
+- **Group Toggles**: Enable or disable all mods within a group.
+- **Load Order Manipulation**: Move mods up (`^`) and down (`v`) to adjust load order in-game.
+- **Auto-Save**: Active profile, custom groups, and load order are saved automatically.
 
 ## Requirements
 
-- **Slay the Spire 2** (v0.99.1+)
+- **Slay the Spire 2** (Game Version 0.99.1+)
 
 ## Installation
 
 1. Download the latest release from the [Releases](../../releases) page.
-2. Place `BetterModMenu.json` and `BetterModMenu.dll` into your `mods` folder.
-3. Launch the game.
+2. Extract the archive and place `BetterModMenu.json` and `BetterModMenu.dll` into your Slay the Spire 2 `mods` folder.
+3. Launch the game and open the Modding screen.
+
+## Usage
+
+- **Managing Profiles**: Use the top bar on the Modding screen to create `+ New` profiles, `Rename` the current profile, or `Del`ete it. Selecting a profile applies its saved mod states.
+- **Managing Groups**: Use the `Group:` input at the top right to `+ Add` a new group. It will appear in the mod list.
+- **Assigning Mods**: Next to each mod row, use the dropdown menu to assign it to a custom group or leave it "Unassigned".
+- **Reordering Mods**: Click the `^` or `v` buttons on a mod's row to shift its position in the game's load order. *Note: When using Custom Groups, movement is based on the underlying global list. If a grouped mod doesn't visually move right away, keep clicking until it bypasses the other mods.*
 
 ## Building from Source
 
-This mod is built with **Godot 4** and **.NET 8/C#**.
+This mod is built using **Godot 4** and **.NET 8/C#**.
 
 1. Clone this repository.
-2. Place `sts2.dll` (from your game's `Slay the Spire 2_Data/Managed` directory) in the project root.
-3. Open the project in your preferred C# IDE (Rider/VS) or run `dotnet build`.
+2. Locate `sts2.dll` in your Slay the Spire 2 game installation directory (typically under `Slay the Spire 2_Data/Managed/` or exported via Godot PCK tools) and place it in the root folder of this project.
+3. Open the project in your preferred IDE (Rider/Visual Studio) or run `dotnet build` from the command line.
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
