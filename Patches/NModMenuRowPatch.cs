@@ -29,8 +29,10 @@ public static class NModMenuRowPatch
         var container = new HBoxContainer { Name = "RowCustomControls" };
         __instance.AddChild(container);
 
+        var modId = __instance.Mod.manifest.id ?? "";
+        if (string.IsNullOrEmpty(modId)) return;
+
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
-        var modId = __instance.Mod.manifest.id;
         upBtn.Pressed += () => Godot.Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
         container.AddChild(upBtn);
 

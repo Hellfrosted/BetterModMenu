@@ -9,7 +9,6 @@ namespace BetterModMenu.Data;
 public class ModProfile
 {
     public string Name { get; set; } = "Default";
-    public List<string> LoadOrder { get; set; } = new();
     public HashSet<string> DisabledMods { get; set; } = new();
 }
 
@@ -25,7 +24,8 @@ public class ProfileSaveData
 
 public static class ProfileManager
 {
-    private static readonly Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    public static readonly Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
     private static string SavePath
     {
         get
@@ -104,8 +104,7 @@ public static class ProfileManager
                 ModGroups = ModGroups,
                 CollapsedGroups = CollapsedGroups
             };
-            var jsonOpts = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(saveData, jsonOpts);
+            var json = JsonSerializer.Serialize(saveData, JsonOpts);
             File.WriteAllText(SavePath, json);
         }
         catch (Exception ex)
@@ -147,9 +146,19 @@ public static class ProfileManager
                 Profiles.Add(new ModProfile { Name = "Default" });
             }
         }
+        catch (JsonException ex)
+        {
+            ModLogger.Error($"Profile format corrupted:\n{ex}");
+            Profiles.Add(new ModProfile { Name = "Default" });
+        }
+        catch (IOException ex)
+        {
+            ModLogger.Error($"Unable to read profile save file. It may be locked by another program.\n{ex}");
+            Profiles.Add(new ModProfile { Name = "Default" });
+        }
         catch (Exception ex)
         {
-            ModLogger.Error("Failed to load mod profiles: " + ex.Message);
+            ModLogger.Error($"Failed to load mod profiles:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
         }
     }

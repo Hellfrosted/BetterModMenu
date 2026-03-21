@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" />
     <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
 </Project>

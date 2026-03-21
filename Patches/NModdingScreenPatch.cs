@@ -16,6 +16,7 @@ public static class NModdingScreenPatch
     private static OptionButton? _profileDropdown;
     private static HBoxContainer? _groupBar;
     private static bool _suppressAutoSave = false;
+    private static readonly List<Node> _generatedGroupNodes = new();
 
     [HarmonyPatch(nameof(NModdingScreen.OnModEnabledOrDisabled))]
     [HarmonyPostfix]
@@ -133,31 +134,56 @@ public static class NModdingScreenPatch
         Control modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
 
         var rows = new List<NModMenuRow>();
-        var toDelete = new List<Node>();
-        foreach (Node child in modRowContainer.GetChildren())
+        ClearOldGroups(modRowContainer, rows);
+        SortModRows(rows);
+
+        var groups = GroupRows(rows);
+        BuildGroupHeaders(modRowContainer, groups);
+    }
+
+    private static void ClearOldGroups(Control container, List<NModMenuRow> rows)
+    {
+        foreach (Node child in container.GetChildren())
         {
             if (child is NModMenuRow r)
                 rows.Add(r);
             else if (child.Name.ToString().StartsWith("ModGroup"))
-                toDelete.Add(child);
+            {
+                // Fallback for pre-existing leftover nodes (e.g. from script reloads)
+                if (!_generatedGroupNodes.Contains(child))
+                    _generatedGroupNodes.Add(child);
+            }
         }
 
-        foreach (var child in toDelete)
+        foreach (var child in _generatedGroupNodes)
         {
-            modRowContainer.RemoveChild(child);
-            child.QueueFree();
+            if (GodotObject.IsInstanceValid(child) && child.GetParent() == container)
+            {
+                container.RemoveChild(child);
+                child.QueueFree();
+            }
         }
+        _generatedGroupNodes.Clear();
+    }
 
+    private static void SortModRows(List<NModMenuRow> rows)
+    {
         var options = SaveManager.Instance.SettingsSave.ModSettings;
         if (options != null && options.ModList != null)
         {
-            rows = rows.OrderBy(r => {
-                if (r.Mod == null || r.Mod.manifest == null) return 9999;
-                var idx = options.ModList.FindIndex(m => m.Id == r.Mod.manifest.id);
-                return idx == -1 ? 9999 : idx;
-            }).ToList();
+            rows.Sort((r1, r2) => {
+                int getIdx(NModMenuRow r) => r.Mod?.manifest?.id != null ? options.ModList.FindIndex(m => m.Id == r.Mod.manifest.id) : 9999;
+                int idx1 = getIdx(r1);
+                int idx2 = getIdx(r2);
+                if (idx1 == -1) idx1 = 9999;
+                if (idx2 == -1) idx2 = 9999;
+                return idx1.CompareTo(idx2);
+            });
         }
+    }
 
+    private static Dictionary<string, List<NModMenuRow>> GroupRows(List<NModMenuRow> rows)
+    {
         var groups = new Dictionary<string, List<NModMenuRow>>();
         groups["Unassigned"] = new List<NModMenuRow>();
         foreach (var grp in ProfileManager.CustomGroups) groups[grp] = new List<NModMenuRow>();
@@ -165,9 +191,10 @@ public static class NModdingScreenPatch
         foreach (var row in rows)
         {
             string grp = "Unassigned";
-            if (row.Mod != null && row.Mod.manifest != null)
+            if (row.Mod?.manifest != null)
             {
-                if (ProfileManager.ModGroups.TryGetValue(row.Mod.manifest.id, out string? assignedGrp))
+                var modId = row.Mod.manifest.id ?? "";
+                if (!string.IsNullOrEmpty(modId) && ProfileManager.ModGroups.TryGetValue(modId, out string? assignedGrp))
                 {
                     if (assignedGrp != null && ProfileManager.CustomGroups.Contains(assignedGrp))
                         grp = assignedGrp;
@@ -194,7 +221,11 @@ public static class NModdingScreenPatch
                 }
             }
         }
+        return groups;
+    }
 
+    private static void BuildGroupHeaders(Control container, Dictionary<string, List<NModMenuRow>> groups)
+    {
         int idx = 0;
         foreach (var kvp in groups)
         {
@@ -206,10 +237,12 @@ public static class NModdingScreenPatch
             bool isCollapsed = ProfileManager.CollapsedGroups.Contains(grpName);
 
             var sep = new ColorRect { Name = "ModGroupSep_" + grpName, CustomMinimumSize = new Vector2(0, 4), Color = new Color(0, 0, 0, 0) };
-            modRowContainer.AddChild(sep);
-            modRowContainer.MoveChild(sep, idx++);
+            container.AddChild(sep);
+            container.MoveChild(sep, idx++);
+            _generatedGroupNodes.Add(sep);
 
             var header = new HBoxContainer { Name = "ModGroupHeader_" + grpName };
+            _generatedGroupNodes.Add(header);
 
             var collapseBtn = new Button { Text = isCollapsed ? "► " + grpName : "▼ " + grpName, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             collapseBtn.Pressed += () => {
@@ -245,12 +278,12 @@ public static class NModdingScreenPatch
                 header.AddChild(deleteBtn);
             }
 
-            modRowContainer.AddChild(header);
-            modRowContainer.MoveChild(header, idx++);
+            container.AddChild(header);
+            container.MoveChild(header, idx++);
 
             foreach (var row in kvp.Value)
             {
-                modRowContainer.MoveChild(row, idx++);
+                container.MoveChild(row, idx++);
                 row.Visible = !isCollapsed;
             }
         }
@@ -291,7 +324,9 @@ public static class NModdingScreenPatch
         {
             if (child is NModMenuRow row && row.Mod?.manifest != null)
             {
-                string modId = row.Mod.manifest.id;
+                string modId = row.Mod.manifest.id ?? "";
+                if (string.IsNullOrEmpty(modId)) continue;
+
                 string assignedGrp = "Unassigned";
                 if (ProfileManager.ModGroups.TryGetValue(modId, out string? grpVal) && grpVal != null && ProfileManager.CustomGroups.Contains(grpVal))
                     assignedGrp = grpVal;
@@ -313,9 +348,15 @@ public static class NModdingScreenPatch
                         {
                             NModMenuRowPatch.SuppressTickboxHandler = true;
                             tickbox.IsTicked = isToggled;
-                            NModMenuRowPatch.SuppressTickboxHandler = false;
                         }
-                        catch { NModMenuRowPatch.SuppressTickboxHandler = false; }
+                        catch (System.Exception ex) 
+                        { 
+                            ProfileManager.ModLogger.Error($"Failed to toggle tickbox:\n{ex}"); 
+                        }
+                        finally
+                        {
+                            NModMenuRowPatch.SuppressTickboxHandler = false; 
+                        }
                     }
                 }
             }
@@ -373,12 +414,13 @@ public static class NModdingScreenPatch
             {
                 if (child is NModMenuRow row && row.Mod?.manifest != null)
                 {
-                    bool isOn = !profile.DisabledMods.Contains(row.Mod.manifest.id);
+                    string modId = row.Mod.manifest.id ?? "";
+                    bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
                     var tickbox = row.GetNodeOrNull<MegaCrit.Sts2.Core.Nodes.CommonUi.NTickbox>("Tickbox");
                     if (tickbox != null)
                     {
                         try { tickbox.IsTicked = isOn; }
-                        catch { }
+                        catch (System.Exception ex) { ProfileManager.ModLogger.Error($"Failed to set tickbox state:\n{ex}"); }
                     }
                 }
             }
