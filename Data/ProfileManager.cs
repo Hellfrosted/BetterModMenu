@@ -5,6 +5,7 @@ using System.Text.Json;
 using Godot;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Saves;
+using System.Linq;
 
 namespace BetterModMenu.Data;
 
@@ -28,10 +29,25 @@ public static class ProfileManager
 {
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
-    private static string SavePath
+    public static string PortableConfigPath
     {
         get
         {
+            var mod = MegaCrit.Sts2.Core.Modding.ModManager.LoadedMods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
+            string assemblyFolder = (mod != null && !string.IsNullOrEmpty(mod.path)) 
+                ? mod.path 
+                : (System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
+            return System.IO.Path.Combine(assemblyFolder, "mod_profiles.json");
+        }
+    }
+
+    public static string SavePath
+    {
+        get
+        {
+            if (File.Exists(PortableConfigPath))
+                return PortableConfigPath;
+
             string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
             string absolutePath = ProjectSettings.GlobalizePath(userPath);
             if (!System.IO.Directory.Exists(absolutePath))

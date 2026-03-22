@@ -116,7 +116,35 @@ public static class NModdingScreenPatch
             _groupBar.Position = new Vector2(550, 30);
             _groupBar.Size = new Vector2(400, 28);
         }
-        _groupBar.Alignment = BoxContainer.AlignmentMode.End;
+        _groupBar.Alignment = BoxContainer.AlignmentMode.Begin;
+
+        var portableToggle = new CheckButton { Text = "Portable Mode" };
+        portableToggle.ButtonPressed = System.IO.File.Exists(ProfileManager.PortableConfigPath);
+        portableToggle.Toggled += (isToggled) => {
+            if (isToggled) {
+                try {
+                    if (System.IO.File.Exists(ProfileManager.SavePath) && ProfileManager.SavePath != ProfileManager.PortableConfigPath)
+                        System.IO.File.Copy(ProfileManager.SavePath, ProfileManager.PortableConfigPath, true);
+                    else
+                        ProfileManager.SaveProfiles();
+                } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to enable portable mode: " + ex); }
+            } else {
+                try {
+                    string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
+                    string absolutePath = Godot.ProjectSettings.GlobalizePath(userPath);
+                    if (!System.IO.Directory.Exists(absolutePath)) System.IO.Directory.CreateDirectory(absolutePath);
+                    string target = System.IO.Path.Combine(absolutePath, "mod_profiles.json");
+                    
+                    if (System.IO.File.Exists(ProfileManager.PortableConfigPath))
+                        System.IO.File.Copy(ProfileManager.PortableConfigPath, target, true);
+                    
+                    System.IO.File.Delete(ProfileManager.PortableConfigPath);
+                } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to disable portable mode: " + ex); }
+            }
+        };
+        _groupBar.AddChild(portableToggle);
+
+        _groupBar.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
         var groupLabel = new Label { Text = "Group:" };
         _groupBar.AddChild(groupLabel);
@@ -285,13 +313,19 @@ public static class NModdingScreenPatch
                 renameBtn.Pressed += () => RenameGroup(grpName);
                 header.AddChild(renameBtn);
 
+                header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
+
                 var upBtn = new Button { Text = "^" };
                 upBtn.Pressed += () => MoveGroup(grpName, -1);
                 header.AddChild(upBtn);
 
+                header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
+
                 var downBtn = new Button { Text = "v" };
                 downBtn.Pressed += () => MoveGroup(grpName, 1);
                 header.AddChild(downBtn);
+
+                header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
                 var deleteBtn = new Button { Text = "Del" };
                 deleteBtn.Pressed += () => {
