@@ -26,7 +26,7 @@ public class ProfileSaveData
 
 public static class ProfileManager
 {
-    public static readonly Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
     private static string SavePath
     {

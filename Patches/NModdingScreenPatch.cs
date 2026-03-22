@@ -5,6 +5,7 @@ using BetterModMenu.Data;
 using System.Collections.Generic;
 using MegaCrit.Sts2.Core.Saves;
 using System.Linq;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 
 namespace BetterModMenu.Patches;
 
@@ -44,88 +45,97 @@ public static class NModdingScreenPatch
         if (_topBar == null || !GodotObject.IsInstanceValid(_topBar))
         {
             var titleNode = __instance.GetNodeOrNull<Control>("%InstalledModsTitle");
-
-            _topBar = new HBoxContainer();
-            __instance.AddChild(_topBar);
-
-            if (titleNode != null && scrollContainer != null)
-            {
-                float leftPanelRight = scrollContainer.GlobalPosition.X + scrollContainer.Size.X;
-                _topBar.Position = new Vector2(
-                    titleNode.GlobalPosition.X + titleNode.Size.X + 10,
-                    titleNode.GlobalPosition.Y
-                );
-                _topBar.Size = new Vector2(
-                    leftPanelRight - (titleNode.GlobalPosition.X + titleNode.Size.X + 10) - 30,
-                    titleNode.Size.Y
-                );
-            }
-            else
-            {
-                _topBar.Position = new Vector2(300, 55);
-                _topBar.Size = new Vector2(200, 30);
-            }
-
-            var profileLabel = new Label { Text = "Profile:" };
-            _topBar.AddChild(profileLabel);
-
-            _profileDropdown = new OptionButton { CustomMinimumSize = new Vector2(120, 0) };
-            _topBar.AddChild(_profileDropdown);
-            _profileDropdown.ItemSelected += OnProfileSelected;
-
-            var newProfileBtn = new Button { Text = "+ New" };
-            newProfileBtn.Pressed += OnNewProfilePressed;
-            _topBar.AddChild(newProfileBtn);
-
-            var renameProfileBtn = new Button { Text = "Rename" };
-            renameProfileBtn.Pressed += OnRenameProfilePressed;
-            _topBar.AddChild(renameProfileBtn);
-
-            var delProfileBtn = new Button { Text = "Del" };
-            delProfileBtn.Pressed += OnDelProfilePressed;
-            _topBar.AddChild(delProfileBtn);
-
             var modInfoPanel = __instance.GetNodeOrNull<Control>("%ModInfoContainer");
-            _groupBar = new HBoxContainer();
-            __instance.AddChild(_groupBar);
 
-            if (modInfoPanel != null)
-            {
-                _groupBar.Position = new Vector2(
-                    modInfoPanel.GlobalPosition.X,
-                    modInfoPanel.GlobalPosition.Y - 35
-                );
-                _groupBar.Size = new Vector2(modInfoPanel.Size.X, 28);
-            }
-            else
-            {
-                _groupBar.Position = new Vector2(550, 30);
-                _groupBar.Size = new Vector2(400, 28);
-            }
-            _groupBar.Alignment = BoxContainer.AlignmentMode.End;
-
-            var groupLabel = new Label { Text = "Group:" };
-            _groupBar.AddChild(groupLabel);
-
-            var newGroupInput = new LineEdit { PlaceholderText = "Name...", CustomMinimumSize = new Vector2(140, 0) };
-            _groupBar.AddChild(newGroupInput);
-
-            var newGroupBtn = new Button { Text = "+ Add" };
-            newGroupBtn.Pressed += () => {
-                var txt = newGroupInput.Text.Trim();
-                if (!string.IsNullOrEmpty(txt) && !ProfileManager.CustomGroups.Contains(txt) && txt != "Unassigned")
-                {
-                    ProfileManager.CustomGroups.Add(txt);
-                    ProfileManager.SaveProfiles();
-                    newGroupInput.Text = "";
-                    RefreshGroupsUI();
-                }
-            };
-            _groupBar.AddChild(newGroupBtn);
+            BuildTopBar(__instance, titleNode, scrollContainer);
+            BuildGroupBar(__instance, modInfoPanel);
         }
 
         RefreshProfileDropdown();
         RefreshGroupsUI();
+    }
+
+    private static void BuildTopBar(NModdingScreen __instance, Control? titleNode, Control? scrollContainer)
+    {
+        _topBar = new HBoxContainer();
+        __instance.AddChild(_topBar);
+
+        if (titleNode != null && scrollContainer != null)
+        {
+            float leftPanelRight = scrollContainer.GlobalPosition.X + scrollContainer.Size.X;
+            _topBar.Position = new Vector2(
+                titleNode.GlobalPosition.X + titleNode.Size.X + 10,
+                titleNode.GlobalPosition.Y
+            );
+            _topBar.Size = new Vector2(
+                leftPanelRight - (titleNode.GlobalPosition.X + titleNode.Size.X + 10) - 30,
+                titleNode.Size.Y
+            );
+        }
+        else
+        {
+            _topBar.Position = new Vector2(300, 55);
+            _topBar.Size = new Vector2(200, 30);
+        }
+
+        var profileLabel = new Label { Text = "Profile:" };
+        _topBar.AddChild(profileLabel);
+
+        _profileDropdown = new OptionButton { CustomMinimumSize = new Vector2(120, 0) };
+        _topBar.AddChild(_profileDropdown);
+        _profileDropdown.ItemSelected += OnProfileSelected;
+
+        var newProfileBtn = new Button { Text = "+ New" };
+        newProfileBtn.Pressed += OnNewProfilePressed;
+        _topBar.AddChild(newProfileBtn);
+
+        var renameProfileBtn = new Button { Text = "Rename" };
+        renameProfileBtn.Pressed += OnRenameProfilePressed;
+        _topBar.AddChild(renameProfileBtn);
+
+        var delProfileBtn = new Button { Text = "Del" };
+        delProfileBtn.Pressed += OnDelProfilePressed;
+        _topBar.AddChild(delProfileBtn);
+    }
+
+    private static void BuildGroupBar(NModdingScreen __instance, Control? modInfoPanel)
+    {
+        _groupBar = new HBoxContainer();
+        __instance.AddChild(_groupBar);
+
+        if (modInfoPanel != null)
+        {
+            _groupBar.Position = new Vector2(
+                modInfoPanel.GlobalPosition.X,
+                modInfoPanel.GlobalPosition.Y - 35
+            );
+            _groupBar.Size = new Vector2(modInfoPanel.Size.X, 28);
+        }
+        else
+        {
+            _groupBar.Position = new Vector2(550, 30);
+            _groupBar.Size = new Vector2(400, 28);
+        }
+        _groupBar.Alignment = BoxContainer.AlignmentMode.End;
+
+        var groupLabel = new Label { Text = "Group:" };
+        _groupBar.AddChild(groupLabel);
+
+        var newGroupInput = new LineEdit { PlaceholderText = "Name...", CustomMinimumSize = new Vector2(140, 0) };
+        _groupBar.AddChild(newGroupInput);
+
+        var newGroupBtn = new Button { Text = "+ Add" };
+        newGroupBtn.Pressed += () => {
+            var txt = newGroupInput.Text.Trim();
+            if (!string.IsNullOrEmpty(txt) && !ProfileManager.CustomGroups.Contains(txt) && txt != "Unassigned")
+            {
+                ProfileManager.CustomGroups.Add(txt);
+                ProfileManager.SaveProfiles();
+                newGroupInput.Text = "";
+                RefreshGroupsUI();
+            }
+        };
+        _groupBar.AddChild(newGroupBtn);
     }
 
     public static void RefreshGroupsUI()
@@ -258,7 +268,7 @@ public static class NModdingScreenPatch
             bool allEnabled = true;
             foreach (var r in kvp.Value)
             {
-                var tick = r.GetNodeOrNull<MegaCrit.Sts2.Core.Nodes.CommonUi.NTickbox>("Tickbox");
+                var tick = r.GetNodeOrNull<NTickbox>("Tickbox");
                 if (tick != null && !(bool)tick.Get("IsTicked")) allEnabled = false;
             }
             var toggleAllBtn = new Button { Text = allEnabled ? "Disable All" : "Enable All" };
@@ -341,7 +351,7 @@ public static class NModdingScreenPatch
                         else profile.DisabledMods.Add(modId);
                         changed = true;
                     }
-                    var tickbox = row.GetNodeOrNull<MegaCrit.Sts2.Core.Nodes.CommonUi.NTickbox>("Tickbox");
+                    var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
                     if (tickbox != null)
                     {
                         try
@@ -416,7 +426,7 @@ public static class NModdingScreenPatch
                 {
                     string modId = row.Mod.manifest.id ?? "";
                     bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
-                    var tickbox = row.GetNodeOrNull<MegaCrit.Sts2.Core.Nodes.CommonUi.NTickbox>("Tickbox");
+                    var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
                     if (tickbox != null)
                     {
                         try { tickbox.IsTicked = isOn; }
