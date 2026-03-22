@@ -33,11 +33,11 @@ A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2
 
 ## Building from Source
 
-This mod is built using **Godot 4** and **.NET 8/C#**.
+This mod is built using **Godot 4** and **.NET 9/C#**.
 
 1. Clone this repository.
-2. Locate `sts2.dll` in your Slay the Spire 2 game installation directory and place it in the root folder of this project.
-3. Open the project in your preferred IDE (Zed/Visual Studio) or run `dotnet build` from the command line.
+2. This project references `sts2.dll` directly from your game installation directory. If you have the game installed in a non-default path, you must update the `<Sts2DllPath>` property inside `BetterModMenu.csproj` to point to the correct location of your `sts2.dll`.
+3. Open the project in your preferred IDE (Visual Studio/Rider) or run `dotnet build` from the command line.
 
 ## License
 

@@ -8,9 +8,17 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);decompiled\**</DefaultItemExcludes>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Sts2DllPath Condition="'$(Sts2DllPath)' == ''">D:\Program Files\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll</Sts2DllPath>
+  </PropertyGroup>
+
+  <Target Name="CheckSts2Dll" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Sts2DllPath)')" Text="sts2.dll not found at '$(Sts2DllPath)'. Please update the Sts2DllPath property in BetterModMenu.csproj to point to your installed Slay the Spire 2 game folder, or set the Sts2DllPath environment variable." />
+  </Target>
+
   <ItemGroup>
     <Reference Include="sts2">
-      <HintPath>.\sts2.dll</HintPath>
+      <HintPath>$(Sts2DllPath)</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
