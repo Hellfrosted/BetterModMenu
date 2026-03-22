@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Godot;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Saves;
 
 namespace BetterModMenu.Data;
 
@@ -30,8 +32,8 @@ public static class ProfileManager
     {
         get
         {
-            string userPath = MegaCrit.Sts2.Core.Saves.UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
-            string absolutePath = Godot.ProjectSettings.GlobalizePath(userPath);
+            string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
+            string absolutePath = ProjectSettings.GlobalizePath(userPath);
             if (!System.IO.Directory.Exists(absolutePath))
             {
                 System.IO.Directory.CreateDirectory(absolutePath);
@@ -62,7 +64,7 @@ public static class ProfileManager
     /// </summary>
     public static void SnapshotIntoProfile(ModProfile profile)
     {
-        var options = MegaCrit.Sts2.Core.Saves.SaveManager.Instance?.SettingsSave?.ModSettings;
+        var options = SaveManager.Instance?.SettingsSave?.ModSettings;
         if (options == null) return;
         profile.DisabledMods.Clear();
         foreach (var mod in options.ModList)
