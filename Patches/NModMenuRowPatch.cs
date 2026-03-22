@@ -33,11 +33,11 @@ public static class NModMenuRowPatch
         if (string.IsNullOrEmpty(modId)) return;
 
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
-        upBtn.Pressed += () => Godot.Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
+        upBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
         container.AddChild(upBtn);
 
         var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(40, 40) };
-        downBtn.Pressed += () => Godot.Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1, __instance)).CallDeferred();
+        downBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1, __instance)).CallDeferred();
         container.AddChild(downBtn);
 
         var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(180, 0) };
@@ -52,7 +52,7 @@ public static class NModMenuRowPatch
                 Data.ProfileManager.ModGroups[modId] = selectedText;
 
             Data.ProfileManager.SaveProfiles();
-            Godot.Callable.From(() => NModdingScreenPatch.RefreshGroupsUI()).CallDeferred();
+            Callable.From(() => NModdingScreenPatch.RefreshGroupsUI()).CallDeferred();
         };
 
         container.AddChild(groupDropdown);
