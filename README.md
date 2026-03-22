@@ -20,8 +20,8 @@ A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2
 
 ## Installation
 
-1. Download the latest release from the [Releases](../../releases) page.
-2. Extract the archive and place `BetterModMenu.json` and `BetterModMenu.dll` into your Slay the Spire 2 `mods` folder.
+1. Download the dll and json files from the latest release from the [Releases](../../releases) page.
+2. Place `BetterModMenu.json` and `BetterModMenu.dll` into your Slay the Spire 2 `mods` folder.
 3. Launch the game and open the Modding screen.
 
 ## Usage
@@ -36,8 +36,8 @@ A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2
 This mod is built using **Godot 4** and **.NET 8/C#**.
 
 1. Clone this repository.
-2. Locate `sts2.dll` in your Slay the Spire 2 game installation directory (typically under `Slay the Spire 2_Data/Managed/` or exported via Godot PCK tools) and place it in the root folder of this project.
-3. Open the project in your preferred IDE (Rider/Visual Studio) or run `dotnet build` from the command line.
+2. Locate `sts2.dll` in your Slay the Spire 2 game installation directory and place it in the root folder of this project.
+3. Open the project in your preferred IDE (Zed/Visual Studio) or run `dotnet build` from the command line.
 
 ## License
 
