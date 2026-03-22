@@ -237,11 +237,15 @@ public static class NModdingScreenPatch
     private static void BuildGroupHeaders(Control container, Dictionary<string, List<NModMenuRow>> groups)
     {
         int idx = 0;
-        foreach (var kvp in groups)
-        {
-            string grpName = kvp.Key;
+        var orderedGroups = new List<string> { "Unassigned" };
+        orderedGroups.AddRange(ProfileManager.CustomGroups);
 
-            if (grpName == "Unassigned" && kvp.Value.Count == 0)
+        foreach (var grpName in orderedGroups)
+        {
+            if (!groups.TryGetValue(grpName, out var groupRows))
+                continue;
+
+            if (grpName == "Unassigned" && groupRows.Count == 0)
                 continue;
 
             bool isCollapsed = ProfileManager.CollapsedGroups.Contains(grpName);
@@ -266,7 +270,7 @@ public static class NModdingScreenPatch
             header.AddChild(collapseBtn);
 
             bool allEnabled = true;
-            foreach (var r in kvp.Value)
+            foreach (var r in groupRows)
             {
                 var tick = r.GetNodeOrNull<NTickbox>("Tickbox");
                 if (tick != null && !(bool)tick.Get("IsTicked")) allEnabled = false;
@@ -277,6 +281,18 @@ public static class NModdingScreenPatch
 
             if (grpName != "Unassigned")
             {
+                var renameBtn = new Button { Text = "Rename" };
+                renameBtn.Pressed += () => RenameGroup(grpName);
+                header.AddChild(renameBtn);
+
+                var upBtn = new Button { Text = "^" };
+                upBtn.Pressed += () => MoveGroup(grpName, -1);
+                header.AddChild(upBtn);
+
+                var downBtn = new Button { Text = "v" };
+                downBtn.Pressed += () => MoveGroup(grpName, 1);
+                header.AddChild(downBtn);
+
                 var deleteBtn = new Button { Text = "Del" };
                 deleteBtn.Pressed += () => {
                     ProfileManager.CustomGroups.Remove(grpName);
@@ -291,12 +307,70 @@ public static class NModdingScreenPatch
             container.AddChild(header);
             container.MoveChild(header, idx++);
 
-            foreach (var row in kvp.Value)
+            foreach (var row in groupRows)
             {
                 container.MoveChild(row, idx++);
                 row.Visible = !isCollapsed;
             }
         }
+    }
+
+    private static void MoveGroup(string grpName, int direction)
+    {
+        int idx = ProfileManager.CustomGroups.IndexOf(grpName);
+        if (idx == -1) return;
+        int newIdx = idx + direction;
+        if (newIdx >= 0 && newIdx < ProfileManager.CustomGroups.Count)
+        {
+            ProfileManager.CustomGroups.RemoveAt(idx);
+            ProfileManager.CustomGroups.Insert(newIdx, grpName);
+            ProfileManager.SaveProfiles();
+            RefreshGroupsUI();
+        }
+    }
+
+    private static void RenameGroup(string oldName)
+    {
+        if (_currentScreen == null || !GodotObject.IsInstanceValid(_currentScreen)) return;
+
+        var popup = new AcceptDialog();
+        popup.Title = "Rename Group";
+        popup.DialogText = "";
+
+        var input = new LineEdit
+        {
+            Text = oldName,
+            CustomMinimumSize = new Vector2(250, 0)
+        };
+        popup.AddChild(input);
+
+        popup.Confirmed += () =>
+        {
+            var newName = input.Text.Trim();
+            if (!string.IsNullOrEmpty(newName) && newName != "Unassigned" && !ProfileManager.CustomGroups.Contains(newName))
+            {
+                int idx = ProfileManager.CustomGroups.IndexOf(oldName);
+                if (idx != -1)
+                {
+                    ProfileManager.CustomGroups[idx] = newName;
+
+                    var grpMods = ProfileManager.ModGroups.Where(x => x.Value == oldName).Select(x => x.Key).ToList();
+                    foreach (var m in grpMods) ProfileManager.ModGroups[m] = newName;
+
+                    if (ProfileManager.CollapsedGroups.Contains(oldName))
+                    {
+                        ProfileManager.CollapsedGroups.Remove(oldName);
+                        ProfileManager.CollapsedGroups.Add(newName);
+                    }
+
+                    ProfileManager.SaveProfiles();
+                    RefreshGroupsUI();
+                }
+            }
+        };
+
+        _currentScreen.AddChild(popup);
+        popup.PopupCentered(new Vector2I(300, 100));
     }
 
     public static void MoveModOrder(string modId, int direction, NModMenuRow rowNode)
