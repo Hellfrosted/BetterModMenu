@@ -37,7 +37,7 @@ This mod is built using **Godot 4** and **.NET 9/C#**.
 
 1. Clone this repository.
 2. This project references `sts2.dll` directly from your game installation directory. If you have the game installed in a non-default path, you must update the `<Sts2DllPath>` property inside `BetterModMenu.csproj` to point to the correct location of your `sts2.dll`.
-3. Open the project in your preferred IDE (Visual Studio/Rider) or run `dotnet build` from the command line.
+3. Open the project in your preferred IDE or run `dotnet build` from the command line.
 
 ## License
 
