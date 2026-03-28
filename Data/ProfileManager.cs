@@ -247,6 +247,11 @@ public static class ProfileManager
                             string id = idProp.GetString() ?? "";
                             if (!string.IsNullOrEmpty(id))
                             {
+                                // Skip files like RouteSuggestConfig.json if they contain a different mod's ID.
+                                // STS2 mod manifests should have a filename that matches the mod ID.
+                                if (!System.IO.Path.GetFileNameWithoutExtension(file).Equals(id, System.IO.StringComparison.OrdinalIgnoreCase))
+                                    continue;
+
                                 bool affectsGameplay = false;
                                 if (doc.RootElement.TryGetProperty("affects_gameplay", out var gameplayProp))
                                 {
