@@ -30,30 +30,35 @@
   <Target Name="PackageMod" AfterTargets="Build">
     <PropertyGroup>
       <ModStagingDir>$(ProjectDir)ModStaging\</ModStagingDir>
-      <!-- Extract version from JSON to use in zip file name -->
+      <!-- Extract version from JSON -->
       <JsonFileContent>$([System.IO.File]::ReadAllText('$(ProjectDir)BetterModMenu.json'))</JsonFileContent>
       <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
       <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
-      <ZipFilePath>$(ProjectDir)$(AssemblyName)_v$(ModVersion).zip</ZipFilePath>
+      <BaseZipName>$(AssemblyName)_v$(ModVersion)</BaseZipName>
     </PropertyGroup>
 
-    <!-- 1. Copy the compiled DLL to the main project folder -->
+    <!-- 1. Use PowerShell to find the next available suffix (a, b, c...) -->
+    <Exec Command="pwsh -Command &quot;$base = '$(BaseZipName)'; $ext = '.zip'; $path = '$(ProjectDir)'; $full = Join-Path $path ($base + $ext); if (-not (Test-Path $full)) { Write-Host $full; exit 0 }; $chars = 'abcdefghijklmnopqrstuvwxyz'; foreach ($c in $chars.ToCharArray()) { $try = Join-Path $path ($base + $c + $ext); if (-not (Test-Path $try)) { Write-Host $try; exit 0 } }; Write-Host Join-Path $path ($base + '_final' + $ext)&quot;" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="ZipFilePath" />
+    </Exec>
+
+    <!-- 2. Copy the compiled DLL to the main project folder -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)" />
 
-    <!-- 2. Prepare the staging directory for the zip -->
+    <!-- 3. Prepare the staging directory for the zip -->
     <RemoveDir Directories="$(ModStagingDir)" />
     <MakeDir Directories="$(ModStagingDir)" />
 
-    <!-- 3. Copy the DLL and JSON file to the staging directory -->
+    <!-- 4. Copy the DLL and JSON file to the staging directory -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModStagingDir)" />
     <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModStagingDir)" />
 
-    <!-- 4. Create the zip file -->
+    <!-- 5. Create the zip file -->
     <ZipDirectory SourceDirectory="$(ModStagingDir)" DestinationFile="$(ZipFilePath)" Overwrite="true" />
     
-    <!-- 5. Clean up the staging directory -->
+    <!-- 6. Clean up the staging directory -->
     <RemoveDir Directories="$(ModStagingDir)" />
     
-    <Message Text="Successfully copied DLL and packaged $(AssemblyName)_v$(ModVersion).zip in the main folder!" Importance="High" />
+    <Message Text="Successfully packaged: $(ZipFilePath)" Importance="High" />
   </Target>
 </Project>
