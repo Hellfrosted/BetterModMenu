@@ -14,6 +14,7 @@ public static class Main
     {
         Logger.Info("Initializing BetterModMenu...");
         Data.ProfileManager.LoadProfiles();
+        Data.ProfileManager.BuildManifestCache();
 
         var harmony = new Harmony(ModId);
         harmony.PatchAll();

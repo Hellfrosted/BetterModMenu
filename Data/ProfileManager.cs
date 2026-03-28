@@ -64,6 +64,7 @@ public static class ProfileManager
     public static List<string> CustomGroups { get; set; } = new();
     public static Dictionary<string, string> ModGroups { get; set; } = new();
     public static HashSet<string> CollapsedGroups { get; set; } = new();
+    public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
 
     public static ModProfile CurrentProfile
     {
@@ -178,6 +179,64 @@ public static class ProfileManager
         {
             ModLogger.Error($"Failed to load mod profiles:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
+        }
+    }
+
+    public static void BuildManifestCache()
+    {
+        ModGameplayImpactCache.Clear();
+        var mods = MegaCrit.Sts2.Core.Modding.ModManager.Mods;
+        if (mods == null) return;
+
+        var directoriesToScan = new HashSet<string>();
+        foreach (var mod in mods)
+        {
+            if (!string.IsNullOrEmpty(mod.path))
+            {
+                var dir = System.IO.Directory.Exists(mod.path) ? mod.path : System.IO.Path.GetDirectoryName(mod.path);
+                if (!string.IsNullOrEmpty(dir) && System.IO.Directory.Exists(dir))
+                {
+                    directoriesToScan.Add(dir);
+                }
+            }
+        }
+
+        foreach (var dir in directoriesToScan)
+        {
+            try
+            {
+                var jsonFiles = System.IO.Directory.GetFiles(dir, "*.json", System.IO.SearchOption.TopDirectoryOnly);
+                foreach (var file in jsonFiles)
+                {
+                    try
+                    {
+                        string content = System.IO.File.ReadAllText(file);
+                        using var doc = JsonDocument.Parse(content);
+                        if (doc.RootElement.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
+                        {
+                            string id = idProp.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(id))
+                            {
+                                bool affectsGameplay = false;
+                                if (doc.RootElement.TryGetProperty("affects_gameplay", out var gameplayProp))
+                                {
+                                    if (gameplayProp.ValueKind == JsonValueKind.True) affectsGameplay = true;
+                                    else if (gameplayProp.ValueKind == JsonValueKind.False) affectsGameplay = false;
+                                }
+                                ModGameplayImpactCache[id] = affectsGameplay;
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Ignore parse errors on irrelevant .json files
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModLogger.Error($"Failed to scan directory {dir} for manifests: {ex.Message}");
+            }
         }
     }
 }

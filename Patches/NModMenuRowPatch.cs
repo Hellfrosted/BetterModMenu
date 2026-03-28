@@ -32,6 +32,21 @@ public static class NModMenuRowPatch
         var modId = __instance.Mod.manifest.id ?? "";
         if (string.IsNullOrEmpty(modId)) return;
 
+        if (Data.ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
+        {
+            var warningLabel = new Label 
+            { 
+                Text = "[Gameplay]", 
+                TooltipText = "This mod affects gameplay.",
+                Modulate = new Color(1f, 0.5f, 0.3f),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            container.AddChild(warningLabel);
+            
+            var spacer = new Control { CustomMinimumSize = new Vector2(10, 0) };
+            container.AddChild(spacer);
+        }
+
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
         upBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
         container.AddChild(upBtn);
