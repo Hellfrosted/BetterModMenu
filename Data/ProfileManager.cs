@@ -33,7 +33,7 @@ public static class ProfileManager
     {
         get
         {
-            var mod = MegaCrit.Sts2.Core.Modding.ModManager.LoadedMods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
+            var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
             string assemblyFolder = (mod != null && !string.IsNullOrEmpty(mod.path)) 
                 ? mod.path 
                 : (System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
