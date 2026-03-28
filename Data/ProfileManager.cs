@@ -28,7 +28,12 @@ public class ProfileSaveData
 public static class ProfileManager
 {
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
-    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOpts = new() { 
+        WriteIndented = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true
+    };
+    private static string _activeConfigExtension = ".json";
     public static string PortableConfigPath
     {
         get
@@ -37,7 +42,18 @@ public static class ProfileManager
             string assemblyFolder = (mod != null && !string.IsNullOrEmpty(mod.path)) 
                 ? mod.path 
                 : (System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
-            return System.IO.Path.Combine(assemblyFolder, "mod_profiles.json");
+            
+            string[] extensions = new[] { ".json5", ".jsonc", ".json" };
+            foreach (var ext in extensions)
+            {
+                string path = System.IO.Path.Combine(assemblyFolder, "mod_profiles" + ext);
+                if (System.IO.File.Exists(path))
+                {
+                    _activeConfigExtension = ext;
+                    return path;
+                }
+            }
+            return System.IO.Path.Combine(assemblyFolder, "mod_profiles" + _activeConfigExtension);
         }
     }
 
@@ -45,8 +61,9 @@ public static class ProfileManager
     {
         get
         {
-            if (File.Exists(PortableConfigPath))
-                return PortableConfigPath;
+            string portablePath = PortableConfigPath;
+            if (File.Exists(portablePath))
+                return portablePath;
 
             string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
             string absolutePath = ProjectSettings.GlobalizePath(userPath);
@@ -54,7 +71,19 @@ public static class ProfileManager
             {
                 System.IO.Directory.CreateDirectory(absolutePath);
             }
-            return System.IO.Path.Combine(absolutePath, "mod_profiles.json");
+            
+            string[] extensions = new[] { ".json5", ".jsonc", ".json" };
+            foreach (var ext in extensions)
+            {
+                string path = System.IO.Path.Combine(absolutePath, "mod_profiles" + ext);
+                if (System.IO.File.Exists(path))
+                {
+                    _activeConfigExtension = ext;
+                    return path;
+                }
+            }
+
+            return System.IO.Path.Combine(absolutePath, "mod_profiles" + _activeConfigExtension);
         }
     }
 
@@ -143,7 +172,7 @@ public static class ProfileManager
                 var json = File.ReadAllText(SavePath);
                 try
                 {
-                    var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json);
+                    var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json, JsonOpts);
                     if (loaded != null && loaded.Profiles != null && loaded.Profiles.Count > 0)
                     {
                         Profiles = loaded.Profiles;
@@ -156,7 +185,7 @@ public static class ProfileManager
                 catch
                 {
                     // Fallback for legacy format
-                    var legacy = JsonSerializer.Deserialize<List<ModProfile>>(json);
+                    var legacy = JsonSerializer.Deserialize<List<ModProfile>>(json, JsonOpts);
                     if (legacy != null) Profiles = legacy;
                 }
             }
@@ -211,7 +240,8 @@ public static class ProfileManager
                     try
                     {
                         string content = System.IO.File.ReadAllText(file);
-                        using var doc = JsonDocument.Parse(content);
+                        var docOpts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+                        using var doc = JsonDocument.Parse(content, docOpts);
                         if (doc.RootElement.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
                         {
                             string id = idProp.GetString() ?? "";
