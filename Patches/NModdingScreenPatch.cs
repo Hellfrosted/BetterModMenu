@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 using BetterModMenu.Data;
 using System.Collections.Generic;
 using MegaCrit.Sts2.Core.Saves;
-using MegaCrit.Sts2.Core.Nodes.CommonUi;
 
 namespace BetterModMenu.Patches;
 
@@ -141,76 +140,17 @@ public static class NModdingScreenPatch
 
     public static void MoveModOrder(string modId, int direction)
     {
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
-        if (options == null) return;
-
-        var list = options.ModList;
-        int index = list.FindIndex(m => m.Id == modId);
-        if (index == -1) return;
-
-        int newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < list.Count)
-        {
-            var temp = list[index];
-            list[index] = list[newIndex];
-            list[newIndex] = temp;
-            SaveManager.Instance.SaveSettings();
-            ProfileManager.SaveInMemoryState();
-
+        if (ModdingScreenListOps.TryMoveModOrder(modId, direction))
             RefreshGroupsUI();
-        }
     }
 
     private static void ToggleAllInGroup(string groupName, bool isToggled)
     {
-        var profile = ProfileManager.CurrentProfile;
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
-        if (options == null || _currentScreen == null) return;
+        if (_currentScreen == null)
+            return;
 
-        bool changed = false;
         Control modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
-
-        foreach (Node child in modRowContainer.GetChildren())
-        {
-            if (child is NModMenuRow row && row.Mod?.manifest != null)
-            {
-                string modId = row.Mod.manifest.id ?? "";
-                if (string.IsNullOrEmpty(modId)) continue;
-
-                string assignedGrp = ModdingScreenStateOps.GetAssignedGroup(modId);
-
-                if (assignedGrp == groupName)
-                {
-                    var settingsMod = options.ModList.Find(m => m.Id == modId);
-                    if (settingsMod != null)
-                    {
-                        settingsMod.IsEnabled = isToggled;
-                        if (isToggled) profile.DisabledMods.Remove(modId);
-                        else profile.DisabledMods.Add(modId);
-                        changed = true;
-                    }
-                    var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
-                    if (tickbox != null)
-                    {
-                        try
-                        {
-                            NModMenuRowPatch.SuppressTickboxHandler = true;
-                            tickbox.IsTicked = isToggled;
-                        }
-                        catch (System.Exception ex) 
-                        { 
-                            ProfileManager.ModLogger.Error($"Failed to toggle tickbox:\n{ex}"); 
-                        }
-                        finally
-                        {
-                            NModMenuRowPatch.SuppressTickboxHandler = false; 
-                        }
-                    }
-                }
-            }
-        }
-
-        if (changed)
+        if (ModdingScreenListOps.ApplyToggleAllInGroup(modRowContainer, groupName, isToggled))
         {
             _suppressAutoSave = true;
             try
