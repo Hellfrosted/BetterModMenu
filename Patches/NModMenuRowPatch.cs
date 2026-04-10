@@ -26,11 +26,13 @@ public static class NModMenuRowPatch
     {
         if (__instance.Mod == null || __instance.Mod.manifest == null) return;
 
-        var container = new HBoxContainer { Name = "RowCustomControls" };
-        __instance.AddChild(container);
-
         var modId = __instance.Mod.manifest.id ?? "";
         if (string.IsNullOrEmpty(modId)) return;
+
+        if (__instance.GetNodeOrNull<HBoxContainer>("RowCustomControls") != null) return;
+
+        var container = new HBoxContainer { Name = "RowCustomControls" };
+        __instance.AddChild(container);
 
         if (Data.ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
         {
@@ -48,11 +50,11 @@ public static class NModMenuRowPatch
         }
 
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
-        upBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1, __instance)).CallDeferred();
+        upBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1)).CallDeferred();
         container.AddChild(upBtn);
 
         var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(40, 40) };
-        downBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1, __instance)).CallDeferred();
+        downBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1)).CallDeferred();
         container.AddChild(downBtn);
 
         var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(180, 0) };

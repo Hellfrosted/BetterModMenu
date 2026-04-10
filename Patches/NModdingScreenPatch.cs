@@ -309,13 +309,14 @@ public static class NModdingScreenPatch
             };
             header.AddChild(collapseBtn);
 
-            bool allEnabled = true;
+            bool hasRows = groupRows.Count > 0;
+            bool allEnabled = hasRows;
             foreach (var r in groupRows)
             {
                 var tick = r.GetNodeOrNull<NTickbox>("Tickbox");
                 if (tick != null && !(bool)tick.Get("IsTicked")) allEnabled = false;
             }
-            var toggleAllBtn = new Button { Text = allEnabled ? "Disable All" : "Enable All" };
+            var toggleAllBtn = new Button { Text = allEnabled ? "Disable All" : "Enable All", Disabled = !hasRows };
             toggleAllBtn.Pressed += () => ToggleAllInGroup(grpName, !allEnabled);
             header.AddChild(toggleAllBtn);
 
@@ -419,7 +420,7 @@ public static class NModdingScreenPatch
         popup.PopupCentered(new Vector2I(300, 100));
     }
 
-    public static void MoveModOrder(string modId, int direction, NModMenuRow rowNode)
+    public static void MoveModOrder(string modId, int direction)
     {
         var options = SaveManager.Instance.SettingsSave.ModSettings;
         if (options == null) return;
