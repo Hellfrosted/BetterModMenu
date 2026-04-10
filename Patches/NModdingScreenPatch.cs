@@ -494,6 +494,7 @@ public static class NModdingScreenPatch
     {
         if (_profileDropdown == null || !GodotObject.IsInstanceValid(_profileDropdown)) return;
 
+        ProfileManager.NormalizeProfileIndex();
         _profileDropdown.Clear();
         for (int i = 0; i < ProfileManager.Profiles.Count; i++)
             _profileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
@@ -503,9 +504,17 @@ public static class NModdingScreenPatch
 
     private static void OnProfileSelected(long index)
     {
-        ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
+        ApplyProfileSelection((int)index, snapshotCurrentProfile: true);
+    }
 
-        ProfileManager.CurrentProfileIndex = (int)index;
+    private static void ApplyProfileSelection(int index, bool snapshotCurrentProfile)
+    {
+        if (snapshotCurrentProfile)
+            ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
+
+        ProfileManager.CurrentProfileIndex = index;
+        ProfileManager.NormalizeProfileIndex();
+
         var profile = ProfileManager.CurrentProfile;
         var options = SaveManager.Instance.SettingsSave.ModSettings;
         if (options != null)
@@ -516,6 +525,7 @@ public static class NModdingScreenPatch
 
         ProfileManager.SaveToDisk();
         SaveManager.Instance.SaveSettings();
+        RefreshProfileDropdown();
 
         if (_currentScreen != null && GodotObject.IsInstanceValid(_currentScreen))
         {
@@ -600,11 +610,14 @@ public static class NModdingScreenPatch
     {
         if (ProfileManager.Profiles.Count > 1)
         {
-            ProfileManager.Profiles.RemoveAt(ProfileManager.CurrentProfileIndex);
-            ProfileManager.CurrentProfileIndex = 0;
-            ProfileManager.SaveProfiles();
-            RefreshProfileDropdown();
-            OnProfileSelected(0);
+            int removedIndex = ProfileManager.CurrentProfileIndex;
+            ProfileManager.Profiles.RemoveAt(removedIndex);
+
+            int replacementIndex = removedIndex;
+            if (replacementIndex >= ProfileManager.Profiles.Count)
+                replacementIndex = ProfileManager.Profiles.Count - 1;
+
+            ApplyProfileSelection(replacementIndex, snapshotCurrentProfile: false);
         }
     }
 }

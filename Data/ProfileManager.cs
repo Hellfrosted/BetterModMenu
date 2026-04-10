@@ -99,10 +99,20 @@ public static class ProfileManager
     {
         get
         {
-            if (Profiles.Count == 0) Profiles.Add(new ModProfile { Name = "Default" });
-            if (CurrentProfileIndex >= Profiles.Count) CurrentProfileIndex = 0;
+            NormalizeProfileIndex();
             return Profiles[CurrentProfileIndex];
         }
+    }
+
+    public static void NormalizeProfileIndex()
+    {
+        if (Profiles.Count == 0)
+            Profiles.Add(new ModProfile { Name = "Default" });
+
+        if (CurrentProfileIndex < 0)
+            CurrentProfileIndex = 0;
+        else if (CurrentProfileIndex >= Profiles.Count)
+            CurrentProfileIndex = Profiles.Count - 1;
     }
 
     /// <summary>
@@ -193,21 +203,26 @@ public static class ProfileManager
             {
                 Profiles.Add(new ModProfile { Name = "Default" });
             }
+
+            NormalizeProfileIndex();
         }
         catch (JsonException ex)
         {
             ModLogger.Error($"Profile format corrupted:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
+            NormalizeProfileIndex();
         }
         catch (IOException ex)
         {
             ModLogger.Error($"Unable to read profile save file. It may be locked by another program.\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
+            NormalizeProfileIndex();
         }
         catch (Exception ex)
         {
             ModLogger.Error($"Failed to load mod profiles:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
+            NormalizeProfileIndex();
         }
     }
 
