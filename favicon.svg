@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-  <!-- Larger Background Badge -->
-  <rect x="2" y="2" width="96" height="96" rx="24" fill="#6A4C93" stroke="#E0BBE4" stroke-width="4" />
+  <!-- Restored Background Badge -->
+  <rect x="10" y="10" width="80" height="80" rx="20" fill="#6A4C93" stroke="#E0BBE4" stroke-width="4" />
   
   <!-- Bold Outer Menu Element -->
   <path d="M 20,30 h 60 M 20,50 h 60 M 20,70 h 35" stroke="#FFFFFF" fill="none" stroke-width="10" stroke-linecap="round" />
   
   <!-- Enlarged 'Better' Sparkle/Star Indicator -->
-  <path d="M 75,55 l 5,12 l 12,5 l -12,5 l -5,12 l -5,-12 l -12,-5 l 12,-5 Z" fill="#F4DE6A" />
+  <path d="M 72,55 l 5,12 l 12,5 l -12,5 l -5,12 l -5,-12 l -12,-5 l 12,-5 Z" fill="#F4DE6A" />
 </svg>
