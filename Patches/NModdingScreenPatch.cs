@@ -497,10 +497,16 @@ public static class NModdingScreenPatch
         if (changed)
         {
             _suppressAutoSave = true;
-            ProfileManager.SaveProfiles();
-            SaveManager.Instance.SaveSettings();
-            _currentScreen.OnModEnabledOrDisabled();
-            _suppressAutoSave = false;
+            try
+            {
+                ProfileManager.SaveProfiles();
+                SaveManager.Instance.SaveSettings();
+                _currentScreen.OnModEnabledOrDisabled();
+            }
+            finally
+            {
+                _suppressAutoSave = false;
+            }
         }
     }
 
@@ -546,32 +552,35 @@ public static class NModdingScreenPatch
             // Block BOTH the auto-save hook AND the vanilla tickbox handler
             _suppressAutoSave = true;
             NModMenuRowPatch.SuppressTickboxHandler = true;
-
-            _currentScreen.OnModEnabledOrDisabled();
-
-            // Set tickboxes SYNCHRONOUSLY (not deferred) while the vanilla handler is blocked.
-            // The vanilla _Ready does the same (line 100 of NModMenuRow.cs) so this is safe.
-            var modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
-            foreach (Node child in modRowContainer.GetChildren())
+            try
             {
-                if (child is NModMenuRow row && row.Mod?.manifest != null)
+                _currentScreen.OnModEnabledOrDisabled();
+
+                // Set tickboxes SYNCHRONOUSLY (not deferred) while the vanilla handler is blocked.
+                // The vanilla _Ready does the same (line 100 of NModMenuRow.cs) so this is safe.
+                var modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
+                foreach (Node child in modRowContainer.GetChildren())
                 {
-                    string modId = row.Mod.manifest.id ?? "";
-                    bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
-                    var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
-                    if (tickbox != null)
+                    if (child is NModMenuRow row && row.Mod?.manifest != null)
                     {
-                        try { tickbox.IsTicked = isOn; }
-                        catch (System.Exception ex) { ProfileManager.ModLogger.Error($"Failed to set tickbox state:\n{ex}"); }
+                        string modId = row.Mod.manifest.id ?? "";
+                        bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
+                        var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
+                        if (tickbox != null)
+                        {
+                            try { tickbox.IsTicked = isOn; }
+                            catch (System.Exception ex) { ProfileManager.ModLogger.Error($"Failed to set tickbox state:\n{ex}"); }
+                        }
                     }
                 }
+
+                RefreshGroupsUI();
             }
-
-            // Un-suppress synchronously — everything is already done, no deferred calls pending
-            NModMenuRowPatch.SuppressTickboxHandler = false;
-            _suppressAutoSave = false;
-
-            RefreshGroupsUI();
+            finally
+            {
+                NModMenuRowPatch.SuppressTickboxHandler = false;
+                _suppressAutoSave = false;
+            }
         }
     }
 
