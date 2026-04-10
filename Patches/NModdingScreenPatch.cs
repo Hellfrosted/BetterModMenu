@@ -450,22 +450,7 @@ public static class NModdingScreenPatch
 
     private static void ApplyProfileSelection(int index, bool snapshotCurrentProfile)
     {
-        if (snapshotCurrentProfile)
-            ProfileManager.SnapshotCurrentState();
-
-        ProfileManager.CurrentProfileIndex = index;
-        ProfileManager.NormalizeProfileIndex();
-
-        var profile = ProfileManager.CurrentProfile;
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
-        if (options != null)
-        {
-            foreach (var mod in options.ModList)
-                mod.IsEnabled = !profile.DisabledMods.Contains(mod.Id);
-        }
-
-        ProfileManager.SaveInMemoryState();
-        SaveManager.Instance.SaveSettings();
+        var profile = ModdingScreenProfileOps.ApplyProfileSelection(index, snapshotCurrentProfile);
         RefreshProfileDropdown();
 
         if (_currentScreen != null && GodotObject.IsInstanceValid(_currentScreen))
@@ -480,21 +465,7 @@ public static class NModdingScreenPatch
                 // Set tickboxes SYNCHRONOUSLY (not deferred) while the vanilla handler is blocked.
                 // The vanilla _Ready does the same (line 100 of NModMenuRow.cs) so this is safe.
                 var modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
-                foreach (Node child in modRowContainer.GetChildren())
-                {
-                    if (child is NModMenuRow row && row.Mod?.manifest != null)
-                    {
-                        string modId = row.Mod.manifest.id ?? "";
-                        bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
-                        var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
-                        if (tickbox != null)
-                        {
-                            try { tickbox.IsTicked = isOn; }
-                            catch (System.Exception ex) { ProfileManager.ModLogger.Error($"Failed to set tickbox state:\n{ex}"); }
-                        }
-                    }
-                }
-
+                ModdingScreenProfileOps.SyncTickboxesForProfile(modRowContainer, profile);
                 RefreshGroupsUI();
             }
             finally
@@ -507,15 +478,7 @@ public static class NModdingScreenPatch
 
     private static void OnNewProfilePressed()
     {
-        ProfileManager.SnapshotCurrentState();
-        var newProfile = new ModProfile
-        {
-            Name = "Profile " + (ProfileManager.Profiles.Count + 1),
-            DisabledMods = new HashSet<string>(ProfileManager.CurrentProfile.DisabledMods)
-        };
-        ProfileManager.Profiles.Add(newProfile);
-        ProfileManager.CurrentProfileIndex = ProfileManager.Profiles.Count - 1;
-        ProfileManager.SaveInMemoryState();
+        ModdingScreenProfileOps.CreateNewProfileFromCurrentState();
         RefreshProfileDropdown();
         RefreshGroupsUI();
     }
@@ -537,11 +500,8 @@ public static class NModdingScreenPatch
 
         popup.Confirmed += () =>
         {
-            var newName = input.Text.Trim();
-            if (!string.IsNullOrEmpty(newName))
+            if (ModdingScreenProfileOps.TryRenameCurrentProfile(input.Text))
             {
-                ProfileManager.CurrentProfile.Name = newName;
-                ProfileManager.SaveInMemoryState();
                 RefreshProfileDropdown();
             }
         };
@@ -552,16 +512,8 @@ public static class NModdingScreenPatch
 
     private static void OnDelProfilePressed()
     {
-        if (ProfileManager.Profiles.Count > 1)
-        {
-            int removedIndex = ProfileManager.CurrentProfileIndex;
-            ProfileManager.Profiles.RemoveAt(removedIndex);
-
-            int replacementIndex = removedIndex;
-            if (replacementIndex >= ProfileManager.Profiles.Count)
-                replacementIndex = ProfileManager.Profiles.Count - 1;
-
-            ApplyProfileSelection(replacementIndex, snapshotCurrentProfile: false);
-        }
+        int? replacementIndex = ModdingScreenProfileOps.DeleteCurrentProfile();
+        if (replacementIndex.HasValue)
+            ApplyProfileSelection(replacementIndex.Value, snapshotCurrentProfile: false);
     }
 }
