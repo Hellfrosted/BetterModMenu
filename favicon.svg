@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Background Badge -->
+  <rect x="10" y="10" width="80" height="80" rx="20" fill="#2E2B3D" stroke="#D1AED4" stroke-width="4" />
+  
+  <!-- Outer Menu/Gear Element -->
+  <path d="M 30,35 h 40 M 30,50 h 40 M 30,65 h 25" stroke="#FFFFFF" fill="none" stroke-width="6" stroke-linecap="round" />
+  
+  <!-- 'Better' Sparkle/Star Indicator -->
+  <path d="M 70,55 l 3,8 l 8,3 l -8,3 l -3,8 l -3,-8 l -8,-3 l 8,-3 Z" fill="#F4DE6A" />
+</svg>
