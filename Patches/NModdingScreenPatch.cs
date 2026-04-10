@@ -123,22 +123,36 @@ public static class NModdingScreenPatch
         portableToggle.Toggled += (isToggled) => {
             if (isToggled) {
                 try {
-                    if (System.IO.File.Exists(ProfileManager.SavePath) && ProfileManager.SavePath != ProfileManager.PortableConfigPath)
-                        System.IO.File.Copy(ProfileManager.SavePath, ProfileManager.PortableConfigPath, true);
+                    string sourcePath = ProfileManager.SavePath;
+                    string targetPath = ProfileManager.GetPortableConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
+                    ProfileManager.DeleteOtherConfigVariants(targetPath);
+
+                    if (System.IO.File.Exists(sourcePath) && !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        System.IO.File.Copy(sourcePath, targetPath, true);
+                    }
                     else
-                        ProfileManager.SaveProfiles();
+                    {
+                        ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
+                        ProfileManager.SaveToPath(targetPath);
+                    }
                 } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to enable portable mode: " + ex); }
             } else {
                 try {
-                    string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
-                    string absolutePath = Godot.ProjectSettings.GlobalizePath(userPath);
-                    if (!System.IO.Directory.Exists(absolutePath)) System.IO.Directory.CreateDirectory(absolutePath);
-                    string target = System.IO.Path.Combine(absolutePath, "mod_profiles.json");
-                    
-                    if (System.IO.File.Exists(ProfileManager.PortableConfigPath))
-                        System.IO.File.Copy(ProfileManager.PortableConfigPath, target, true);
-                    
-                    System.IO.File.Delete(ProfileManager.PortableConfigPath);
+                    string sourcePath = ProfileManager.PortableConfigPath;
+                    string targetPath = ProfileManager.GetUserConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
+                    ProfileManager.DeleteOtherConfigVariants(targetPath);
+
+                    if (System.IO.File.Exists(sourcePath))
+                    {
+                        System.IO.File.Copy(sourcePath, targetPath, true);
+                        System.IO.File.Delete(sourcePath);
+                    }
+                    else
+                    {
+                        ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
+                        ProfileManager.SaveToPath(targetPath);
+                    }
                 } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to disable portable mode: " + ex); }
             }
         };

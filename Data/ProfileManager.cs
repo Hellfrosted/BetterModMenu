@@ -28,34 +28,88 @@ public class ProfileSaveData
 public static class ProfileManager
 {
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    private static readonly string[] ConfigExtensions = new[] { ".json5", ".jsonc", ".json" };
     private static readonly JsonSerializerOptions JsonOpts = new() { 
         WriteIndented = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
     };
     private static string _activeConfigExtension = ".json";
-    public static string PortableConfigPath
+
+    private static string NormalizeConfigExtension(string extension)
+    {
+        if (string.IsNullOrEmpty(extension))
+            return _activeConfigExtension;
+
+        string normalized = extension.StartsWith(".") ? extension.ToLowerInvariant() : "." + extension.ToLowerInvariant();
+        return ConfigExtensions.Contains(normalized) ? normalized : _activeConfigExtension;
+    }
+
+    private static string BuildConfigPath(string directory, string extension)
+    {
+        return Path.Combine(directory, "mod_profiles" + NormalizeConfigExtension(extension));
+    }
+
+    private static string? FindExistingConfigPath(string directory)
+    {
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return null;
+
+        foreach (var ext in ConfigExtensions)
+        {
+            string path = BuildConfigPath(directory, ext);
+            if (File.Exists(path))
+                return path;
+        }
+
+        return null;
+    }
+
+    private static string ResolveConfigPath(string directory, bool ensureDirectoryExists = false)
+    {
+        if (ensureDirectoryExists && !string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+
+        var existingPath = FindExistingConfigPath(directory);
+        if (!string.IsNullOrEmpty(existingPath))
+        {
+            _activeConfigExtension = NormalizeConfigExtension(Path.GetExtension(existingPath));
+            return existingPath;
+        }
+
+        return BuildConfigPath(directory, _activeConfigExtension);
+    }
+
+    private static string ResolvePortableConfigDirectory()
+    {
+        var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
+        string path = (mod != null && !string.IsNullOrEmpty(mod.path))
+            ? mod.path
+            : (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
+
+        if (Directory.Exists(path))
+            return path;
+
+        return Path.GetDirectoryName(path) ?? "";
+    }
+
+    public static string PortableConfigDirectory => ResolvePortableConfigDirectory();
+    public static string PortableConfigPath => ResolveConfigPath(PortableConfigDirectory);
+
+    public static string UserConfigDirectory
     {
         get
         {
-            var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
-            string assemblyFolder = (mod != null && !string.IsNullOrEmpty(mod.path)) 
-                ? mod.path 
-                : (System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
-            
-            string[] extensions = new[] { ".json5", ".jsonc", ".json" };
-            foreach (var ext in extensions)
-            {
-                string path = System.IO.Path.Combine(assemblyFolder, "mod_profiles" + ext);
-                if (System.IO.File.Exists(path))
-                {
-                    _activeConfigExtension = ext;
-                    return path;
-                }
-            }
-            return System.IO.Path.Combine(assemblyFolder, "mod_profiles" + _activeConfigExtension);
+            string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
+            string absolutePath = ProjectSettings.GlobalizePath(userPath);
+            if (!Directory.Exists(absolutePath))
+                Directory.CreateDirectory(absolutePath);
+
+            return absolutePath;
         }
     }
+
+    public static string UserConfigPath => ResolveConfigPath(UserConfigDirectory, ensureDirectoryExists: true);
 
     public static string SavePath
     {
@@ -65,25 +119,25 @@ public static class ProfileManager
             if (File.Exists(portablePath))
                 return portablePath;
 
-            string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
-            string absolutePath = ProjectSettings.GlobalizePath(userPath);
-            if (!System.IO.Directory.Exists(absolutePath))
-            {
-                System.IO.Directory.CreateDirectory(absolutePath);
-            }
-            
-            string[] extensions = new[] { ".json5", ".jsonc", ".json" };
-            foreach (var ext in extensions)
-            {
-                string path = System.IO.Path.Combine(absolutePath, "mod_profiles" + ext);
-                if (System.IO.File.Exists(path))
-                {
-                    _activeConfigExtension = ext;
-                    return path;
-                }
-            }
+            return UserConfigPath;
+        }
+    }
 
-            return System.IO.Path.Combine(absolutePath, "mod_profiles" + _activeConfigExtension);
+    public static string GetPortableConfigPathForExtension(string extension) => BuildConfigPath(PortableConfigDirectory, extension);
+    public static string GetUserConfigPathForExtension(string extension) => BuildConfigPath(UserConfigDirectory, extension);
+
+    public static void DeleteOtherConfigVariants(string pathToKeep)
+    {
+        string? directory = Path.GetDirectoryName(pathToKeep);
+        if (string.IsNullOrEmpty(directory))
+            return;
+
+        string fullKeepPath = Path.GetFullPath(pathToKeep);
+        foreach (var ext in ConfigExtensions)
+        {
+            string candidate = BuildConfigPath(directory, ext);
+            if (!Path.GetFullPath(candidate).Equals(fullKeepPath, StringComparison.OrdinalIgnoreCase) && File.Exists(candidate))
+                File.Delete(candidate);
         }
     }
 
@@ -146,9 +200,16 @@ public static class ProfileManager
     /// </summary>
     public static void SaveToDisk()
     {
+        SaveToPath(SavePath);
+    }
+
+    public static void SaveToPath(string path)
+    {
         try
         {
-            var folder = Path.GetDirectoryName(SavePath);
+            _activeConfigExtension = NormalizeConfigExtension(Path.GetExtension(path));
+
+            var folder = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
             {
                 Directory.CreateDirectory(folder);
@@ -163,7 +224,7 @@ public static class ProfileManager
                 CollapsedGroups = CollapsedGroups
             };
             var json = JsonSerializer.Serialize(saveData, JsonOpts);
-            File.WriteAllText(SavePath, json);
+            File.WriteAllText(path, json);
         }
         catch (Exception ex)
         {
