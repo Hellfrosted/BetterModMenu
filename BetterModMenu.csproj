@@ -35,12 +35,95 @@
       <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
       <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
       <BaseZipName>$(AssemblyName)_v$(ModVersion)</BaseZipName>
+      <PackageBasePath>$(ProjectDir)$(BaseZipName)</PackageBasePath>
     </PropertyGroup>
 
-    <!-- 1. Use PowerShell to find the next available suffix (a, b, c...) -->
-    <Exec Command="pwsh -Command &quot;$base = '$(BaseZipName)'; $ext = '.zip'; $path = '$(ProjectDir)'; $full = Join-Path $path ($base + $ext); if (-not (Test-Path $full)) { Write-Host $full; exit 0 }; $chars = 'abcdefghijklmnopqrstuvwxyz'; foreach ($c in $chars.ToCharArray()) { $try = Join-Path $path ($base + $c + $ext); if (-not (Test-Path $try)) { Write-Host $try; exit 0 } }; Write-Host Join-Path $path ($base + '_final' + $ext)&quot;" ConsoleToMSBuild="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="ZipFilePath" />
-    </Exec>
+    <!-- 1. Select the first unused zip name without invoking a shell. -->
+    <PropertyGroup>
+      <ZipFilePath>$(PackageBasePath).zip</ZipFilePath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)a.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)b.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)c.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)d.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)e.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)f.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)g.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)h.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)i.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)j.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)k.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)l.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)m.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)n.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)o.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)p.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)q.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)r.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)s.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)t.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)u.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)v.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)w.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)x.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)y.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)z.zip</ZipFilePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(ZipFilePath)')">
+      <ZipFilePath>$(PackageBasePath)_final.zip</ZipFilePath>
+    </PropertyGroup>
 
     <!-- 2. Copy the compiled DLL to the main project folder -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)" />
