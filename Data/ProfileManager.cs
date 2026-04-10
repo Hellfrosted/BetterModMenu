@@ -50,6 +50,16 @@ public static class ProfileManager
         return Path.Combine(directory, "mod_profiles" + NormalizeConfigExtension(extension));
     }
 
+    private static void SetActiveConfigExtension(string extension)
+    {
+        _activeConfigExtension = NormalizeConfigExtension(extension);
+    }
+
+    private static void SetActiveConfigExtensionFromPath(string path)
+    {
+        SetActiveConfigExtension(Path.GetExtension(path));
+    }
+
     private static string? FindExistingConfigPath(string directory)
     {
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
@@ -72,12 +82,19 @@ public static class ProfileManager
 
         var existingPath = FindExistingConfigPath(directory);
         if (!string.IsNullOrEmpty(existingPath))
-        {
-            _activeConfigExtension = NormalizeConfigExtension(Path.GetExtension(existingPath));
             return existingPath;
-        }
 
         return BuildConfigPath(directory, _activeConfigExtension);
+    }
+
+    private static string ResolveUserConfigDirectory(bool ensureDirectoryExists)
+    {
+        string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
+        string absolutePath = ProjectSettings.GlobalizePath(userPath);
+        if (ensureDirectoryExists && !Directory.Exists(absolutePath))
+            Directory.CreateDirectory(absolutePath);
+
+        return absolutePath;
     }
 
     private static string ResolvePortableConfigDirectory()
@@ -100,16 +117,11 @@ public static class ProfileManager
     {
         get
         {
-            string userPath = UserDataPathProvider.GetAccountScopedBasePath("mod_data/BetterModMenu");
-            string absolutePath = ProjectSettings.GlobalizePath(userPath);
-            if (!Directory.Exists(absolutePath))
-                Directory.CreateDirectory(absolutePath);
-
-            return absolutePath;
+            return ResolveUserConfigDirectory(ensureDirectoryExists: false);
         }
     }
 
-    public static string UserConfigPath => ResolveConfigPath(UserConfigDirectory, ensureDirectoryExists: true);
+    public static string UserConfigPath => ResolveConfigPath(ResolveUserConfigDirectory(ensureDirectoryExists: true));
 
     public static string SavePath
     {
@@ -124,7 +136,7 @@ public static class ProfileManager
     }
 
     public static string GetPortableConfigPathForExtension(string extension) => BuildConfigPath(PortableConfigDirectory, extension);
-    public static string GetUserConfigPathForExtension(string extension) => BuildConfigPath(UserConfigDirectory, extension);
+    public static string GetUserConfigPathForExtension(string extension) => BuildConfigPath(ResolveUserConfigDirectory(ensureDirectoryExists: true), extension);
 
     public static void DeleteOtherConfigVariants(string pathToKeep)
     {
@@ -223,7 +235,7 @@ public static class ProfileManager
     {
         try
         {
-            _activeConfigExtension = NormalizeConfigExtension(Path.GetExtension(path));
+            SetActiveConfigExtensionFromPath(path);
 
             var folder = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
@@ -252,9 +264,11 @@ public static class ProfileManager
     {
         try
         {
-            if (File.Exists(SavePath))
+            string savePath = SavePath;
+            if (File.Exists(savePath))
             {
-                var json = File.ReadAllText(SavePath);
+                SetActiveConfigExtensionFromPath(savePath);
+                var json = File.ReadAllText(savePath);
                 try
                 {
                     var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json, JsonOpts);
