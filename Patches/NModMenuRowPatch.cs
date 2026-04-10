@@ -66,7 +66,7 @@ public static class NModMenuRowPatch
             else
                 Data.ProfileManager.ModGroups[modId] = selectedText;
 
-            Data.ProfileManager.SaveProfiles();
+            Data.ProfileManager.SaveInMemoryState();
             Callable.From(() => NModdingScreenPatch.RefreshGroupsUI()).CallDeferred();
         };
 

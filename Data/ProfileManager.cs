@@ -185,22 +185,38 @@ public static class ProfileManager
     }
 
     /// <summary>
-    /// Snapshot current game state into the active profile, then save to disk.
-    /// Use this for auto-save scenarios (user toggles a mod).
+    /// Reads the current game state into the active profile without writing to disk.
     /// </summary>
-    public static void SnapshotAndSave()
+    public static void SnapshotCurrentState()
     {
         SnapshotIntoProfile(CurrentProfile);
-        SaveToDisk();
     }
 
     /// <summary>
-    /// Pure serialization — writes current in-memory data to disk WITHOUT snapshotting game state.
-    /// Use this when you've already manually set DisabledMods (e.g. during profile switching).
+    /// Pure serialization — writes current in-memory profile/group state to the active save path.
+    /// Use this when you've already updated in-memory state yourself.
     /// </summary>
-    public static void SaveToDisk()
+    public static void SaveInMemoryState()
     {
         SaveToPath(SavePath);
+    }
+
+    /// <summary>
+    /// Auto-save helper for live game changes such as enabling/disabling mods.
+    /// </summary>
+    public static void SnapshotCurrentStateAndSave()
+    {
+        SnapshotCurrentState();
+        SaveInMemoryState();
+    }
+
+    /// <summary>
+    /// Writes the current live game state to a specific save path.
+    /// </summary>
+    public static void SaveCurrentStateToPath(string path)
+    {
+        SnapshotCurrentState();
+        SaveToPath(path);
     }
 
     public static void SaveToPath(string path)
@@ -231,8 +247,6 @@ public static class ProfileManager
             ModLogger.Error("Failed to save mod profiles: " + ex.Message);
         }
     }
-
-    public static void SaveProfiles() => SnapshotAndSave();
 
     public static void LoadProfiles()
     {

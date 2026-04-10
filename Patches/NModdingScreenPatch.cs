@@ -24,7 +24,7 @@ public static class NModdingScreenPatch
     public static void Postfix_OnModEnabledOrDisabled()
     {
         if (!_suppressAutoSave)
-            ProfileManager.SaveProfiles();
+            ProfileManager.SnapshotCurrentStateAndSave();
     }
 
     [HarmonyPatch(nameof(NModdingScreen._Ready))]
@@ -133,8 +133,7 @@ public static class NModdingScreenPatch
                     }
                     else
                     {
-                        ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
-                        ProfileManager.SaveToPath(targetPath);
+                        ProfileManager.SaveCurrentStateToPath(targetPath);
                     }
                 } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to enable portable mode: " + ex); }
             } else {
@@ -150,8 +149,7 @@ public static class NModdingScreenPatch
                     }
                     else
                     {
-                        ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
-                        ProfileManager.SaveToPath(targetPath);
+                        ProfileManager.SaveCurrentStateToPath(targetPath);
                     }
                 } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to disable portable mode: " + ex); }
             }
@@ -172,7 +170,7 @@ public static class NModdingScreenPatch
             if (!string.IsNullOrEmpty(txt) && !ProfileManager.CustomGroups.Contains(txt) && txt != "Unassigned")
             {
                 ProfileManager.CustomGroups.Add(txt);
-                ProfileManager.SaveProfiles();
+                ProfileManager.SaveInMemoryState();
                 newGroupInput.Text = "";
                 RefreshGroupsUI();
             }
@@ -306,7 +304,7 @@ public static class NModdingScreenPatch
                     ProfileManager.CollapsedGroups.Remove(grpName);
                 else
                     ProfileManager.CollapsedGroups.Add(grpName);
-                ProfileManager.SaveProfiles();
+                ProfileManager.SaveInMemoryState();
                 RefreshGroupsUI();
             };
             header.AddChild(collapseBtn);
@@ -346,7 +344,7 @@ public static class NModdingScreenPatch
                     ProfileManager.CustomGroups.Remove(grpName);
                     var grpMods = ProfileManager.ModGroups.Where(x => x.Value == grpName).Select(x => x.Key).ToList();
                     foreach (var m in grpMods) ProfileManager.ModGroups.Remove(m);
-                    ProfileManager.SaveProfiles();
+                    ProfileManager.SaveInMemoryState();
                     RefreshGroupsUI();
                 };
                 header.AddChild(deleteBtn);
@@ -372,7 +370,7 @@ public static class NModdingScreenPatch
         {
             ProfileManager.CustomGroups.RemoveAt(idx);
             ProfileManager.CustomGroups.Insert(newIdx, grpName);
-            ProfileManager.SaveProfiles();
+            ProfileManager.SaveInMemoryState();
             RefreshGroupsUI();
         }
     }
@@ -411,7 +409,7 @@ public static class NModdingScreenPatch
                         ProfileManager.CollapsedGroups.Add(newName);
                     }
 
-                    ProfileManager.SaveProfiles();
+                    ProfileManager.SaveInMemoryState();
                     RefreshGroupsUI();
                 }
             }
@@ -437,7 +435,7 @@ public static class NModdingScreenPatch
             list[index] = list[newIndex];
             list[newIndex] = temp;
             SaveManager.Instance.SaveSettings();
-            ProfileManager.SaveProfiles();
+            ProfileManager.SaveInMemoryState();
 
             RefreshGroupsUI();
         }
@@ -499,7 +497,7 @@ public static class NModdingScreenPatch
             _suppressAutoSave = true;
             try
             {
-                ProfileManager.SaveProfiles();
+                ProfileManager.SaveInMemoryState();
                 SaveManager.Instance.SaveSettings();
                 _currentScreen.OnModEnabledOrDisabled();
             }
@@ -530,7 +528,7 @@ public static class NModdingScreenPatch
     private static void ApplyProfileSelection(int index, bool snapshotCurrentProfile)
     {
         if (snapshotCurrentProfile)
-            ProfileManager.SnapshotIntoProfile(ProfileManager.CurrentProfile);
+            ProfileManager.SnapshotCurrentState();
 
         ProfileManager.CurrentProfileIndex = index;
         ProfileManager.NormalizeProfileIndex();
@@ -543,7 +541,7 @@ public static class NModdingScreenPatch
                 mod.IsEnabled = !profile.DisabledMods.Contains(mod.Id);
         }
 
-        ProfileManager.SaveToDisk();
+        ProfileManager.SaveInMemoryState();
         SaveManager.Instance.SaveSettings();
         RefreshProfileDropdown();
 
@@ -586,7 +584,7 @@ public static class NModdingScreenPatch
 
     private static void OnNewProfilePressed()
     {
-        ProfileManager.SaveProfiles();
+        ProfileManager.SnapshotCurrentState();
         var newProfile = new ModProfile
         {
             Name = "Profile " + (ProfileManager.Profiles.Count + 1),
@@ -594,7 +592,7 @@ public static class NModdingScreenPatch
         };
         ProfileManager.Profiles.Add(newProfile);
         ProfileManager.CurrentProfileIndex = ProfileManager.Profiles.Count - 1;
-        ProfileManager.SaveProfiles();
+        ProfileManager.SaveInMemoryState();
         RefreshProfileDropdown();
         RefreshGroupsUI();
     }
@@ -620,7 +618,7 @@ public static class NModdingScreenPatch
             if (!string.IsNullOrEmpty(newName))
             {
                 ProfileManager.CurrentProfile.Name = newName;
-                ProfileManager.SaveProfiles();
+                ProfileManager.SaveInMemoryState();
                 RefreshProfileDropdown();
             }
         };
