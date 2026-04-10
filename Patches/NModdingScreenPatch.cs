@@ -56,99 +56,49 @@ public static class NModdingScreenPatch
 
     private static void BuildTopBar(NModdingScreen __instance, Control? titleNode, Control? scrollContainer)
     {
-        _topBar = new HBoxContainer();
+        var builtTopBar = ModdingScreenBars.CreateTopBar(
+            titleNode,
+            scrollContainer,
+            OnProfileSelected,
+            OnNewProfilePressed,
+            OnRenameProfilePressed,
+            OnDelProfilePressed);
+
+        _topBar = builtTopBar.Bar;
+        _profileDropdown = builtTopBar.ProfileDropdown;
         __instance.AddChild(_topBar);
-
-        if (titleNode != null && scrollContainer != null)
-        {
-            float leftPanelRight = scrollContainer.GlobalPosition.X + scrollContainer.Size.X;
-            _topBar.Position = new Vector2(
-                titleNode.GlobalPosition.X + titleNode.Size.X + 10,
-                titleNode.GlobalPosition.Y
-            );
-            _topBar.Size = new Vector2(
-                leftPanelRight - (titleNode.GlobalPosition.X + titleNode.Size.X + 10) - 30,
-                titleNode.Size.Y
-            );
-        }
-        else
-        {
-            _topBar.Position = new Vector2(300, 55);
-            _topBar.Size = new Vector2(200, 30);
-        }
-
-        var profileLabel = new Label { Text = "Profile:" };
-        _topBar.AddChild(profileLabel);
-
-        _profileDropdown = new OptionButton { CustomMinimumSize = new Vector2(120, 0) };
-        _topBar.AddChild(_profileDropdown);
-        _profileDropdown.ItemSelected += OnProfileSelected;
-
-        var newProfileBtn = new Button { Text = "+ New" };
-        newProfileBtn.Pressed += OnNewProfilePressed;
-        _topBar.AddChild(newProfileBtn);
-
-        var renameProfileBtn = new Button { Text = "Rename" };
-        renameProfileBtn.Pressed += OnRenameProfilePressed;
-        _topBar.AddChild(renameProfileBtn);
-
-        var delProfileBtn = new Button { Text = "Del" };
-        delProfileBtn.Pressed += OnDelProfilePressed;
-        _topBar.AddChild(delProfileBtn);
     }
 
     private static void BuildGroupBar(NModdingScreen __instance, Control? modInfoPanel)
     {
-        _groupBar = new HBoxContainer();
+        _groupBar = ModdingScreenBars.CreateGroupBar(
+            modInfoPanel,
+            System.IO.File.Exists(ProfileManager.PortableConfigPath),
+            OnPortableModeToggled,
+            OnAddGroupRequested);
         __instance.AddChild(_groupBar);
+    }
 
-        if (modInfoPanel != null)
+    private static void OnPortableModeToggled(bool isToggled)
+    {
+        try
         {
-            _groupBar.Position = new Vector2(
-                modInfoPanel.GlobalPosition.X,
-                modInfoPanel.GlobalPosition.Y - 35
-            );
-            _groupBar.Size = new Vector2(modInfoPanel.Size.X, 28);
+            ModdingScreenStateOps.SetPortableMode(isToggled);
         }
-        else
+        catch (System.Exception ex)
         {
-            _groupBar.Position = new Vector2(550, 30);
-            _groupBar.Size = new Vector2(400, 28);
+            string action = isToggled ? "enable" : "disable";
+            ProfileManager.ModLogger.Error($"Failed to {action} portable mode: {ex}");
         }
-        _groupBar.Alignment = BoxContainer.AlignmentMode.Begin;
+    }
 
-        var portableToggle = new CheckButton { Text = "Portable Mode" };
-        portableToggle.ButtonPressed = System.IO.File.Exists(ProfileManager.PortableConfigPath);
-        portableToggle.Toggled += (isToggled) => {
-            try
-            {
-                ModdingScreenStateOps.SetPortableMode(isToggled);
-            }
-            catch (System.Exception ex)
-            {
-                string action = isToggled ? "enable" : "disable";
-                ProfileManager.ModLogger.Error($"Failed to {action} portable mode: {ex}");
-            }
-        };
-        _groupBar.AddChild(portableToggle);
+    private static bool OnAddGroupRequested(string groupName)
+    {
+        if (!ModdingScreenStateOps.TryAddGroup(groupName))
+            return false;
 
-        _groupBar.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
-
-        var groupLabel = new Label { Text = "Group:" };
-        _groupBar.AddChild(groupLabel);
-
-        var newGroupInput = new LineEdit { PlaceholderText = "Name...", CustomMinimumSize = new Vector2(140, 0) };
-        _groupBar.AddChild(newGroupInput);
-
-        var newGroupBtn = new Button { Text = "+ Add" };
-        newGroupBtn.Pressed += () => {
-            if (ModdingScreenStateOps.TryAddGroup(newGroupInput.Text))
-            {
-                newGroupInput.Text = "";
-                RefreshGroupsUI();
-            }
-        };
-        _groupBar.AddChild(newGroupBtn);
+        RefreshGroupsUI();
+        return true;
     }
 
     public static void RefreshGroupsUI()
