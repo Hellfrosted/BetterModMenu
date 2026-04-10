@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 using BetterModMenu.Data;
 using System.Collections.Generic;
 using MegaCrit.Sts2.Core.Saves;
-using System.Linq;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 
 namespace BetterModMenu.Patches;
@@ -121,37 +120,14 @@ public static class NModdingScreenPatch
         var portableToggle = new CheckButton { Text = "Portable Mode" };
         portableToggle.ButtonPressed = System.IO.File.Exists(ProfileManager.PortableConfigPath);
         portableToggle.Toggled += (isToggled) => {
-            if (isToggled) {
-                try {
-                    string sourcePath = ProfileManager.SavePath;
-                    string targetPath = ProfileManager.GetPortableConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
-                    ProfileManager.DeleteOtherConfigVariants(targetPath);
-
-                    if (System.IO.File.Exists(sourcePath) && !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase))
-                    {
-                        System.IO.File.Copy(sourcePath, targetPath, true);
-                    }
-                    else
-                    {
-                        ProfileManager.SaveCurrentStateToPath(targetPath);
-                    }
-                } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to enable portable mode: " + ex); }
-            } else {
-                try {
-                    string sourcePath = ProfileManager.PortableConfigPath;
-                    string targetPath = ProfileManager.GetUserConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
-                    ProfileManager.DeleteOtherConfigVariants(targetPath);
-
-                    if (System.IO.File.Exists(sourcePath))
-                    {
-                        System.IO.File.Copy(sourcePath, targetPath, true);
-                        System.IO.File.Delete(sourcePath);
-                    }
-                    else
-                    {
-                        ProfileManager.SaveCurrentStateToPath(targetPath);
-                    }
-                } catch (System.Exception ex) { ProfileManager.ModLogger.Error("Failed to disable portable mode: " + ex); }
+            try
+            {
+                ModdingScreenStateOps.SetPortableMode(isToggled);
+            }
+            catch (System.Exception ex)
+            {
+                string action = isToggled ? "enable" : "disable";
+                ProfileManager.ModLogger.Error($"Failed to {action} portable mode: {ex}");
             }
         };
         _groupBar.AddChild(portableToggle);
@@ -166,11 +142,8 @@ public static class NModdingScreenPatch
 
         var newGroupBtn = new Button { Text = "+ Add" };
         newGroupBtn.Pressed += () => {
-            var txt = newGroupInput.Text.Trim();
-            if (!string.IsNullOrEmpty(txt) && !ProfileManager.CustomGroups.Contains(txt) && txt != "Unassigned")
+            if (ModdingScreenStateOps.TryAddGroup(newGroupInput.Text))
             {
-                ProfileManager.CustomGroups.Add(txt);
-                ProfileManager.SaveInMemoryState();
                 newGroupInput.Text = "";
                 RefreshGroupsUI();
             }
@@ -244,32 +217,13 @@ public static class NModdingScreenPatch
             if (row.Mod?.manifest != null)
             {
                 var modId = row.Mod.manifest.id ?? "";
-                if (!string.IsNullOrEmpty(modId) && ProfileManager.ModGroups.TryGetValue(modId, out string? assignedGrp))
-                {
-                    if (assignedGrp != null && ProfileManager.CustomGroups.Contains(assignedGrp))
-                        grp = assignedGrp;
-                }
+                grp = ModdingScreenStateOps.GetAssignedGroup(modId);
             }
             groups[grp].Add(row);
 
             var dropdown = row.GetNodeOrNull<OptionButton>("RowCustomControls/GroupDropdown");
             if (dropdown != null)
-            {
-                string currSelected = (dropdown.ItemCount > 0 && dropdown.Selected >= 0) ? dropdown.GetItemText(dropdown.Selected) : "";
-                if (currSelected != grp || dropdown.ItemCount != ProfileManager.CustomGroups.Count + 1)
-                {
-                    dropdown.Clear();
-                    dropdown.AddItem("Unassigned", 0);
-                    for (int i = 0; i < ProfileManager.CustomGroups.Count; i++)
-                        dropdown.AddItem(ProfileManager.CustomGroups[i], i + 1);
-
-                    int selectIdx = 0;
-                    if (grp != "Unassigned")
-                        selectIdx = ProfileManager.CustomGroups.IndexOf(grp) + 1;
-
-                    dropdown.Select(selectIdx);
-                }
-            }
+                ModdingScreenStateOps.SyncGroupDropdown(dropdown, grp);
         }
         return groups;
     }
@@ -342,11 +296,8 @@ public static class NModdingScreenPatch
 
                 var deleteBtn = new Button { Text = "Del" };
                 deleteBtn.Pressed += () => {
-                    ProfileManager.CustomGroups.Remove(grpName);
-                    var grpMods = ProfileManager.ModGroups.Where(x => x.Value == grpName).Select(x => x.Key).ToList();
-                    foreach (var m in grpMods) ProfileManager.ModGroups.Remove(m);
-                    ProfileManager.SaveInMemoryState();
-                    RefreshGroupsUI();
+                    if (ModdingScreenStateOps.DeleteGroup(grpName))
+                        RefreshGroupsUI();
                 };
                 header.AddChild(deleteBtn);
             }
@@ -364,16 +315,8 @@ public static class NModdingScreenPatch
 
     private static void MoveGroup(string grpName, int direction)
     {
-        int idx = ProfileManager.CustomGroups.IndexOf(grpName);
-        if (idx == -1) return;
-        int newIdx = idx + direction;
-        if (newIdx >= 0 && newIdx < ProfileManager.CustomGroups.Count)
-        {
-            ProfileManager.CustomGroups.RemoveAt(idx);
-            ProfileManager.CustomGroups.Insert(newIdx, grpName);
-            ProfileManager.SaveInMemoryState();
+        if (ModdingScreenStateOps.TryMoveGroup(grpName, direction))
             RefreshGroupsUI();
-        }
     }
 
     private static void RenameGroup(string oldName)
@@ -393,27 +336,8 @@ public static class NModdingScreenPatch
 
         popup.Confirmed += () =>
         {
-            var newName = input.Text.Trim();
-            if (!string.IsNullOrEmpty(newName) && newName != "Unassigned" && !ProfileManager.CustomGroups.Contains(newName))
-            {
-                int idx = ProfileManager.CustomGroups.IndexOf(oldName);
-                if (idx != -1)
-                {
-                    ProfileManager.CustomGroups[idx] = newName;
-
-                    var grpMods = ProfileManager.ModGroups.Where(x => x.Value == oldName).Select(x => x.Key).ToList();
-                    foreach (var m in grpMods) ProfileManager.ModGroups[m] = newName;
-
-                    if (ProfileManager.CollapsedGroups.Contains(oldName))
-                    {
-                        ProfileManager.CollapsedGroups.Remove(oldName);
-                        ProfileManager.CollapsedGroups.Add(newName);
-                    }
-
-                    ProfileManager.SaveInMemoryState();
-                    RefreshGroupsUI();
-                }
-            }
+            if (ModdingScreenStateOps.TryRenameGroup(oldName, input.Text))
+                RefreshGroupsUI();
         };
 
         _currentScreen.AddChild(popup);
@@ -458,9 +382,7 @@ public static class NModdingScreenPatch
                 string modId = row.Mod.manifest.id ?? "";
                 if (string.IsNullOrEmpty(modId)) continue;
 
-                string assignedGrp = "Unassigned";
-                if (ProfileManager.ModGroups.TryGetValue(modId, out string? grpVal) && grpVal != null && ProfileManager.CustomGroups.Contains(grpVal))
-                    assignedGrp = grpVal;
+                string assignedGrp = ModdingScreenStateOps.GetAssignedGroup(modId);
 
                 if (assignedGrp == groupName)
                 {
