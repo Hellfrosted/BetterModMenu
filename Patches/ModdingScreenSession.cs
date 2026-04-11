@@ -6,9 +6,10 @@ namespace BetterModMenu.Patches;
 internal sealed class ModdingScreenSession
 {
     public int AutoSaveSuppressionDepth { get; set; }
+    public Control? ChromeRoot { get; set; }
     public List<Node> GeneratedGroupNodes { get; } = new();
-    public HBoxContainer? GroupBar { get; set; }
-    public OptionButton? ProfileDropdown { get; set; }
-    public HBoxContainer? TopBar { get; set; }
+    public GroupBarControls? GroupBarControls { get; set; }
+    public bool LayoutSignalsConnected { get; set; }
+    public TopBarControls? TopBarControls { get; set; }
     public int TickboxSuppressionDepth { get; set; }
 }

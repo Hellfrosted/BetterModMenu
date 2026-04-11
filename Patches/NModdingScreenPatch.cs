@@ -38,17 +38,28 @@ public static class NModdingScreenPatch
                 mask.ClipContents = true;
         }
 
-        if (session.TopBar == null || !GodotObject.IsInstanceValid(session.TopBar) || session.TopBar.GetParent() != __instance)
-        {
-            var titleNode = __instance.GetNodeOrNull<Control>("%InstalledModsTitle");
-            var modInfoPanel = __instance.GetNodeOrNull<Control>("%ModInfoContainer");
+        EnsureChromeRoot(__instance, session);
 
-            BuildTopBar(__instance, session, titleNode, scrollContainer);
-            BuildGroupBar(__instance, session, modInfoPanel);
+        if (!session.LayoutSignalsConnected)
+            ConnectLayoutSignals(__instance, session);
+
+        if (session.TopBarControls == null || !GodotObject.IsInstanceValid(session.TopBarControls.Bar) || session.TopBarControls.Bar.GetParent() != session.ChromeRoot)
+        {
+            BuildTopBar(session);
+            BuildGroupBar(session);
         }
 
         RefreshProfileDropdown();
         RefreshGroupsUI();
+        UpdateChromeLayout(__instance);
+        Callable.From(() =>
+        {
+            if (IsCurrentScreen(__instance))
+            {
+                RefreshGroupsUI();
+                UpdateChromeLayout(__instance);
+            }
+        }).CallDeferred();
     }
 
     [HarmonyPatch(nameof(NModdingScreen._ExitTree))]
@@ -62,9 +73,10 @@ public static class NModdingScreenPatch
         session.AutoSaveSuppressionDepth = 0;
         session.TickboxSuppressionDepth = 0;
         session.GeneratedGroupNodes.Clear();
-        session.GroupBar = null;
-        session.ProfileDropdown = null;
-        session.TopBar = null;
+        session.ChromeRoot = null;
+        session.GroupBarControls = null;
+        session.LayoutSignalsConnected = false;
+        session.TopBarControls = null;
     }
 
     public static bool IsCurrentScreen(NModdingScreen? screen)
@@ -99,29 +111,123 @@ public static class NModdingScreenPatch
         return false;
     }
 
-    private static void BuildTopBar(NModdingScreen screen, ModdingScreenSession session, Control? titleNode, Control? scrollContainer)
+    private static void EnsureChromeRoot(NModdingScreen screen, ModdingScreenSession session)
     {
+        if (session.ChromeRoot != null && GodotObject.IsInstanceValid(session.ChromeRoot) && session.ChromeRoot.GetParent() == screen)
+            return;
+
+        var chromeRoot = new Control { Name = ModdingScreenConstants.ChromeRootName };
+        chromeRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        screen.AddChild(chromeRoot);
+        session.ChromeRoot = chromeRoot;
+    }
+
+    private static void BuildTopBar(ModdingScreenSession session)
+    {
+        if (session.ChromeRoot == null)
+            return;
+
         var builtTopBar = ModdingScreenBars.CreateTopBar(
-            titleNode,
-            scrollContainer,
             OnProfileSelected,
             OnNewProfilePressed,
             OnRenameProfilePressed,
             OnDelProfilePressed);
 
-        session.TopBar = builtTopBar.Bar;
-        session.ProfileDropdown = builtTopBar.ProfileDropdown;
-        screen.AddChild(session.TopBar);
+        session.TopBarControls = builtTopBar;
+        session.ChromeRoot.AddChild(builtTopBar.Bar);
     }
 
-    private static void BuildGroupBar(NModdingScreen screen, ModdingScreenSession session, Control? modInfoPanel)
+    private static void BuildGroupBar(ModdingScreenSession session)
     {
-        session.GroupBar = ModdingScreenBars.CreateGroupBar(
-            modInfoPanel,
+        if (session.ChromeRoot == null)
+            return;
+
+        var builtGroupBar = ModdingScreenBars.CreateGroupBar(
             System.IO.File.Exists(ProfileManager.PortableConfigPath),
             OnPortableModeToggled,
             OnAddGroupRequested);
-        screen.AddChild(session.GroupBar);
+        session.GroupBarControls = builtGroupBar;
+        session.ChromeRoot.AddChild(builtGroupBar.Bar);
+    }
+
+    private static void ConnectLayoutSignals(NModdingScreen screen, ModdingScreenSession session)
+    {
+        session.LayoutSignalsConnected = true;
+        screen.Resized += () =>
+        {
+            if (IsCurrentScreen(screen))
+                UpdateChromeLayout(screen);
+        };
+
+        foreach (string path in new[] { "%InstalledModsTitle", "%ModsScrollContainer", "%ModInfoContainer" })
+        {
+            var control = screen.GetNodeOrNull<Control>(path);
+            if (control == null)
+                continue;
+
+            control.Resized += () =>
+            {
+                if (IsCurrentScreen(screen))
+                    UpdateChromeLayout(screen);
+            };
+        }
+    }
+
+    private static void UpdateChromeLayout(NModdingScreen screen)
+    {
+        var session = GetSession(screen);
+        var chromeRoot = session.ChromeRoot;
+        if (chromeRoot == null || !GodotObject.IsInstanceValid(chromeRoot))
+            return;
+
+        chromeRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+
+        var titleNode = screen.GetNodeOrNull<Control>("%InstalledModsTitle");
+        var scrollContainer = screen.GetNodeOrNull<Control>("%ModsScrollContainer");
+        var modInfoPanel = screen.GetNodeOrNull<Control>("%ModInfoContainer");
+        Vector2 screenOffset = screen.GlobalPosition;
+
+        if (session.TopBarControls != null && GodotObject.IsInstanceValid(session.TopBarControls.Bar))
+        {
+            var topBar = session.TopBarControls.Bar;
+            float x = ModdingScreenConstants.TopBarFallbackX;
+            float y = ModdingScreenConstants.TopBarFallbackY;
+            float width = ModdingScreenConstants.TopBarFallbackWidth;
+            float height = topBar.GetCombinedMinimumSize().Y;
+
+            if (titleNode != null && scrollContainer != null)
+            {
+                x = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X + ModdingScreenConstants.TopBarGap;
+                y = titleNode.GlobalPosition.Y - screenOffset.Y;
+                float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
+                width = Math.Max(ModdingScreenConstants.TopBarFallbackWidth, leftPanelRight - x - ModdingScreenConstants.TopBarTrailingPadding);
+                height = Math.Max(height, titleNode.Size.Y);
+            }
+
+            session.TopBarControls.SetCompact(width < ModdingScreenConstants.TopBarCompactThreshold);
+            topBar.Position = new Vector2(x, y);
+            topBar.Size = new Vector2(width, height);
+        }
+
+        if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
+        {
+            var groupBar = session.GroupBarControls.Bar;
+            float x = ModdingScreenConstants.GroupBarFallbackX;
+            float y = ModdingScreenConstants.GroupBarFallbackY;
+            float width = ModdingScreenConstants.GroupBarFallbackWidth;
+
+            if (modInfoPanel != null)
+            {
+                x = modInfoPanel.GlobalPosition.X - screenOffset.X;
+                y = modInfoPanel.GlobalPosition.Y - screenOffset.Y - ModdingScreenConstants.GroupBarYOffset;
+                width = modInfoPanel.Size.X;
+            }
+
+            bool isCompact = width < ModdingScreenConstants.GroupBarCompactThreshold;
+            session.GroupBarControls.SetCompact(isCompact);
+            groupBar.Position = new Vector2(x, y);
+            groupBar.Size = new Vector2(width, isCompact ? ModdingScreenConstants.GroupBarCompactHeight : ModdingScreenConstants.GroupBarWideHeight);
+        }
     }
 
     private static void OnPortableModeToggled(bool isToggled)
@@ -156,6 +262,7 @@ public static class NModdingScreenPatch
             return;
 
         ModdingScreenGroupUi.RefreshGroupsUI(modRowContainer, GetSession(screen).GeneratedGroupNodes, RefreshGroupsUI, RenameGroup, MoveGroup, ToggleAllInGroup);
+        UpdateChromeLayout(screen);
     }
 
     private static void MoveGroup(string grpName, int direction)
@@ -220,16 +327,17 @@ public static class NModdingScreenPatch
         if (!TryGetCurrentScreen(out var screen) || screen == null)
             return;
 
-        var profileDropdown = GetSession(screen).ProfileDropdown;
-        if (profileDropdown == null || !GodotObject.IsInstanceValid(profileDropdown))
+        var topBarControls = GetSession(screen).TopBarControls;
+        if (topBarControls == null || !GodotObject.IsInstanceValid(topBarControls.ProfileDropdown))
             return;
 
         ProfileManager.NormalizeProfileIndex();
-        profileDropdown.Clear();
+        topBarControls.ProfileDropdown.Clear();
         for (int i = 0; i < ProfileManager.Profiles.Count; i++)
-            profileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
+            topBarControls.ProfileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
 
-        profileDropdown.Select(ProfileManager.CurrentProfileIndex);
+        topBarControls.ProfileDropdown.Select(ProfileManager.CurrentProfileIndex);
+        UpdateChromeLayout(screen);
     }
 
     private static void OnProfileSelected(long index)

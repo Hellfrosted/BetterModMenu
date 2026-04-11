@@ -29,9 +29,10 @@ public static class NModMenuRowPatch
         var container = new HBoxContainer { Name = "RowCustomControls" };
         __instance.AddChild(container);
 
+        Label? warningLabel = null;
         if (Data.ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
         {
-            var warningLabel = new Label 
+            warningLabel = new Label 
             { 
                 Text = "[Gameplay]", 
                 TooltipText = "This mod affects gameplay.",
@@ -44,15 +45,15 @@ public static class NModMenuRowPatch
             container.AddChild(spacer);
         }
 
-        var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
+        var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize) };
         upBtn.Pressed += () => QueueMoveModOrder(__instance, modId, -1);
         container.AddChild(upBtn);
 
-        var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(40, 40) };
+        var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize) };
         downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 
-        var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(180, 0) };
+        var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0) };
 
         groupDropdown.ItemSelected += (idx) =>
         {
@@ -69,9 +70,33 @@ public static class NModMenuRowPatch
 
         container.AddChild(groupDropdown);
 
+        __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown);
+        Callable.From(() => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown)).CallDeferred();
+    }
+
+    private static void UpdateCustomControlsLayout(NModMenuRow row, HBoxContainer container, Label? warningLabel, OptionButton groupDropdown)
+    {
+        if (!GodotObject.IsInstanceValid(row) || !GodotObject.IsInstanceValid(container))
+            return;
+
+        groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0);
+        if (warningLabel != null)
+            warningLabel.Text = "[Gameplay]";
+
+        float preferredWidth = container.GetCombinedMinimumSize().X;
+        bool isCompact = row.Size.X > 0 && row.Size.X - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;
+        if (isCompact)
+        {
+            groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, 0);
+            if (warningLabel != null)
+                warningLabel.Text = "GP";
+        }
+
+        float width = container.GetCombinedMinimumSize().X;
         container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
-        container.OffsetRight = -150;
         container.GrowHorizontal = Control.GrowDirection.Begin;
+        container.OffsetRight = -ModdingScreenConstants.RowControlsRightPadding;
+        container.OffsetLeft = container.OffsetRight - width;
     }
 
     private static void QueueMoveModOrder(NModMenuRow row, string modId, int direction)
