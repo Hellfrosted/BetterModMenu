@@ -112,15 +112,10 @@ internal static class ModdingScreenGroupUi
         Action<string, bool> toggleAllInGroup)
     {
         int index = 0;
-        var orderedGroups = new List<string> { ModdingScreenConstants.UnassignedGroup };
-        orderedGroups.AddRange(ProfileManager.CustomGroups);
-
-        foreach (var groupName in orderedGroups)
+        var groupCounts = groups.ToDictionary(entry => entry.Key, entry => entry.Value.Count);
+        foreach (var groupName in ProfileStateRules.BuildVisibleGroupOrder(groupCounts, ProfileManager.CustomGroups, ModdingScreenConstants.UnassignedGroup))
         {
             if (!groups.TryGetValue(groupName, out var groupRows))
-                continue;
-
-            if (groupName == ModdingScreenConstants.UnassignedGroup && groupRows.Count == 0)
                 continue;
 
             bool isCollapsed = ProfileManager.CollapsedGroups.Contains(groupName);

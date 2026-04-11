@@ -28,6 +28,7 @@ public class ProfileSaveData
 public static class ProfileManager
 {
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    private const string UnassignedGroupName = "Unassigned";
     private static readonly string[] ConfigExtensions = new[] { ".json5", ".jsonc", ".json" };
     private static readonly JsonSerializerOptions JsonOpts = new() { 
         WriteIndented = true,
@@ -332,6 +333,43 @@ public static class ProfileManager
             Profiles.Add(new ModProfile { Name = "Default" });
             NormalizeProfileIndex();
         }
+    }
+
+    public static bool NormalizePersistedState(IEnumerable<string> installedModIds)
+    {
+        return ProfileStateRules.NormalizeGroups(CustomGroups, ModGroups, CollapsedGroups, installedModIds, UnassignedGroupName);
+    }
+
+    public static void NormalizePersistedStateAndSaveIfNeeded()
+    {
+        var installedModIds = new HashSet<string>(StringComparer.Ordinal);
+
+        var liveMods = MegaCrit.Sts2.Core.Modding.ModManager.Mods;
+        if (liveMods != null)
+        {
+            foreach (var mod in liveMods)
+            {
+                string modId = mod.manifest?.id ?? "";
+                if (!string.IsNullOrWhiteSpace(modId))
+                    installedModIds.Add(modId);
+            }
+        }
+
+        var settingsMods = SaveManager.Instance?.SettingsSave?.ModSettings?.ModList;
+        if (settingsMods != null)
+        {
+            foreach (var mod in settingsMods)
+            {
+                if (!string.IsNullOrWhiteSpace(mod.Id))
+                    installedModIds.Add(mod.Id);
+            }
+        }
+
+        if (installedModIds.Count == 0)
+            return;
+
+        if (NormalizePersistedState(installedModIds))
+            SaveInMemoryState();
     }
 
     public static void BuildManifestCache()

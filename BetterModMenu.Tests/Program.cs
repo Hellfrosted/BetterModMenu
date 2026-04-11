@@ -72,6 +72,53 @@ Run("TryReadAffectsGameplay ignores mismatched ids", () =>
     }
 });
 
+Run("NormalizePersistedState removes stale mod and group entries", () =>
+{
+    var customGroups = new List<string> { "Bosses", "Elites" };
+    var modGroups = new Dictionary<string, string>
+    {
+        ["keep-mod"] = "Bosses",
+        ["missing-mod"] = "Bosses",
+        ["wrong-group"] = "Missing"
+    };
+    var collapsedGroups = new HashSet<string> { "Bosses", "Missing", "Unassigned" };
+
+    bool changed = ProfileStateRules.NormalizeGroups(customGroups, modGroups, collapsedGroups, new[] { "keep-mod", "other-mod" }, "Unassigned");
+
+    Assert.True(changed, "expected stale state to be normalized");
+    Assert.Equal(1, modGroups.Count, "expected only valid mod-group assignment to remain");
+    Assert.Equal("Bosses", modGroups["keep-mod"], "expected valid assignment to remain");
+    Assert.True(collapsedGroups.Contains("Bosses"), "expected valid collapsed group to remain");
+    Assert.False(collapsedGroups.Contains("Missing"), "expected invalid collapsed group to be removed");
+    Assert.False(collapsedGroups.Contains("Unassigned"), "expected unassigned collapsed state to be removed");
+});
+
+Run("NormalizePersistedState reports no-op when state is already valid", () =>
+{
+    var customGroups = new List<string> { "Bosses" };
+    var modGroups = new Dictionary<string, string> { ["keep-mod"] = "Bosses" };
+    var collapsedGroups = new HashSet<string> { "Bosses" };
+
+    bool changed = ProfileStateRules.NormalizeGroups(customGroups, modGroups, collapsedGroups, new[] { "keep-mod" }, "Unassigned");
+
+    Assert.False(changed, "expected already-valid state to remain unchanged");
+});
+
+Run("BuildVisibleGroupOrder omits empty unassigned group", () =>
+{
+    var groups = new Dictionary<string, int>
+    {
+        [ModdingScreenConstants.UnassignedGroup] = 0,
+        ["Bosses"] = 1,
+        ["Elites"] = 0
+    };
+    var names = ProfileStateRules.BuildVisibleGroupOrder(groups, new List<string> { "Bosses", "Elites" }, ModdingScreenConstants.UnassignedGroup);
+
+    Assert.Equal(2, names.Count, "expected only custom groups to be visible");
+    Assert.Equal("Bosses", names[0], "expected custom groups to preserve order");
+    Assert.Equal("Elites", names[1], "expected custom groups to preserve order");
+});
+
 if (failures.Count > 0)
 {
     Console.Error.WriteLine("Test failures:");
@@ -98,6 +145,12 @@ void Run(string name, Action test)
 
 static class Assert
 {
+    public static void Equal<T>(T expected, T actual)
+    {
+        if (!EqualityComparer<T>.Default.Equals(expected, actual))
+            throw new InvalidOperationException($"Expected '{expected}', got '{actual}'.");
+    }
+
     public static void Equal<T>(T expected, T actual, string message)
     {
         if (!EqualityComparer<T>.Default.Equals(expected, actual))
