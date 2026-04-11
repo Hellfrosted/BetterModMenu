@@ -340,60 +340,30 @@ public static class ProfileManager
         var mods = MegaCrit.Sts2.Core.Modding.ModManager.Mods;
         if (mods == null) return;
 
-        var directoriesToScan = new HashSet<string>();
         foreach (var mod in mods)
         {
-            if (!string.IsNullOrEmpty(mod.path))
-            {
-                var dir = System.IO.Directory.Exists(mod.path) ? mod.path : System.IO.Path.GetDirectoryName(mod.path);
-                if (!string.IsNullOrEmpty(dir) && System.IO.Directory.Exists(dir))
-                {
-                    directoriesToScan.Add(dir);
-                }
-            }
-        }
+            string modId = mod.manifest?.id ?? "";
+            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(mod.path))
+                continue;
 
-        foreach (var dir in directoriesToScan)
-        {
+            var dir = System.IO.Directory.Exists(mod.path) ? mod.path : System.IO.Path.GetDirectoryName(mod.path);
+            if (string.IsNullOrEmpty(dir) || !System.IO.Directory.Exists(dir))
+                continue;
+
+            string? manifestPath = ManifestScanner.FindManifestPath(dir, modId, ConfigExtensions);
+            if (string.IsNullOrEmpty(manifestPath))
+                continue;
+
             try
             {
-                var jsonFiles = System.IO.Directory.GetFiles(dir, "*.json", System.IO.SearchOption.TopDirectoryOnly);
-                foreach (var file in jsonFiles)
+                if (ManifestScanner.TryReadAffectsGameplay(manifestPath, modId, out bool affectsGameplay))
                 {
-                    try
-                    {
-                        string content = System.IO.File.ReadAllText(file);
-                        var docOpts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
-                        using var doc = JsonDocument.Parse(content, docOpts);
-                        if (doc.RootElement.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
-                        {
-                            string id = idProp.GetString() ?? "";
-                            if (!string.IsNullOrEmpty(id))
-                            {
-                                // Skip files like RouteSuggestConfig.json if they contain a different mod's ID.
-                                // STS2 mod manifests should have a filename that matches the mod ID.
-                                if (!System.IO.Path.GetFileNameWithoutExtension(file).Equals(id, System.StringComparison.OrdinalIgnoreCase))
-                                    continue;
-
-                                bool affectsGameplay = false;
-                                if (doc.RootElement.TryGetProperty("affects_gameplay", out var gameplayProp))
-                                {
-                                    if (gameplayProp.ValueKind == JsonValueKind.True) affectsGameplay = true;
-                                    else if (gameplayProp.ValueKind == JsonValueKind.False) affectsGameplay = false;
-                                }
-                                ModGameplayImpactCache[id] = affectsGameplay;
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // Ignore parse errors on irrelevant .json files
-                    }
+                    ModGameplayImpactCache[modId] = affectsGameplay;
                 }
             }
             catch (Exception ex)
             {
-                ModLogger.Error($"Failed to scan directory {dir} for manifests: {ex.Message}");
+                ModLogger.Error($"Failed to read manifest {manifestPath}: {ex.Message}");
             }
         }
     }

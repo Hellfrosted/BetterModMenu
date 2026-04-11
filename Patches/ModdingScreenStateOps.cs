@@ -15,8 +15,7 @@ internal static class ModdingScreenStateOps
 
     public static bool TryAddGroup(string groupName)
     {
-        string trimmedName = groupName.Trim();
-        if (string.IsNullOrEmpty(trimmedName) || trimmedName == ModdingScreenConstants.UnassignedGroup || ProfileManager.CustomGroups.Contains(trimmedName))
+        if (!ModdingGroupRules.CanAdd(ProfileManager.CustomGroups, groupName, out string trimmedName))
             return false;
 
         ProfileManager.CustomGroups.Add(trimmedName);
@@ -75,18 +74,15 @@ internal static class ModdingScreenStateOps
 
     public static bool TryRenameGroup(string oldName, string newName)
     {
-        string trimmedName = newName.Trim();
-        if (string.IsNullOrEmpty(trimmedName) || trimmedName == ModdingScreenConstants.UnassignedGroup)
-            return false;
-
         int index = ProfileManager.CustomGroups.IndexOf(oldName);
         if (index == -1)
             return false;
 
-        if (trimmedName == oldName)
+        var validation = ModdingGroupRules.ValidateRename(ProfileManager.CustomGroups, oldName, newName, out string trimmedName);
+        if (validation == GroupNameValidationResult.Unchanged)
             return true;
 
-        if (ProfileManager.CustomGroups.Contains(trimmedName))
+        if (validation != GroupNameValidationResult.Valid)
             return false;
 
         ProfileManager.CustomGroups[index] = trimmedName;
