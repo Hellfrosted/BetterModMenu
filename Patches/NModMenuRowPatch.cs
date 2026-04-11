@@ -45,11 +45,23 @@ public static class NModMenuRowPatch
             container.AddChild(spacer);
         }
 
-        var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize) };
+        const string orderTooltip = "Reorders the saved mod list for the next launch. Slay the Spire 2 may still override dependency order, so this is not guaranteed multiplayer synchronization.";
+
+        var upBtn = new Button
+        {
+            Text = "^",
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
+            TooltipText = orderTooltip
+        };
         upBtn.Pressed += () => QueueMoveModOrder(__instance, modId, -1);
         container.AddChild(upBtn);
 
-        var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize) };
+        var downBtn = new Button
+        {
+            Text = "v",
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
+            TooltipText = orderTooltip
+        };
         downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 

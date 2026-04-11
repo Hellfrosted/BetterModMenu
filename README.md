@@ -29,7 +29,13 @@ A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2
 - **Managing Profiles**: Use the top bar on the Modding screen to create `+ New` profiles, `Rename` the current profile, or `Del`ete it. Selecting a profile applies its saved mod states.
 - **Managing Groups**: Use the `Group:` input at the top right to `+ Add` a new group. It will appear in the mod list.
 - **Assigning Mods**: Next to each mod row, use the dropdown menu to assign it to a custom group or leave it "Unassigned".
-- **Reordering Mods**: Click the `^` or `v` buttons on a mod's row to shift its position in the game's load order. *Note: When using Custom Groups, movement is based on the underlying global list. If a grouped mod doesn't visually move right away, keep clicking until it bypasses the other mods.*
+- **Reordering Mods**: Click the `^` or `v` buttons on a mod's row to reorder the saved mod list for the next launch. *Note: STS2 may still override dependency order on startup, so this is best used for local organization and preferred next-launch ordering rather than strict multiplayer synchronization. When using Custom Groups, movement is based on the underlying global list. If a grouped mod doesn't visually move right away, keep clicking until it bypasses the other mods.*
+
+## Known Behavior
+
+- Better Mod Menu writes the saved mod order that STS2 reads on the next launch.
+- STS2 may still reorder dependency chains during startup validation.
+- The ordering controls are best treated as a local organization and next-launch preference tool, not a guaranteed multiplayer parity feature.
 
 ## Building from Source
 
