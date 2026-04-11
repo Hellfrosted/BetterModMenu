@@ -10,7 +10,7 @@ internal static class ModdingScreenListOps
 {
     public static bool TryMoveModOrder(string modId, int direction)
     {
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
+        var options = SaveManager.Instance?.SettingsSave?.ModSettings;
         if (options == null)
             return false;
 
@@ -26,7 +26,7 @@ internal static class ModdingScreenListOps
         var temp = list[index];
         list[index] = list[newIndex];
         list[newIndex] = temp;
-        SaveManager.Instance.SaveSettings();
+        SaveManager.Instance?.SaveSettings();
         ProfileManager.SaveInMemoryState();
         return true;
     }
@@ -34,7 +34,7 @@ internal static class ModdingScreenListOps
     public static bool ApplyToggleAllInGroup(Control modRowContainer, string groupName, bool isToggled)
     {
         var profile = ProfileManager.CurrentProfile;
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
+        var options = SaveManager.Instance?.SettingsSave?.ModSettings;
         if (options == null)
             return false;
 
@@ -65,16 +65,11 @@ internal static class ModdingScreenListOps
 
             try
             {
-                NModMenuRowPatch.SuppressTickboxHandler = true;
                 tickbox.IsTicked = isToggled;
             }
             catch (System.Exception ex)
             {
                 ProfileManager.ModLogger.Error($"Failed to toggle tickbox:\n{ex}");
-            }
-            finally
-            {
-                NModMenuRowPatch.SuppressTickboxHandler = false;
             }
         }
 

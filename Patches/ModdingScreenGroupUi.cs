@@ -55,7 +55,7 @@ internal static class ModdingScreenGroupUi
 
     private static void SortRows(List<NModMenuRow> rows)
     {
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
+        var options = SaveManager.Instance?.SettingsSave?.ModSettings;
         if (options == null || options.ModList == null)
             return;
 

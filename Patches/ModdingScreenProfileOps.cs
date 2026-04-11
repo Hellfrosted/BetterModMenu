@@ -18,7 +18,7 @@ internal static class ModdingScreenProfileOps
         ProfileManager.NormalizeProfileIndex();
 
         var profile = ProfileManager.CurrentProfile;
-        var options = SaveManager.Instance.SettingsSave.ModSettings;
+        var options = SaveManager.Instance?.SettingsSave?.ModSettings;
         if (options != null)
         {
             foreach (var mod in options.ModList)
@@ -26,7 +26,7 @@ internal static class ModdingScreenProfileOps
         }
 
         ProfileManager.SaveInMemoryState();
-        SaveManager.Instance.SaveSettings();
+        SaveManager.Instance?.SaveSettings();
         return profile;
     }
 

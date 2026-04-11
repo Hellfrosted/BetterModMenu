@@ -78,11 +78,17 @@ internal static class ModdingScreenStateOps
     public static bool TryRenameGroup(string oldName, string newName)
     {
         string trimmedName = newName.Trim();
-        if (string.IsNullOrEmpty(trimmedName) || trimmedName == UnassignedGroup || ProfileManager.CustomGroups.Contains(trimmedName))
+        if (string.IsNullOrEmpty(trimmedName) || trimmedName == UnassignedGroup)
             return false;
 
         int index = ProfileManager.CustomGroups.IndexOf(oldName);
         if (index == -1)
+            return false;
+
+        if (trimmedName == oldName)
+            return true;
+
+        if (ProfileManager.CustomGroups.Contains(trimmedName))
             return false;
 
         ProfileManager.CustomGroups[index] = trimmedName;
@@ -110,6 +116,8 @@ internal static class ModdingScreenStateOps
         foreach (var modId in modIds)
             ProfileManager.ModGroups.Remove(modId);
 
+        ProfileManager.CollapsedGroups.Remove(groupName);
+
         ProfileManager.SaveInMemoryState();
         return true;
     }
@@ -130,19 +138,30 @@ internal static class ModdingScreenStateOps
 
     private static void CopyOrWriteConfig(string sourcePath, string targetPath, bool deleteSourceAfterCopy)
     {
-        ProfileManager.DeleteOtherConfigVariants(targetPath);
-
         bool canCopy = System.IO.File.Exists(sourcePath) &&
             !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase);
 
+        string tempTargetPath = targetPath + ".tmp";
+        if (System.IO.File.Exists(tempTargetPath))
+            System.IO.File.Delete(tempTargetPath);
+
         if (canCopy)
         {
-            System.IO.File.Copy(sourcePath, targetPath, true);
-            if (deleteSourceAfterCopy)
-                System.IO.File.Delete(sourcePath);
-            return;
+            System.IO.File.Copy(sourcePath, tempTargetPath, true);
+        }
+        else
+        {
+            ProfileManager.SaveCurrentStateToPath(tempTargetPath);
         }
 
-        ProfileManager.SaveCurrentStateToPath(targetPath);
+        System.IO.File.Move(tempTargetPath, targetPath, true);
+        ProfileManager.DeleteOtherConfigVariants(targetPath);
+
+        if (deleteSourceAfterCopy &&
+            !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase) &&
+            System.IO.File.Exists(sourcePath))
+        {
+            System.IO.File.Delete(sourcePath);
+        }
     }
 }

@@ -161,6 +161,16 @@ public static class ProfileManager
     public static HashSet<string> CollapsedGroups { get; set; } = new();
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
 
+    public static void ResetState()
+    {
+        Profiles = new();
+        CurrentProfileIndex = 0;
+        CustomGroups = new();
+        ModGroups = new();
+        CollapsedGroups = new();
+        ModGameplayImpactCache = new();
+    }
+
     public static ModProfile CurrentProfile
     {
         get
@@ -233,6 +243,7 @@ public static class ProfileManager
 
     public static void SaveToPath(string path)
     {
+        string? tempPath = null;
         try
         {
             SetActiveConfigExtensionFromPath(path);
@@ -252,10 +263,14 @@ public static class ProfileManager
                 CollapsedGroups = CollapsedGroups
             };
             var json = JsonSerializer.Serialize(saveData, JsonOpts);
-            File.WriteAllText(path, json);
+            tempPath = path + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, path, true);
         }
         catch (Exception ex)
         {
+            if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
+                File.Delete(tempPath);
             ModLogger.Error("Failed to save mod profiles: " + ex.Message);
         }
     }
@@ -264,6 +279,7 @@ public static class ProfileManager
     {
         try
         {
+            ResetState();
             string savePath = SavePath;
             if (File.Exists(savePath))
             {
@@ -297,18 +313,21 @@ public static class ProfileManager
         }
         catch (JsonException ex)
         {
+            ResetState();
             ModLogger.Error($"Profile format corrupted:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
             NormalizeProfileIndex();
         }
         catch (IOException ex)
         {
+            ResetState();
             ModLogger.Error($"Unable to read profile save file. It may be locked by another program.\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
             NormalizeProfileIndex();
         }
         catch (Exception ex)
         {
+            ResetState();
             ModLogger.Error($"Failed to load mod profiles:\n{ex}");
             Profiles.Add(new ModProfile { Name = "Default" });
             NormalizeProfileIndex();
