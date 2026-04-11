@@ -1,23 +1,18 @@
 using HarmonyLib;
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
-using System;
 
 namespace BetterModMenu.Patches;
 
 [HarmonyPatch(typeof(NModMenuRow))]
 public static class NModMenuRowPatch
 {
-    // When true, the vanilla OnTickboxToggled handler is completely blocked.
-    // This prevents deferred IsTicked changes from writing back mod.IsEnabled during profile switches.
-    public static bool SuppressTickboxHandler = false;
-
     [HarmonyPatch("OnTickboxToggled")]
     [HarmonyPrefix]
-    public static bool Prefix_OnTickboxToggled()
+    public static bool Prefix_OnTickboxToggled(NModMenuRow __instance)
     {
-        // Return false = skip the original method entirely
-        return !SuppressTickboxHandler;
+        var screen = ModdingScreenNodeOps.FindOwningScreen(__instance);
+        return screen == null || !NModdingScreenPatch.IsTickboxHandlerSuppressed(screen);
     }
 
     [HarmonyPatch(nameof(NModMenuRow._Ready))]
@@ -50,11 +45,11 @@ public static class NModMenuRowPatch
         }
 
         var upBtn = new Button { Text = "^", CustomMinimumSize = new Vector2(40, 40) };
-        upBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, -1)).CallDeferred();
+        upBtn.Pressed += () => QueueMoveModOrder(__instance, modId, -1);
         container.AddChild(upBtn);
 
         var downBtn = new Button { Text = "v", CustomMinimumSize = new Vector2(40, 40) };
-        downBtn.Pressed += () => Callable.From(() => NModdingScreenPatch.MoveModOrder(modId, 1)).CallDeferred();
+        downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 
         var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(180, 0) };
@@ -63,13 +58,13 @@ public static class NModMenuRowPatch
         {
             var selectedText = groupDropdown.GetItemText((int)idx);
 
-            if (selectedText == "Unassigned")
+            if (selectedText == ModdingScreenConstants.UnassignedGroup)
                 Data.ProfileManager.ModGroups.Remove(modId);
             else
                 Data.ProfileManager.ModGroups[modId] = selectedText;
 
             Data.ProfileManager.SaveInMemoryState();
-            Callable.From(() => NModdingScreenPatch.RefreshGroupsUI()).CallDeferred();
+            QueueRefreshGroupsUI(__instance);
         };
 
         container.AddChild(groupDropdown);
@@ -77,5 +72,31 @@ public static class NModMenuRowPatch
         container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         container.OffsetRight = -150;
         container.GrowHorizontal = Control.GrowDirection.Begin;
+    }
+
+    private static void QueueMoveModOrder(NModMenuRow row, string modId, int direction)
+    {
+        var screen = ModdingScreenNodeOps.FindOwningScreen(row);
+        if (screen == null)
+            return;
+
+        Callable.From(() =>
+        {
+            if (NModdingScreenPatch.IsCurrentScreen(screen))
+                NModdingScreenPatch.MoveModOrder(modId, direction);
+        }).CallDeferred();
+    }
+
+    private static void QueueRefreshGroupsUI(NModMenuRow row)
+    {
+        var screen = ModdingScreenNodeOps.FindOwningScreen(row);
+        if (screen == null)
+            return;
+
+        Callable.From(() =>
+        {
+            if (NModdingScreenPatch.IsCurrentScreen(screen))
+                NModdingScreenPatch.RefreshGroupsUI();
+        }).CallDeferred();
     }
 }

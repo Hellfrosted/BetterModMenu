@@ -10,8 +10,6 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenGroupUi
 {
-    private const string UnassignedGroup = "Unassigned";
-
     public static void RefreshGroupsUI(
         Control modRowContainer,
         List<Node> generatedGroupNodes,
@@ -79,7 +77,7 @@ internal static class ModdingScreenGroupUi
     {
         var groups = new Dictionary<string, List<NModMenuRow>>
         {
-            [UnassignedGroup] = new()
+            [ModdingScreenConstants.UnassignedGroup] = new()
         };
 
         foreach (var groupName in ProfileManager.CustomGroups)
@@ -87,7 +85,7 @@ internal static class ModdingScreenGroupUi
 
         foreach (var row in rows)
         {
-            string groupName = UnassignedGroup;
+            string groupName = ModdingScreenConstants.UnassignedGroup;
             if (row.Mod?.manifest != null)
             {
                 string modId = row.Mod.manifest.id ?? "";
@@ -96,7 +94,7 @@ internal static class ModdingScreenGroupUi
 
             groups[groupName].Add(row);
 
-            var dropdown = row.GetNodeOrNull<OptionButton>("RowCustomControls/GroupDropdown");
+            var dropdown = row.GetNodeOrNull<OptionButton>(ModdingScreenConstants.GroupDropdownPath);
             if (dropdown != null)
                 ModdingScreenStateOps.SyncGroupDropdown(dropdown, groupName);
         }
@@ -114,7 +112,7 @@ internal static class ModdingScreenGroupUi
         Action<string, bool> toggleAllInGroup)
     {
         int index = 0;
-        var orderedGroups = new List<string> { UnassignedGroup };
+        var orderedGroups = new List<string> { ModdingScreenConstants.UnassignedGroup };
         orderedGroups.AddRange(ProfileManager.CustomGroups);
 
         foreach (var groupName in orderedGroups)
@@ -122,7 +120,7 @@ internal static class ModdingScreenGroupUi
             if (!groups.TryGetValue(groupName, out var groupRows))
                 continue;
 
-            if (groupName == UnassignedGroup && groupRows.Count == 0)
+            if (groupName == ModdingScreenConstants.UnassignedGroup && groupRows.Count == 0)
                 continue;
 
             bool isCollapsed = ProfileManager.CollapsedGroups.Contains(groupName);
@@ -179,7 +177,7 @@ internal static class ModdingScreenGroupUi
         toggleAllBtn.Pressed += () => toggleAllInGroup(groupName, !allEnabled);
         header.AddChild(toggleAllBtn);
 
-        if (groupName == UnassignedGroup)
+        if (groupName == ModdingScreenConstants.UnassignedGroup)
             return header;
 
         var renameBtn = new Button { Text = "Rename" };
@@ -218,7 +216,7 @@ internal static class ModdingScreenGroupUi
 
         foreach (var row in groupRows)
         {
-            var tick = row.GetNodeOrNull<NTickbox>("Tickbox");
+            var tick = row.GetNodeOrNull<NTickbox>(ModdingScreenConstants.TickboxPath);
             if (tick != null && !(bool)tick.Get("IsTicked"))
                 return false;
         }

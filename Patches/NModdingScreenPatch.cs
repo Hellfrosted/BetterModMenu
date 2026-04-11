@@ -3,6 +3,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 using BetterModMenu.Data;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using MegaCrit.Sts2.Core.Saves;
 
 namespace BetterModMenu.Patches;
@@ -10,18 +11,14 @@ namespace BetterModMenu.Patches;
 [HarmonyPatch(typeof(NModdingScreen))]
 public static class NModdingScreenPatch
 {
-    private static NModdingScreen? _currentScreen;
-    private static HBoxContainer? _topBar;
-    private static OptionButton? _profileDropdown;
-    private static HBoxContainer? _groupBar;
-    private static bool _suppressAutoSave = false;
-    private static readonly List<Node> _generatedGroupNodes = new();
+    private static WeakReference<NModdingScreen>? _currentScreenRef;
+    private static readonly ConditionalWeakTable<NModdingScreen, ModdingScreenSession> Sessions = new();
 
     [HarmonyPatch(nameof(NModdingScreen.OnModEnabledOrDisabled))]
     [HarmonyPostfix]
-    public static void Postfix_OnModEnabledOrDisabled()
+    public static void Postfix_OnModEnabledOrDisabled(NModdingScreen __instance)
     {
-        if (!_suppressAutoSave)
+        if (!IsAutoSaveSuppressed(__instance))
             ProfileManager.SnapshotCurrentStateAndSave();
     }
 
@@ -29,7 +26,8 @@ public static class NModdingScreenPatch
     [HarmonyPostfix]
     public static void Postfix_Ready(NModdingScreen __instance)
     {
-        _currentScreen = __instance;
+        _currentScreenRef = new(__instance);
+        var session = GetSession(__instance);
 
         // Clip only the Mask so the ScrollContainer's scrollbar remains visible
         var scrollContainer = __instance.GetNodeOrNull<Control>("%ModsScrollContainer");
@@ -40,20 +38,68 @@ public static class NModdingScreenPatch
                 mask.ClipContents = true;
         }
 
-        if (_topBar == null || !GodotObject.IsInstanceValid(_topBar))
+        if (session.TopBar == null || !GodotObject.IsInstanceValid(session.TopBar) || session.TopBar.GetParent() != __instance)
         {
             var titleNode = __instance.GetNodeOrNull<Control>("%InstalledModsTitle");
             var modInfoPanel = __instance.GetNodeOrNull<Control>("%ModInfoContainer");
 
-            BuildTopBar(__instance, titleNode, scrollContainer);
-            BuildGroupBar(__instance, modInfoPanel);
+            BuildTopBar(__instance, session, titleNode, scrollContainer);
+            BuildGroupBar(__instance, session, modInfoPanel);
         }
 
         RefreshProfileDropdown();
         RefreshGroupsUI();
     }
 
-    private static void BuildTopBar(NModdingScreen __instance, Control? titleNode, Control? scrollContainer)
+    [HarmonyPatch(nameof(NModdingScreen._ExitTree))]
+    [HarmonyPostfix]
+    public static void Postfix_ExitTree(NModdingScreen __instance)
+    {
+        if (IsCurrentScreen(__instance))
+            _currentScreenRef = null;
+
+        var session = GetSession(__instance);
+        session.AutoSaveSuppressionDepth = 0;
+        session.TickboxSuppressionDepth = 0;
+        session.GeneratedGroupNodes.Clear();
+        session.GroupBar = null;
+        session.ProfileDropdown = null;
+        session.TopBar = null;
+    }
+
+    public static bool IsCurrentScreen(NModdingScreen? screen)
+    {
+        return screen != null &&
+            _currentScreenRef?.TryGetTarget(out var current) == true &&
+            current == screen &&
+            GodotObject.IsInstanceValid(screen);
+    }
+
+    internal static bool IsTickboxHandlerSuppressed(NModdingScreen screen)
+    {
+        return GetSession(screen).TickboxSuppressionDepth > 0;
+    }
+
+    private static bool IsAutoSaveSuppressed(NModdingScreen screen)
+    {
+        return GetSession(screen).AutoSaveSuppressionDepth > 0;
+    }
+
+    private static ModdingScreenSession GetSession(NModdingScreen screen)
+    {
+        return Sessions.GetOrCreateValue(screen);
+    }
+
+    private static bool TryGetCurrentScreen(out NModdingScreen? screen)
+    {
+        if (_currentScreenRef?.TryGetTarget(out screen) == true && GodotObject.IsInstanceValid(screen))
+            return true;
+
+        screen = null;
+        return false;
+    }
+
+    private static void BuildTopBar(NModdingScreen screen, ModdingScreenSession session, Control? titleNode, Control? scrollContainer)
     {
         var builtTopBar = ModdingScreenBars.CreateTopBar(
             titleNode,
@@ -63,19 +109,19 @@ public static class NModdingScreenPatch
             OnRenameProfilePressed,
             OnDelProfilePressed);
 
-        _topBar = builtTopBar.Bar;
-        _profileDropdown = builtTopBar.ProfileDropdown;
-        __instance.AddChild(_topBar);
+        session.TopBar = builtTopBar.Bar;
+        session.ProfileDropdown = builtTopBar.ProfileDropdown;
+        screen.AddChild(session.TopBar);
     }
 
-    private static void BuildGroupBar(NModdingScreen __instance, Control? modInfoPanel)
+    private static void BuildGroupBar(NModdingScreen screen, ModdingScreenSession session, Control? modInfoPanel)
     {
-        _groupBar = ModdingScreenBars.CreateGroupBar(
+        session.GroupBar = ModdingScreenBars.CreateGroupBar(
             modInfoPanel,
             System.IO.File.Exists(ProfileManager.PortableConfigPath),
             OnPortableModeToggled,
             OnAddGroupRequested);
-        __instance.AddChild(_groupBar);
+        screen.AddChild(session.GroupBar);
     }
 
     private static void OnPortableModeToggled(bool isToggled)
@@ -102,9 +148,14 @@ public static class NModdingScreenPatch
 
     public static void RefreshGroupsUI()
     {
-        if (_currentScreen == null || !GodotObject.IsInstanceValid(_currentScreen)) return;
-        Control modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
-        ModdingScreenGroupUi.RefreshGroupsUI(modRowContainer, _generatedGroupNodes, RefreshGroupsUI, RenameGroup, MoveGroup, ToggleAllInGroup);
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+        if (modRowContainer == null)
+            return;
+
+        ModdingScreenGroupUi.RefreshGroupsUI(modRowContainer, GetSession(screen).GeneratedGroupNodes, RefreshGroupsUI, RenameGroup, MoveGroup, ToggleAllInGroup);
     }
 
     private static void MoveGroup(string grpName, int direction)
@@ -115,7 +166,8 @@ public static class NModdingScreenPatch
 
     private static void RenameGroup(string oldName)
     {
-        if (_currentScreen == null || !GodotObject.IsInstanceValid(_currentScreen)) return;
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
 
         var popup = new AcceptDialog();
         popup.Title = "Rename Group";
@@ -134,7 +186,7 @@ public static class NModdingScreenPatch
                 RefreshGroupsUI();
         };
 
-        _currentScreen.AddChild(popup);
+        screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(300, 100));
     }
 
@@ -146,36 +198,38 @@ public static class NModdingScreenPatch
 
     private static void ToggleAllInGroup(string groupName, bool isToggled)
     {
-        if (_currentScreen == null)
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
             return;
 
-        Control modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
+        var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+        if (modRowContainer == null)
+            return;
+
+        using var autoSaveSuppression = new ScreenSuppressionScope(screen, suppressAutoSave: true, suppressTickboxes: false);
+        using var tickboxSuppression = new ScreenSuppressionScope(screen, suppressAutoSave: false, suppressTickboxes: true);
         if (ModdingScreenListOps.ApplyToggleAllInGroup(modRowContainer, groupName, isToggled))
         {
-            _suppressAutoSave = true;
-            try
-            {
-                ProfileManager.SaveInMemoryState();
-                SaveManager.Instance.SaveSettings();
-                _currentScreen.OnModEnabledOrDisabled();
-            }
-            finally
-            {
-                _suppressAutoSave = false;
-            }
+            ProfileManager.SaveInMemoryState();
+            SaveManager.Instance?.SaveSettings();
+            screen.OnModEnabledOrDisabled();
         }
     }
 
     private static void RefreshProfileDropdown()
     {
-        if (_profileDropdown == null || !GodotObject.IsInstanceValid(_profileDropdown)) return;
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        var profileDropdown = GetSession(screen).ProfileDropdown;
+        if (profileDropdown == null || !GodotObject.IsInstanceValid(profileDropdown))
+            return;
 
         ProfileManager.NormalizeProfileIndex();
-        _profileDropdown.Clear();
+        profileDropdown.Clear();
         for (int i = 0; i < ProfileManager.Profiles.Count; i++)
-            _profileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
+            profileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
 
-        _profileDropdown.Select(ProfileManager.CurrentProfileIndex);
+        profileDropdown.Select(ProfileManager.CurrentProfileIndex);
     }
 
     private static void OnProfileSelected(long index)
@@ -188,25 +242,17 @@ public static class NModdingScreenPatch
         var profile = ModdingScreenProfileOps.ApplyProfileSelection(index, snapshotCurrentProfile);
         RefreshProfileDropdown();
 
-        if (_currentScreen != null && GodotObject.IsInstanceValid(_currentScreen))
+        if (TryGetCurrentScreen(out var screen) && screen != null)
         {
-            // Block BOTH the auto-save hook AND the vanilla tickbox handler
-            _suppressAutoSave = true;
-            NModMenuRowPatch.SuppressTickboxHandler = true;
-            try
-            {
-                _currentScreen.OnModEnabledOrDisabled();
+            using var autoSaveSuppression = new ScreenSuppressionScope(screen, suppressAutoSave: true, suppressTickboxes: false);
+            using var tickboxSuppression = new ScreenSuppressionScope(screen, suppressAutoSave: false, suppressTickboxes: true);
+            screen.OnModEnabledOrDisabled();
 
-                // Set tickboxes SYNCHRONOUSLY (not deferred) while the vanilla handler is blocked.
-                // The vanilla _Ready does the same (line 100 of NModMenuRow.cs) so this is safe.
-                var modRowContainer = _currentScreen.GetNode<Control>("%ModsScrollContainer/Mask/Content");
+            var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+            if (modRowContainer != null)
+            {
                 ModdingScreenProfileOps.SyncTickboxesForProfile(modRowContainer, profile);
                 RefreshGroupsUI();
-            }
-            finally
-            {
-                NModMenuRowPatch.SuppressTickboxHandler = false;
-                _suppressAutoSave = false;
             }
         }
     }
@@ -220,7 +266,8 @@ public static class NModdingScreenPatch
 
     private static void OnRenameProfilePressed()
     {
-        if (_currentScreen == null || !GodotObject.IsInstanceValid(_currentScreen)) return;
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
 
         var popup = new AcceptDialog();
         popup.Title = "Rename Profile";
@@ -241,7 +288,7 @@ public static class NModdingScreenPatch
             }
         };
 
-        _currentScreen.AddChild(popup);
+        screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(300, 100));
     }
 
@@ -250,5 +297,34 @@ public static class NModdingScreenPatch
         int? replacementIndex = ModdingScreenProfileOps.DeleteCurrentProfile();
         if (replacementIndex.HasValue)
             ApplyProfileSelection(replacementIndex.Value, snapshotCurrentProfile: false);
+    }
+
+    private sealed class ScreenSuppressionScope : System.IDisposable
+    {
+        private readonly NModdingScreen _screen;
+        private readonly bool _suppressAutoSave;
+        private readonly bool _suppressTickboxes;
+
+        public ScreenSuppressionScope(NModdingScreen screen, bool suppressAutoSave, bool suppressTickboxes)
+        {
+            _screen = screen;
+            _suppressAutoSave = suppressAutoSave;
+            _suppressTickboxes = suppressTickboxes;
+
+            var session = GetSession(screen);
+            if (_suppressAutoSave)
+                session.AutoSaveSuppressionDepth++;
+            if (_suppressTickboxes)
+                session.TickboxSuppressionDepth++;
+        }
+
+        public void Dispose()
+        {
+            var session = GetSession(_screen);
+            if (_suppressTickboxes && session.TickboxSuppressionDepth > 0)
+                session.TickboxSuppressionDepth--;
+            if (_suppressAutoSave && session.AutoSaveSuppressionDepth > 0)
+                session.AutoSaveSuppressionDepth--;
+        }
     }
 }

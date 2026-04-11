@@ -59,7 +59,7 @@ internal static class ModdingScreenListOps
                 changed = true;
             }
 
-            var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
+            var tickbox = row.GetNodeOrNull<NTickbox>(ModdingScreenConstants.TickboxPath);
             if (tickbox == null)
                 continue;
 

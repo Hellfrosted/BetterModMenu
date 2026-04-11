@@ -39,7 +39,7 @@ internal static class ModdingScreenProfileOps
 
             string modId = row.Mod.manifest.id ?? "";
             bool isOn = !string.IsNullOrEmpty(modId) && !profile.DisabledMods.Contains(modId);
-            var tickbox = row.GetNodeOrNull<NTickbox>("Tickbox");
+            var tickbox = row.GetNodeOrNull<NTickbox>(ModdingScreenConstants.TickboxPath);
             if (tickbox == null)
                 continue;
 

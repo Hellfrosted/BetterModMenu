@@ -5,8 +5,6 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenStateOps
 {
-    private const string UnassignedGroup = "Unassigned";
-
     public static void SetPortableMode(bool isPortable)
     {
         if (isPortable)
@@ -18,7 +16,7 @@ internal static class ModdingScreenStateOps
     public static bool TryAddGroup(string groupName)
     {
         string trimmedName = groupName.Trim();
-        if (string.IsNullOrEmpty(trimmedName) || trimmedName == UnassignedGroup || ProfileManager.CustomGroups.Contains(trimmedName))
+        if (string.IsNullOrEmpty(trimmedName) || trimmedName == ModdingScreenConstants.UnassignedGroup || ProfileManager.CustomGroups.Contains(trimmedName))
             return false;
 
         ProfileManager.CustomGroups.Add(trimmedName);
@@ -36,7 +34,7 @@ internal static class ModdingScreenStateOps
             return assignedGroup;
         }
 
-        return UnassignedGroup;
+        return ModdingScreenConstants.UnassignedGroup;
     }
 
     public static void SyncGroupDropdown(OptionButton dropdown, string assignedGroup)
@@ -49,11 +47,11 @@ internal static class ModdingScreenStateOps
             return;
 
         dropdown.Clear();
-        dropdown.AddItem(UnassignedGroup, 0);
+        dropdown.AddItem(ModdingScreenConstants.UnassignedGroup, 0);
         for (int i = 0; i < ProfileManager.CustomGroups.Count; i++)
             dropdown.AddItem(ProfileManager.CustomGroups[i], i + 1);
 
-        int selectedIndex = assignedGroup == UnassignedGroup
+        int selectedIndex = assignedGroup == ModdingScreenConstants.UnassignedGroup
             ? 0
             : ProfileManager.CustomGroups.IndexOf(assignedGroup) + 1;
         dropdown.Select(selectedIndex);
@@ -78,7 +76,7 @@ internal static class ModdingScreenStateOps
     public static bool TryRenameGroup(string oldName, string newName)
     {
         string trimmedName = newName.Trim();
-        if (string.IsNullOrEmpty(trimmedName) || trimmedName == UnassignedGroup)
+        if (string.IsNullOrEmpty(trimmedName) || trimmedName == ModdingScreenConstants.UnassignedGroup)
             return false;
 
         int index = ProfileManager.CustomGroups.IndexOf(oldName);
