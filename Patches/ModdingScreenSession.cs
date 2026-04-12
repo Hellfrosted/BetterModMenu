@@ -12,4 +12,15 @@ internal sealed class ModdingScreenSession
     public bool LayoutSignalsConnected { get; set; }
     public TopBarControls? TopBarControls { get; set; }
     public int TickboxSuppressionDepth { get; set; }
+
+    public void Reset()
+    {
+        AutoSaveSuppressionDepth = 0;
+        ChromeRoot = null;
+        GeneratedGroupNodes.Clear();
+        GroupBarControls = null;
+        LayoutSignalsConnected = false;
+        TopBarControls = null;
+        TickboxSuppressionDepth = 0;
+    }
 }
