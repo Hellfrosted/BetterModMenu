@@ -24,6 +24,10 @@ public static class NModMenuRowPatch
         var modId = __instance.Mod.manifest.id ?? "";
         if (string.IsNullOrEmpty(modId)) return;
 
+        var platformIcon = __instance.GetNodeOrNull<TextureRect>("PlatformIcon");
+        if (platformIcon != null)
+            platformIcon.Visible = false;
+
         if (__instance.GetNodeOrNull<HBoxContainer>("RowCustomControls") != null) return;
 
         var container = new HBoxContainer { Name = "RowCustomControls" };
@@ -34,7 +38,7 @@ public static class NModMenuRowPatch
         {
             warningLabel = new Label 
             { 
-                Text = "[Gameplay]", 
+                Text = "Gameplay",
                 TooltipText = "This mod affects gameplay.",
                 Modulate = new Color(1f, 0.5f, 0.3f),
                 VerticalAlignment = VerticalAlignment.Center
@@ -105,21 +109,19 @@ public static class NModMenuRowPatch
 
         groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0);
         if (warningLabel != null)
-            warningLabel.Text = "[Gameplay]";
+            warningLabel.Text = "Gameplay";
 
         float preferredWidth = container.GetCombinedMinimumSize().X;
         bool isCompact = row.Size.X > 0 && row.Size.X - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;
         if (isCompact)
         {
             groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, 0);
-            if (warningLabel != null)
-                warningLabel.Text = "GP";
         }
 
         float width = container.GetCombinedMinimumSize().X;
         container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         container.GrowHorizontal = Control.GrowDirection.Begin;
-        container.OffsetRight = -ModdingScreenConstants.RowControlsRightPadding;
+        container.OffsetRight = -(ModdingScreenConstants.RowControlsRightPadding + ModdingScreenConstants.RowNativeTickboxReserveWidth);
         container.OffsetLeft = container.OffsetRight - width;
     }
 

@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using BetterModMenu.Data;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 
 namespace BetterModMenu.Patches;
@@ -51,7 +52,13 @@ internal static class ModdingScreenChromeOps
             moveGroup,
             toggleAllInGroup);
 
+        SyncModsScrollbar(screen, modRowContainer);
         UpdateLayout(screen, session);
+        Callable.From(() =>
+        {
+            if (ModdingScreenContext.IsCurrentScreen(screen))
+                SyncModsScrollbar(screen, modRowContainer);
+        }).CallDeferred();
     }
 
     public static void UpdateLayout(NModdingScreen screen, ModdingScreenSession session)
@@ -90,7 +97,11 @@ internal static class ModdingScreenChromeOps
         if (session.ChromeRoot != null && GodotObject.IsInstanceValid(session.ChromeRoot) && session.ChromeRoot.GetParent() == screen)
             return;
 
-        var chromeRoot = new Control { Name = ModdingScreenConstants.ChromeRootName };
+        var chromeRoot = new Control
+        {
+            Name = ModdingScreenConstants.ChromeRootName,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
         chromeRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         screen.AddChild(chromeRoot);
         session.ChromeRoot = chromeRoot;
@@ -169,6 +180,25 @@ internal static class ModdingScreenChromeOps
     {
         if (ModdingScreenContext.IsCurrentScreen(screen))
             UpdateLayout(screen, session);
+    }
+
+    private static void SyncModsScrollbar(NModdingScreen screen, Control modRowContainer)
+    {
+        if (modRowContainer is Container container)
+            container.QueueSort();
+
+        modRowContainer.UpdateMinimumSize();
+
+        var scrollContainer = screen.GetNodeOrNull<NScrollableContainer>("%ModsScrollContainer");
+        var viewport = modRowContainer.GetParentOrNull<Control>();
+        if (scrollContainer?.Scrollbar == null || viewport == null)
+            return;
+
+        bool shouldShowScrollbar = modRowContainer.Size.Y > viewport.Size.Y;
+        scrollContainer.Scrollbar.Visible = shouldShowScrollbar;
+        scrollContainer.Scrollbar.MouseFilter = shouldShowScrollbar
+            ? Control.MouseFilterEnum.Stop
+            : Control.MouseFilterEnum.Ignore;
     }
 
     private static void LayoutTopBar(

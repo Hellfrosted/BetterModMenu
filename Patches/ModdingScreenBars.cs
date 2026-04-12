@@ -23,7 +23,7 @@ internal sealed class TopBarControls
     public void SetCompact(bool isCompact)
     {
         NewProfileButton.Text = isCompact ? "New" : "+ New";
-        RenameProfileButton.Text = isCompact ? "Ren" : "Rename";
+        RenameProfileButton.Text = "Rename";
 
         float buttonWidth = isCompact
             ? ModdingScreenConstants.TopBarButtonCompactWidth

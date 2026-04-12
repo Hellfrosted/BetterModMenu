@@ -170,7 +170,11 @@ internal static class ModdingScreenGroupUi
         Action<string, int> moveGroup,
         Action<string, bool> toggleAllInGroup)
     {
-        var header = new HBoxContainer { Name = "ModGroupHeader_" + groupName };
+        var header = new HBoxContainer
+        {
+            Name = "ModGroupHeader_" + groupName,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
 
         var collapseBtn = new Button
         {
@@ -191,7 +195,10 @@ internal static class ModdingScreenGroupUi
         header.AddChild(toggleAllBtn);
 
         if (groupName == ModdingScreenConstants.UnassignedGroup)
+        {
+            AddHeaderScrollbarSpacer(header);
             return header;
+        }
 
         var renameBtn = new Button { Text = "Rename" };
         renameBtn.Pressed += () => renameGroup(groupName);
@@ -219,7 +226,18 @@ internal static class ModdingScreenGroupUi
         };
         header.AddChild(deleteBtn);
 
+        AddHeaderScrollbarSpacer(header);
+
         return header;
+    }
+
+    private static void AddHeaderScrollbarSpacer(HBoxContainer header)
+    {
+        header.AddChild(new Control
+        {
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupHeaderScrollbarReserveWidth, 0),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        });
     }
 
     private static bool AreAllRowsEnabled(List<NModMenuRow> groupRows)
