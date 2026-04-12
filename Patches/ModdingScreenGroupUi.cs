@@ -19,8 +19,10 @@ internal static class ModdingScreenGroupUi
         Action<string, bool> toggleAllInGroup)
     {
         var rows = CollectRowsAndClearGeneratedNodes(modRowContainer, generatedGroupNodes);
-        SortRows(rows);
-        var groups = GroupRows(rows);
+        var modOrder = BuildModOrderLookup();
+        SortRows(rows, modOrder);
+        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(rows.Select(row => row.Mod?.manifest?.id ?? ""));
+        var groups = GroupRows(rows, assignedGroups);
         BuildGroupHeaders(modRowContainer, generatedGroupNodes, groups, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
     }
 
@@ -51,12 +53,25 @@ internal static class ModdingScreenGroupUi
         return rows;
     }
 
-    private static void SortRows(List<NModMenuRow> rows)
+    private static Dictionary<string, int> BuildModOrderLookup()
     {
         var options = SaveManager.Instance?.SettingsSave?.ModSettings;
-        if (options == null || options.ModList == null)
-            return;
+        var modOrder = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (options?.ModList == null)
+            return modOrder;
 
+        for (int index = 0; index < options.ModList.Count; index++)
+        {
+            string modId = options.ModList[index].Id ?? "";
+            if (!string.IsNullOrWhiteSpace(modId) && !modOrder.ContainsKey(modId))
+                modOrder[modId] = index;
+        }
+
+        return modOrder;
+    }
+
+    private static void SortRows(List<NModMenuRow> rows, IReadOnlyDictionary<string, int> modOrder)
+    {
         rows.Sort((left, right) =>
         {
             int leftIndex = GetModIndex(left);
@@ -65,15 +80,15 @@ internal static class ModdingScreenGroupUi
             
             int GetModIndex(NModMenuRow row)
             {
-                int index = row.Mod?.manifest?.id != null
-                    ? options.ModList.FindIndex(mod => mod.Id == row.Mod.manifest.id)
-                    : 9999;
-                return index == -1 ? 9999 : index;
+                string modId = row.Mod?.manifest?.id ?? "";
+                return !string.IsNullOrEmpty(modId) && modOrder.TryGetValue(modId, out int index)
+                    ? index
+                    : int.MaxValue;
             }
         });
     }
 
-    private static Dictionary<string, List<NModMenuRow>> GroupRows(List<NModMenuRow> rows)
+    private static Dictionary<string, List<NModMenuRow>> GroupRows(List<NModMenuRow> rows, IReadOnlyDictionary<string, string> assignedGroups)
     {
         var groups = new Dictionary<string, List<NModMenuRow>>
         {
@@ -89,7 +104,10 @@ internal static class ModdingScreenGroupUi
             if (row.Mod?.manifest != null)
             {
                 string modId = row.Mod.manifest.id ?? "";
-                groupName = ModdingScreenStateOps.GetAssignedGroup(modId);
+                if (!string.IsNullOrEmpty(modId) &&
+                    assignedGroups.TryGetValue(modId, out string? assignedGroup) &&
+                    assignedGroup != null)
+                    groupName = assignedGroup;
             }
 
             groups[groupName].Add(row);
@@ -221,11 +239,18 @@ internal static class ModdingScreenGroupUi
 
     private static void ToggleCollapsedGroup(string groupName)
     {
-        if (ProfileManager.CollapsedGroups.Contains(groupName))
+        bool wasCollapsed = ProfileManager.CollapsedGroups.Contains(groupName);
+        if (wasCollapsed)
             ProfileManager.CollapsedGroups.Remove(groupName);
         else
             ProfileManager.CollapsedGroups.Add(groupName);
 
-        ProfileManager.SaveInMemoryState();
+        if (ProfileManager.SaveInMemoryState())
+            return;
+
+        if (wasCollapsed)
+            ProfileManager.CollapsedGroups.Add(groupName);
+        else
+            ProfileManager.CollapsedGroups.Remove(groupName);
     }
 }

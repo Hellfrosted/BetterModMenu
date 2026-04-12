@@ -37,19 +37,31 @@ A UI enhancement mod for [Slay the Spire 2](https://store.steampowered.com/app/2
 - STS2 may still reorder dependency chains during startup validation.
 - The ordering controls are best treated as a local organization and next-launch preference tool, not a guaranteed multiplayer parity feature.
 
+## Save Data and Recovery
+
+- Better Mod Menu stores profile/group state in `mod_profiles.json`, `mod_profiles.jsonc`, or `mod_profiles.json5`.
+- When **Portable Mode** is enabled, that file is read from and written to the mod directory beside the installed mod.
+- When Portable Mode is disabled, the file lives under STS2's account-scoped user data in `mod_data/BetterModMenu/`.
+- If the config file is corrupt or locked, Better Mod Menu logs the error and recreates an in-memory `Default` profile for the current session.
+- To fully reset Better Mod Menu state, close the game and remove the active `mod_profiles.*` file from the portable or user-scoped location.
+- Log file location is not verified from this repo. Check the game or mod loader logs for entries tagged `BetterModMenu`.
+
 ## Building from Source
 
 This mod is built using **Godot 4** and **.NET 9/C#**.
 
 1. Clone this repository.
-2. This project references `sts2.dll` directly from your game installation directory. If you are not using the default path, set `STS2_DLL_PATH` or pass `-p:Sts2DllPath="C:\path\to\sts2.dll"`.
-3. Run `dotnet build` from the command line.
-4. To create the release zip during build, add `-p:PackageModOnBuild=true`.
+2. Install the .NET SDK version pinned in `global.json` or another SDK that can build `net9.0`.
+3. Point the build at your local `sts2.dll` by setting `STS2_DLL_PATH` or passing `-p:Sts2DllPath="C:\path\to\sts2.dll"`.
+4. Run `dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll"`.
+5. To create the release zip during build, add `-p:PackageModOnBuild=true`. Packaged artifacts are written to `artifacts/`.
+
+This repo intentionally does not hardcode a local game install path. If `sts2.dll` is missing, the build fails fast with a message explaining how to provide it.
 
 ## Automated Checks
 
-- Run the lightweight logic tests with `dotnet run --project BetterModMenu.Tests/BetterModMenu.Tests.csproj`.
-- Build the mod with `dotnet build`.
+- Run the lightweight logic tests with `dotnet test BetterModMenu.Tests/BetterModMenu.Tests.csproj`.
+- Build the mod with `dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll"`.
 
 ## License
 

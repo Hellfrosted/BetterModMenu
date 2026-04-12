@@ -9,25 +9,59 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenProfileOps
 {
-    public static ModProfile ApplyProfileSelection(int index, bool snapshotCurrentProfile)
+    public static bool TryApplyProfileSelection(int index, bool snapshotCurrentProfile, out ModProfile? profile)
     {
-        if (snapshotCurrentProfile)
-            ProfileManager.SnapshotCurrentState();
-
-        ProfileManager.CurrentProfileIndex = index;
-        ProfileManager.NormalizeProfileIndex();
-
-        var profile = ProfileManager.CurrentProfile;
+        profile = null;
+        var previousProfiles = CloneProfiles(ProfileManager.Profiles);
+        int previousProfileIndex = ProfileManager.CurrentProfileIndex;
         var options = SaveManager.Instance?.SettingsSave?.ModSettings;
-        if (options != null)
-        {
-            foreach (var mod in options.ModList)
-                mod.IsEnabled = !profile.DisabledMods.Contains(mod.Id);
-        }
+        List<bool>? previousEnabledStates = options?.ModList.Select(mod => mod.IsEnabled).ToList();
 
-        ProfileManager.SaveInMemoryState();
-        SaveManager.Instance?.SaveSettings();
-        return profile;
+        try
+        {
+            if (snapshotCurrentProfile)
+                ProfileManager.SnapshotCurrentState();
+
+            ProfileManager.CurrentProfileIndex = index;
+            ProfileManager.NormalizeProfileIndex();
+
+            profile = ProfileManager.CurrentProfile;
+            if (options != null)
+            {
+                foreach (var mod in options.ModList)
+                    mod.IsEnabled = !profile.DisabledMods.Contains(mod.Id);
+            }
+
+            if (!ProfileManager.SaveInMemoryState())
+                throw new InvalidOperationException(ProfileManager.LastPersistenceError ?? "Failed to save the selected profile.");
+
+            SaveManager.Instance?.SaveSettings();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ProfileManager.Profiles = previousProfiles;
+            ProfileManager.CurrentProfileIndex = previousProfileIndex;
+
+            if (options != null && previousEnabledStates != null)
+            {
+                for (int i = 0; i < options.ModList.Count && i < previousEnabledStates.Count; i++)
+                    options.ModList[i].IsEnabled = previousEnabledStates[i];
+            }
+
+            ProfileManager.SaveInMemoryState();
+            try
+            {
+                SaveManager.Instance?.SaveSettings();
+            }
+            catch (Exception restoreEx)
+            {
+                ProfileManager.ModLogger.Error($"Failed to restore settings after a profile-selection error:\n{restoreEx}");
+            }
+
+            ProfileManager.ModLogger.Error($"Failed to apply profile selection:\n{ex}");
+            return false;
+        }
     }
 
     public static void SyncTickboxesForProfile(Control modRowContainer, ModProfile profile)
@@ -57,6 +91,8 @@ internal static class ModdingScreenProfileOps
     public static void CreateNewProfileFromCurrentState()
     {
         ProfileManager.SnapshotCurrentState();
+        var previousProfiles = CloneProfiles(ProfileManager.Profiles);
+        int previousProfileIndex = ProfileManager.CurrentProfileIndex;
         var newProfile = new ModProfile
         {
             Name = "Profile " + (ProfileManager.Profiles.Count + 1),
@@ -65,7 +101,11 @@ internal static class ModdingScreenProfileOps
 
         ProfileManager.Profiles.Add(newProfile);
         ProfileManager.CurrentProfileIndex = ProfileManager.Profiles.Count - 1;
-        ProfileManager.SaveInMemoryState();
+        if (ProfileManager.SaveInMemoryState())
+            return;
+
+        ProfileManager.Profiles = previousProfiles;
+        ProfileManager.CurrentProfileIndex = previousProfileIndex;
     }
 
     public static bool TryRenameCurrentProfile(string newName)
@@ -74,9 +114,13 @@ internal static class ModdingScreenProfileOps
         if (string.IsNullOrEmpty(trimmedName))
             return false;
 
+        string previousName = ProfileManager.CurrentProfile.Name;
         ProfileManager.CurrentProfile.Name = trimmedName;
-        ProfileManager.SaveInMemoryState();
-        return true;
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        ProfileManager.CurrentProfile.Name = previousName;
+        return false;
     }
 
     public static int? DeleteCurrentProfile()
@@ -92,5 +136,16 @@ internal static class ModdingScreenProfileOps
             replacementIndex = ProfileManager.Profiles.Count - 1;
 
         return replacementIndex;
+    }
+
+    private static List<ModProfile> CloneProfiles(IReadOnlyList<ModProfile> profiles)
+    {
+        return profiles
+            .Select(profile => new ModProfile
+            {
+                Name = profile.Name,
+                DisabledMods = new HashSet<string>(profile.DisabledMods, StringComparer.Ordinal)
+            })
+            .ToList();
     }
 }

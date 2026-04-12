@@ -5,12 +5,11 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenStateOps
 {
-    public static void SetPortableMode(bool isPortable)
+    public static bool SetPortableMode(bool isPortable)
     {
-        if (isPortable)
-            EnablePortableMode();
-        else
-            DisablePortableMode();
+        return isPortable
+            ? EnablePortableMode()
+            : DisablePortableMode();
     }
 
     public static bool TryAddGroup(string groupName)
@@ -19,21 +18,40 @@ internal static class ModdingScreenStateOps
             return false;
 
         ProfileManager.CustomGroups.Add(trimmedName);
-        ProfileManager.SaveInMemoryState();
-        return true;
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        ProfileManager.CustomGroups.Remove(trimmedName);
+        return false;
     }
 
-    public static string GetAssignedGroup(string modId)
+    public static string GetAssignedGroup(string modId, ISet<string>? validGroups = null)
     {
         if (!string.IsNullOrEmpty(modId) &&
             ProfileManager.ModGroups.TryGetValue(modId, out string? assignedGroup) &&
             assignedGroup != null &&
-            ProfileManager.CustomGroups.Contains(assignedGroup))
+            (validGroups?.Contains(assignedGroup) ?? ProfileManager.CustomGroups.Contains(assignedGroup)))
         {
             return assignedGroup;
         }
 
         return ModdingScreenConstants.UnassignedGroup;
+    }
+
+    public static Dictionary<string, string> BuildAssignedGroupLookup(IEnumerable<string> modIds)
+    {
+        var validGroups = new HashSet<string>(ProfileManager.CustomGroups, StringComparer.Ordinal);
+        var assignedGroups = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (string modId in modIds)
+        {
+            if (string.IsNullOrWhiteSpace(modId))
+                continue;
+
+            assignedGroups[modId] = GetAssignedGroup(modId, validGroups);
+        }
+
+        return assignedGroups;
     }
 
     public static void SyncGroupDropdown(OptionButton dropdown, string assignedGroup)
@@ -66,10 +84,14 @@ internal static class ModdingScreenStateOps
         if (newIndex < 0 || newIndex >= ProfileManager.CustomGroups.Count)
             return false;
 
+        var previousGroups = new List<string>(ProfileManager.CustomGroups);
         ProfileManager.CustomGroups.RemoveAt(currentIndex);
         ProfileManager.CustomGroups.Insert(newIndex, groupName);
-        ProfileManager.SaveInMemoryState();
-        return true;
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        ProfileManager.CustomGroups = previousGroups;
+        return false;
     }
 
     public static bool TryRenameGroup(string oldName, string newName)
@@ -85,6 +107,10 @@ internal static class ModdingScreenStateOps
         if (validation != GroupNameValidationResult.Valid)
             return false;
 
+        var previousGroups = new List<string>(ProfileManager.CustomGroups);
+        var previousModGroups = new Dictionary<string, string>(ProfileManager.ModGroups, StringComparer.Ordinal);
+        var previousCollapsedGroups = new HashSet<string>(ProfileManager.CollapsedGroups, StringComparer.Ordinal);
+
         ProfileManager.CustomGroups[index] = trimmedName;
 
         var modIds = ProfileManager.ModGroups.Where(x => x.Value == oldName).Select(x => x.Key).ToList();
@@ -97,12 +123,21 @@ internal static class ModdingScreenStateOps
             ProfileManager.CollapsedGroups.Add(trimmedName);
         }
 
-        ProfileManager.SaveInMemoryState();
-        return true;
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        ProfileManager.CustomGroups = previousGroups;
+        ProfileManager.ModGroups = previousModGroups;
+        ProfileManager.CollapsedGroups = previousCollapsedGroups;
+        return false;
     }
 
     public static bool DeleteGroup(string groupName)
     {
+        var previousGroups = new List<string>(ProfileManager.CustomGroups);
+        var previousModGroups = new Dictionary<string, string>(ProfileManager.ModGroups, StringComparer.Ordinal);
+        var previousCollapsedGroups = new HashSet<string>(ProfileManager.CollapsedGroups, StringComparer.Ordinal);
+
         if (!ProfileManager.CustomGroups.Remove(groupName))
             return false;
 
@@ -112,50 +147,84 @@ internal static class ModdingScreenStateOps
 
         ProfileManager.CollapsedGroups.Remove(groupName);
 
-        ProfileManager.SaveInMemoryState();
-        return true;
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        ProfileManager.CustomGroups = previousGroups;
+        ProfileManager.ModGroups = previousModGroups;
+        ProfileManager.CollapsedGroups = previousCollapsedGroups;
+        return false;
     }
 
-    private static void EnablePortableMode()
+    private static bool EnablePortableMode()
     {
         string sourcePath = ProfileManager.SavePath;
-        string targetPath = ProfileManager.GetPortableConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
-        CopyOrWriteConfig(sourcePath, targetPath, deleteSourceAfterCopy: false);
+        if (!ProfileManager.TryGetPortableConfigPathForExtension(System.IO.Path.GetExtension(sourcePath), out string targetPath))
+        {
+            ProfileManager.ModLogger.Error("Failed to enable portable mode: could not resolve the portable config directory.");
+            return false;
+        }
+
+        return CopyOrWriteConfig(sourcePath, targetPath, deleteSourceAfterCopy: false);
     }
 
-    private static void DisablePortableMode()
+    private static bool DisablePortableMode()
     {
-        string sourcePath = ProfileManager.PortableConfigPath;
+        if (!ProfileManager.TryGetPortableConfigPath(out string sourcePath))
+        {
+            ProfileManager.ModLogger.Error("Failed to disable portable mode: portable mode is not available for the current mod path.");
+            return false;
+        }
+
         string targetPath = ProfileManager.GetUserConfigPathForExtension(System.IO.Path.GetExtension(sourcePath));
-        CopyOrWriteConfig(sourcePath, targetPath, deleteSourceAfterCopy: true);
+        return CopyOrWriteConfig(sourcePath, targetPath, deleteSourceAfterCopy: true);
     }
 
-    private static void CopyOrWriteConfig(string sourcePath, string targetPath, bool deleteSourceAfterCopy)
+    private static bool CopyOrWriteConfig(string sourcePath, string targetPath, bool deleteSourceAfterCopy)
     {
-        bool canCopy = System.IO.File.Exists(sourcePath) &&
-            !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(targetPath))
+            return false;
 
         string tempTargetPath = targetPath + ".tmp";
-        if (System.IO.File.Exists(tempTargetPath))
-            System.IO.File.Delete(tempTargetPath);
-
-        if (canCopy)
+        try
         {
-            System.IO.File.Copy(sourcePath, tempTargetPath, true);
+            bool canCopy = System.IO.File.Exists(sourcePath) &&
+                !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase);
+
+            string? targetDirectory = System.IO.Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(targetDirectory) && !System.IO.Directory.Exists(targetDirectory))
+                System.IO.Directory.CreateDirectory(targetDirectory);
+
+            if (System.IO.File.Exists(tempTargetPath))
+                System.IO.File.Delete(tempTargetPath);
+
+            if (canCopy)
+            {
+                System.IO.File.Copy(sourcePath, tempTargetPath, true);
+            }
+            else if (!ProfileManager.SaveCurrentStateToPath(tempTargetPath))
+            {
+                return false;
+            }
+
+            System.IO.File.Move(tempTargetPath, targetPath, true);
+            ProfileManager.DeleteOtherConfigVariants(targetPath);
+
+            if (deleteSourceAfterCopy &&
+                !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase) &&
+                System.IO.File.Exists(sourcePath))
+            {
+                System.IO.File.Delete(sourcePath);
+            }
+
+            return true;
         }
-        else
+        catch (Exception ex)
         {
-            ProfileManager.SaveCurrentStateToPath(tempTargetPath);
-        }
-
-        System.IO.File.Move(tempTargetPath, targetPath, true);
-        ProfileManager.DeleteOtherConfigVariants(targetPath);
-
-        if (deleteSourceAfterCopy &&
-            !sourcePath.Equals(targetPath, System.StringComparison.OrdinalIgnoreCase) &&
-            System.IO.File.Exists(sourcePath))
-        {
-            System.IO.File.Delete(sourcePath);
+            if (System.IO.File.Exists(tempTargetPath))
+                System.IO.File.Delete(tempTargetPath);
+            ProfileManager.ModLogger.Error($"Failed to copy config from '{sourcePath}' to '{targetPath}':\n{ex}");
+            return false;
         }
     }
 }

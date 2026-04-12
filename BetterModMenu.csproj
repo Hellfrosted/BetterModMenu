@@ -10,12 +10,12 @@
 
   <PropertyGroup>
     <PackageModOnBuild Condition="'$(PackageModOnBuild)' == ''">false</PackageModOnBuild>
+    <ArtifactsDir Condition="'$(ArtifactsDir)' == ''">$(ProjectDir)artifacts\</ArtifactsDir>
     <Sts2DllPath Condition="'$(Sts2DllPath)' == '' and '$(STS2_DLL_PATH)' != ''">$(STS2_DLL_PATH)</Sts2DllPath>
-    <Sts2DllPath Condition="'$(Sts2DllPath)' == ''">D:\Program Files\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll</Sts2DllPath>
   </PropertyGroup>
 
   <Target Name="CheckSts2Dll" BeforeTargets="ResolveAssemblyReferences">
-    <Error Condition="!Exists('$(Sts2DllPath)')" Text="sts2.dll not found at '$(Sts2DllPath)'. Please update the Sts2DllPath property in BetterModMenu.csproj to point to your installed Slay the Spire 2 game folder, or set the Sts2DllPath environment variable." />
+    <Error Condition="'$(Sts2DllPath)' == '' or !Exists('$(Sts2DllPath)')" Text="sts2.dll not found. Set STS2_DLL_PATH or pass -p:Sts2DllPath=&quot;C:\path\to\sts2.dll&quot; when building BetterModMenu." />
   </Target>
 
   <ItemGroup>
@@ -31,30 +31,28 @@
   <!-- Custom Target to run after Build -->
   <Target Name="PackageMod" AfterTargets="Build" Condition="'$(PackageModOnBuild)' == 'true'">
     <PropertyGroup>
-      <ModStagingDir>$(ProjectDir)ModStaging\</ModStagingDir>
       <!-- Extract version from JSON -->
       <JsonFileContent>$([System.IO.File]::ReadAllText('$(ProjectDir)BetterModMenu.json'))</JsonFileContent>
       <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
       <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
       <BaseZipName>$(AssemblyName)_v$(ModVersion)</BaseZipName>
-      <ZipFilePath>$(ProjectDir)$(BaseZipName).zip</ZipFilePath>
+      <ModStagingDir>$(ArtifactsDir)$(BaseZipName)\</ModStagingDir>
+      <ZipFilePath>$(ArtifactsDir)$(BaseZipName).zip</ZipFilePath>
     </PropertyGroup>
 
-    <!-- 2. Copy the compiled DLL to the main project folder -->
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)" />
-
-    <!-- 3. Prepare the staging directory for the zip -->
+    <!-- Prepare the staging directory for the zip -->
+    <MakeDir Directories="$(ArtifactsDir)" />
     <RemoveDir Directories="$(ModStagingDir)" />
     <MakeDir Directories="$(ModStagingDir)" />
 
-    <!-- 4. Copy the DLL and JSON file to the staging directory -->
+    <!-- Copy the DLL and JSON file to the staging directory -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModStagingDir)" />
     <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModStagingDir)" />
 
-    <!-- 5. Create the zip file -->
+    <!-- Create the zip file -->
     <ZipDirectory SourceDirectory="$(ModStagingDir)" DestinationFile="$(ZipFilePath)" Overwrite="true" />
     
-    <!-- 6. Clean up the staging directory -->
+    <!-- Clean up the staging directory -->
     <RemoveDir Directories="$(ModStagingDir)" />
     
     <Message Text="Successfully packaged: $(ZipFilePath)" Importance="High" />

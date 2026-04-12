@@ -7,17 +7,42 @@ namespace BetterModMenu.Data;
 
 internal static class ManifestScanner
 {
+    private static bool IsSafeManifestId(string modId)
+    {
+        return !string.IsNullOrWhiteSpace(modId) &&
+            !Path.IsPathRooted(modId) &&
+            modId.IndexOfAny(Path.GetInvalidFileNameChars()) == -1 &&
+            !modId.Contains(Path.DirectorySeparatorChar) &&
+            !modId.Contains(Path.AltDirectorySeparatorChar) &&
+            Path.GetFileName(modId) == modId;
+    }
+
+    private static bool IsPathWithinDirectory(string directory, string path)
+    {
+        string normalizedDirectory = directory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string expectedPrefix = normalizedDirectory + Path.DirectorySeparatorChar;
+        return path.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string? FindManifestPath(string directory, string modId, IEnumerable<string> extensions)
     {
         if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(modId))
             return null;
 
+        if (!IsSafeManifestId(modId))
+            return null;
+
+        string fullDirectory = Path.GetFullPath(directory);
         foreach (var extension in extensions)
         {
             string normalizedExtension = extension.StartsWith(".") ? extension : "." + extension;
             string candidate = Path.Combine(directory, modId + normalizedExtension);
-            if (File.Exists(candidate))
-                return candidate;
+            string fullCandidate = Path.GetFullPath(candidate);
+            if (!IsPathWithinDirectory(fullDirectory, fullCandidate))
+                continue;
+
+            if (File.Exists(fullCandidate))
+                return fullCandidate;
         }
 
         return null;

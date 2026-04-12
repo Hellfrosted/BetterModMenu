@@ -36,6 +36,7 @@ public static class ProfileManager
         AllowTrailingCommas = true
     };
     private static string _activeConfigExtension = ".json";
+    public static string? LastPersistenceError { get; private set; }
 
     private static string NormalizeConfigExtension(string extension)
     {
@@ -98,21 +99,38 @@ public static class ProfileManager
         return absolutePath;
     }
 
-    private static string ResolvePortableConfigDirectory()
+    private static bool TryResolvePortableConfigDirectory(out string directory)
     {
+        directory = string.Empty;
         var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(m => m.manifest?.id == "BetterModMenu");
         string path = (mod != null && !string.IsNullOrEmpty(mod.path))
             ? mod.path
             : (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "");
 
-        if (Directory.Exists(path))
-            return path;
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
 
-        return Path.GetDirectoryName(path) ?? "";
+        if (Directory.Exists(path))
+        {
+            directory = Path.GetFullPath(path);
+            return true;
+        }
+
+        if (File.Exists(path))
+        {
+            string? parentDirectory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(parentDirectory) && Directory.Exists(parentDirectory))
+            {
+                directory = Path.GetFullPath(parentDirectory);
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    public static string PortableConfigDirectory => ResolvePortableConfigDirectory();
-    public static string PortableConfigPath => ResolveConfigPath(PortableConfigDirectory);
+    public static string PortableConfigDirectory => TryResolvePortableConfigDirectory(out string directory) ? directory : string.Empty;
+    public static string PortableConfigPath => TryGetPortableConfigPath(out string path) ? path : string.Empty;
 
     public static string UserConfigDirectory
     {
@@ -128,15 +146,38 @@ public static class ProfileManager
     {
         get
         {
-            string portablePath = PortableConfigPath;
-            if (File.Exists(portablePath))
+            if (TryGetPortableConfigPath(out string portablePath) && File.Exists(portablePath))
                 return portablePath;
 
             return UserConfigPath;
         }
     }
 
-    public static string GetPortableConfigPathForExtension(string extension) => BuildConfigPath(PortableConfigDirectory, extension);
+    public static bool TryGetPortableConfigPath(out string path)
+    {
+        if (TryResolvePortableConfigDirectory(out string directory))
+        {
+            path = ResolveConfigPath(directory);
+            return true;
+        }
+
+        path = string.Empty;
+        return false;
+    }
+
+    public static bool TryGetPortableConfigPathForExtension(string extension, out string path)
+    {
+        if (TryResolvePortableConfigDirectory(out string directory))
+        {
+            path = BuildConfigPath(directory, extension);
+            return true;
+        }
+
+        path = string.Empty;
+        return false;
+    }
+
+    public static string GetPortableConfigPathForExtension(string extension) => TryGetPortableConfigPathForExtension(extension, out string path) ? path : string.Empty;
     public static string GetUserConfigPathForExtension(string extension) => BuildConfigPath(ResolveUserConfigDirectory(ensureDirectoryExists: true), extension);
 
     public static void DeleteOtherConfigVariants(string pathToKeep)
@@ -170,6 +211,7 @@ public static class ProfileManager
         ModGroups = new();
         CollapsedGroups = new();
         ModGameplayImpactCache = new();
+        LastPersistenceError = null;
     }
 
     public static ModProfile CurrentProfile
@@ -219,35 +261,39 @@ public static class ProfileManager
     /// Pure serialization — writes current in-memory profile/group state to the active save path.
     /// Use this when you've already updated in-memory state yourself.
     /// </summary>
-    public static void SaveInMemoryState()
+    public static bool SaveInMemoryState()
     {
-        SaveToPath(SavePath);
+        return SaveToPath(SavePath);
     }
 
     /// <summary>
     /// Auto-save helper for live game changes such as enabling/disabling mods.
     /// </summary>
-    public static void SnapshotCurrentStateAndSave()
+    public static bool SnapshotCurrentStateAndSave()
     {
         SnapshotCurrentState();
-        SaveInMemoryState();
+        return SaveInMemoryState();
     }
 
     /// <summary>
     /// Writes the current live game state to a specific save path.
     /// </summary>
-    public static void SaveCurrentStateToPath(string path)
+    public static bool SaveCurrentStateToPath(string path)
     {
         SnapshotCurrentState();
-        SaveToPath(path);
+        return SaveToPath(path);
     }
 
-    public static void SaveToPath(string path)
+    public static bool SaveToPath(string path)
     {
         string? tempPath = null;
         try
         {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new InvalidOperationException("No writable config path could be resolved.");
+
             SetActiveConfigExtensionFromPath(path);
+            LastPersistenceError = null;
 
             var folder = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
@@ -267,12 +313,15 @@ public static class ProfileManager
             tempPath = path + ".tmp";
             File.WriteAllText(tempPath, json);
             File.Move(tempPath, path, true);
+            return true;
         }
         catch (Exception ex)
         {
+            LastPersistenceError = ex.Message;
             if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
                 File.Delete(tempPath);
-            ModLogger.Error("Failed to save mod profiles: " + ex.Message);
+            ModLogger.Error($"Failed to save mod profiles to '{path}':\n{ex}");
+            return false;
         }
     }
 

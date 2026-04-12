@@ -23,12 +23,34 @@ internal static class ModdingScreenListOps
         if (newIndex < 0 || newIndex >= list.Count)
             return false;
 
-        var temp = list[index];
-        list[index] = list[newIndex];
-        list[newIndex] = temp;
-        SaveManager.Instance?.SaveSettings();
-        ProfileManager.SaveInMemoryState();
-        return true;
+        var originalItem = list[index];
+        var swappedItem = list[newIndex];
+        list[index] = swappedItem;
+        list[newIndex] = originalItem;
+
+        try
+        {
+            SaveManager.Instance?.SaveSettings();
+            if (ProfileManager.SaveInMemoryState())
+                return true;
+        }
+        catch (Exception ex)
+        {
+            ProfileManager.ModLogger.Error($"Failed to persist mod order change:\n{ex}");
+        }
+
+        list[index] = originalItem;
+        list[newIndex] = swappedItem;
+        try
+        {
+            SaveManager.Instance?.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            ProfileManager.ModLogger.Error($"Failed to restore mod order after a persistence error:\n{ex}");
+        }
+
+        return false;
     }
 
     public static bool ApplyToggleAllInGroup(Control modRowContainer, string groupName, bool isToggled)
@@ -38,6 +60,15 @@ internal static class ModdingScreenListOps
         if (options == null)
             return false;
 
+        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(
+            modRowContainer.GetChildren()
+                .OfType<NModMenuRow>()
+                .Select(row => row.Mod?.manifest?.id ?? ""));
+        var settingsById = options.ModList
+            .Where(mod => !string.IsNullOrWhiteSpace(mod.Id))
+            .GroupBy(mod => mod.Id!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
         bool changed = false;
         foreach (Node child in modRowContainer.GetChildren())
         {
@@ -45,11 +76,13 @@ internal static class ModdingScreenListOps
                 continue;
 
             string modId = row.Mod.manifest.id ?? "";
-            if (string.IsNullOrEmpty(modId) || ModdingScreenStateOps.GetAssignedGroup(modId) != groupName)
+            if (string.IsNullOrEmpty(modId) ||
+                !assignedGroups.TryGetValue(modId, out string? assignedGroup) ||
+                assignedGroup == null ||
+                assignedGroup != groupName)
                 continue;
 
-            var settingsMod = options.ModList.Find(mod => mod.Id == modId);
-            if (settingsMod != null)
+            if (settingsById.TryGetValue(modId, out var settingsMod))
             {
                 settingsMod.IsEnabled = isToggled;
                 if (isToggled)

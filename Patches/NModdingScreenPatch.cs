@@ -44,10 +44,10 @@ public static class NModdingScreenPatch
             ConnectLayoutSignals(__instance, session);
 
         if (session.TopBarControls == null || !GodotObject.IsInstanceValid(session.TopBarControls.Bar) || session.TopBarControls.Bar.GetParent() != session.ChromeRoot)
-        {
             BuildTopBar(session);
+
+        if (session.GroupBarControls == null || !GodotObject.IsInstanceValid(session.GroupBarControls.Bar) || session.GroupBarControls.Bar.GetParent() != session.ChromeRoot)
             BuildGroupBar(session);
-        }
 
         RefreshProfileDropdown();
         RefreshGroupsUI();
@@ -142,8 +142,10 @@ public static class NModdingScreenPatch
         if (session.ChromeRoot == null)
             return;
 
+        bool portableModeEnabled = ProfileManager.TryGetPortableConfigPath(out string portableConfigPath) &&
+            System.IO.File.Exists(portableConfigPath);
         var builtGroupBar = ModdingScreenBars.CreateGroupBar(
-            System.IO.File.Exists(ProfileManager.PortableConfigPath),
+            portableModeEnabled,
             OnPortableModeToggled,
             OnAddGroupRequested);
         session.GroupBarControls = builtGroupBar;
@@ -234,7 +236,8 @@ public static class NModdingScreenPatch
     {
         try
         {
-            ModdingScreenStateOps.SetPortableMode(isToggled);
+            if (!ModdingScreenStateOps.SetPortableMode(isToggled))
+                ProfileManager.ModLogger.Error("Portable mode state changed in the UI but could not be persisted.");
         }
         catch (System.Exception ex)
         {
@@ -347,7 +350,9 @@ public static class NModdingScreenPatch
 
     private static void ApplyProfileSelection(int index, bool snapshotCurrentProfile)
     {
-        var profile = ModdingScreenProfileOps.ApplyProfileSelection(index, snapshotCurrentProfile);
+        if (!ModdingScreenProfileOps.TryApplyProfileSelection(index, snapshotCurrentProfile, out var profile) || profile == null)
+            return;
+
         RefreshProfileDropdown();
 
         if (TryGetCurrentScreen(out var screen) && screen != null)

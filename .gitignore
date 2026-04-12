@@ -30,6 +30,7 @@ obj/
 
 # Build, export, and temp files
 build/
+artifacts/
 export/
 *.log
 *.tmp
