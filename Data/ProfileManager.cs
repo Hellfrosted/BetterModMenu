@@ -35,15 +35,10 @@ public static class ProfileManager
     private static readonly ProfileConfigPathResolver ConfigPaths = new("BetterModMenu", ".json5", ".jsonc", ".json");
     public static string? LastPersistenceError { get; private set; }
 
-    public static string PortableConfigDirectory => ConfigPaths.PortableConfigDirectory;
-    public static string PortableConfigPath => ConfigPaths.PortableConfigPath;
-    public static string UserConfigDirectory => ConfigPaths.UserConfigDirectory;
-    public static string UserConfigPath => ConfigPaths.UserConfigPath;
     public static string SavePath => ConfigPaths.SavePath;
 
     public static bool TryGetPortableConfigPath(out string path) => ConfigPaths.TryGetPortableConfigPath(out path);
     public static bool TryGetPortableConfigPathForExtension(string extension, out string path) => ConfigPaths.TryGetPortableConfigPathForExtension(extension, out path);
-    public static string GetPortableConfigPathForExtension(string extension) => ConfigPaths.GetPortableConfigPathForExtension(extension);
     public static string GetUserConfigPathForExtension(string extension) => ConfigPaths.GetUserConfigPathForExtension(extension);
     public static void DeleteOtherConfigVariants(string pathToKeep) => ConfigPaths.DeleteOtherConfigVariants(pathToKeep);
 

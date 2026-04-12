@@ -21,12 +21,6 @@ internal sealed class ProfileConfigPathResolver
 
     public IReadOnlyList<string> ConfigExtensions => _configExtensions;
 
-    public string PortableConfigDirectory => TryResolvePortableConfigDirectory(out string directory) ? directory : string.Empty;
-
-    public string PortableConfigPath => TryGetPortableConfigPath(out string path) ? path : string.Empty;
-
-    public string UserConfigDirectory => ResolveUserConfigDirectory(ensureDirectoryExists: false);
-
     public string UserConfigPath => ResolveConfigPath(ResolveUserConfigDirectory(ensureDirectoryExists: true));
 
     public string SavePath
@@ -38,11 +32,6 @@ internal sealed class ProfileConfigPathResolver
 
             return UserConfigPath;
         }
-    }
-
-    public string GetPortableConfigPathForExtension(string extension)
-    {
-        return TryGetPortableConfigPathForExtension(extension, out string path) ? path : string.Empty;
     }
 
     public string GetUserConfigPathForExtension(string extension)
