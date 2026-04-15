@@ -10,17 +10,13 @@ internal static class ProfileManifestCacheBuilder
     public static void Rebuild(Dictionary<string, bool> targetCache, Logger logger, IEnumerable<string> configExtensions)
     {
         targetCache.Clear();
-        var mods = MegaCrit.Sts2.Core.Modding.ModManager.Mods;
-        if (mods == null)
-            return;
-
-        foreach (var mod in mods)
+        foreach (var mod in Sts2ModManagerCompat.GetLoadedMods())
         {
-            string modId = mod.manifest?.id ?? string.Empty;
-            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(mod.path))
+            string modId = mod.Id;
+            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(mod.Path))
                 continue;
 
-            string? directory = Directory.Exists(mod.path) ? mod.path : Path.GetDirectoryName(mod.path);
+            string? directory = Directory.Exists(mod.Path) ? mod.Path : Path.GetDirectoryName(mod.Path);
             if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
                 continue;
 

@@ -11,7 +11,7 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 
 ## Requirements
 
-- Slay the Spire 2 `0.99.1` or newer
+- Slay the Spire 2 public/stable and beta branches that expose either `ModManager.LoadedMods` or `ModManager.Mods`
 
 ## Installation
 
