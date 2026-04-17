@@ -1,0 +1,94 @@
+name: Publish Nexus Mods Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: GitHub release tag to upload
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Upload release asset to Nexus Mods
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release metadata
+        id: release
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="${{ inputs.tag_name }}"
+          fi
+
+          if [[ -z "$tag" ]]; then
+            echo "Release tag is required." >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          version="${version#V}"
+          release_url="${{ github.server_url }}/${{ github.repository }}/releases/tag/$tag"
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "release_url=$release_url"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download packaged release asset
+        id: asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p release-assets
+
+          gh release download "${{ steps.release.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --dir release-assets \
+            --pattern "BetterModMenu_v*.zip"
+
+          asset_path="$(find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' | head -n 1)"
+          if [[ -z "$asset_path" ]]; then
+            echo "Expected BetterModMenu_v*.zip release asset was not found." >&2
+            exit 1
+          fi
+
+          echo "path=$asset_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release asset to Nexus Mods
+        id: nexus
+        uses: Nexus-Mods/upload-action@d0321c96e04e91da2caf74cad0c8824f4c748f99
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_group_id: ${{ vars.NEXUSMODS_FILE_GROUP_ID }}
+          filename: ${{ steps.asset.outputs.path }}
+          version: ${{ steps.release.outputs.version }}
+          display_name: Better Mod Menu ${{ steps.release.outputs.version }}
+          description: |
+            Automated upload from GitHub release ${{ steps.release.outputs.tag }}.
+            Source: ${{ steps.release.outputs.release_url }}
+          file_category: main
+
+      - name: Summarize upload
+        shell: bash
+        run: |
+          {
+            echo "## Nexus Mods upload"
+            echo
+            echo "- Tag: \`${{ steps.release.outputs.tag }}\`"
+            echo "- Version: \`${{ steps.release.outputs.version }}\`"
+            echo "- File group ID: \`${{ vars.NEXUSMODS_FILE_GROUP_ID }}\`"
+            echo "- Uploaded file UID: \`${{ steps.nexus.outputs.file_uid }}\`"
+            echo "- Release source: ${{ steps.release.outputs.release_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
