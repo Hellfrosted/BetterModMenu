@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Godot;
 using MegaCrit.Sts2.Core.Saves;
 
@@ -136,8 +137,9 @@ internal sealed class ProfileConfigPathResolver
     private bool TryResolvePortableConfigDirectory(out string directory)
     {
         directory = string.Empty;
-        string path = Sts2ModManagerCompat.TryGetModPath(_modId, out string modPath)
-            ? modPath
+        var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(candidate => candidate.manifest?.id == _modId);
+        string path = (mod != null && !string.IsNullOrEmpty(mod.path))
+            ? mod.path
             : (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty);
 
         if (string.IsNullOrWhiteSpace(path))
