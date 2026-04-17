@@ -45,6 +45,8 @@ dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:Packag
 
 Packaged archives are written to `artifacts/`.
 
+Published GitHub releases can be mirrored to Nexus Mods through `publish-nexus-release.yml`.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
