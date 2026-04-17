@@ -45,14 +45,6 @@ dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:Packag
 
 Packaged archives are written to `artifacts/`.
 
-## Release Automation
-
-Published GitHub releases can be mirrored to Nexus Mods through [publish-nexus-release.yml](.github/workflows/publish-nexus-release.yml).
-
-- Required Actions secret: `NEXUSMODS_API_KEY`
-- Required Actions variable: `NEXUSMODS_FILE_GROUP_ID`
-- The workflow uploads the existing `BetterModMenu_v*.zip` release asset instead of rebuilding in CI.
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
