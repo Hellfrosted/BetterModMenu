@@ -18,10 +18,14 @@ jobs:
     name: Upload release asset to Nexus Mods
     if: github.event_name != 'release' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Resolve release metadata
         id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
@@ -37,12 +41,20 @@ jobs:
 
           version="${tag#v}"
           version="${version#V}"
-          release_url="${{ github.server_url }}/${{ github.repository }}/releases/tag/$tag"
+          release_url="$(gh release view "$tag" --repo "${{ github.repository }}" --json url --jq '.url')"
+          release_body="$(gh release view "$tag" --repo "${{ github.repository }}" --json body --jq '.body // \"\"')"
+
+          if [[ -z "$release_body" ]]; then
+            release_body="Automated upload from GitHub release $tag."
+          fi
 
           {
             echo "tag=$tag"
             echo "version=$version"
             echo "release_url=$release_url"
+            echo "release_body<<EOF"
+            printf '%s\n' "$release_body"
+            echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Download packaged release asset
@@ -75,9 +87,7 @@ jobs:
           filename: ${{ steps.asset.outputs.path }}
           version: ${{ steps.release.outputs.version }}
           display_name: Better Mod Menu ${{ steps.release.outputs.version }}
-          description: |
-            Automated upload from GitHub release ${{ steps.release.outputs.tag }}.
-            Source: ${{ steps.release.outputs.release_url }}
+          description: ${{ steps.release.outputs.release_body }}
           file_category: main
 
       - name: Summarize upload
@@ -91,4 +101,5 @@ jobs:
             echo "- File group ID: \`${{ vars.NEXUSMODS_FILE_GROUP_ID }}\`"
             echo "- Uploaded file UID: \`${{ steps.nexus.outputs.file_uid }}\`"
             echo "- Release source: ${{ steps.release.outputs.release_url }}"
+            echo "- Nexus file description source: GitHub release body"
           } >> "$GITHUB_STEP_SUMMARY"
