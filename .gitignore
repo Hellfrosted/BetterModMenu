@@ -24,6 +24,7 @@ obj/
 .vs/
 .idea/
 .rider/
+.serena/
 *.user
 *.user.*
 *.suo
@@ -32,6 +33,7 @@ obj/
 build/
 artifacts/
 export/
+TestResults/
 *.log
 *.tmp
 
