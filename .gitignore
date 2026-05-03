@@ -41,7 +41,7 @@ TestResults/
 sts2.dll
 decompiled/
 
-# Local-only agent instructions
+# Local-only project instructions
 AGENTS.md
 docs/agents/
 
