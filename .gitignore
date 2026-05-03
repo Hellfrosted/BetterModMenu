@@ -41,6 +41,10 @@ TestResults/
 sts2.dll
 decompiled/
 
+# Local-only agent instructions
+AGENTS.md
+docs/agents/
+
 # Ignore built mod outputs in the root folder
 BetterModMenu.dll
 *.zip
