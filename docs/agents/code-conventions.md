@@ -8,7 +8,6 @@ Last updated: 2026-05-01
 - Prefer concise, simple C# that follows the surrounding file's style.
 - Keep game-facing behavior in patch/session classes and reusable pure logic in `Data/` or rule/helper classes when that pattern already exists.
 - Prefer named constants for shared UI text, group names, and behavioral constants.
-- Avoid broad refactors unless they are required for the task.
 
 ## Project Structure
 

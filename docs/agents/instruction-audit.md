@@ -13,6 +13,8 @@ The only scope mismatch is that some global preferences, such as TypeScript and 
 - One-sentence project description.
 - Package manager status.
 - SDK and build constraint.
+- Note that there is no standalone typecheck command.
+- Build command syntax for the non-standard `sts2.dll` requirement.
 - Default validation command.
 - Links to deeper guidance.
 

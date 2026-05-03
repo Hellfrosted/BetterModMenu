@@ -16,6 +16,8 @@ Use the solution-level test command when changes cross project boundaries:
 dotnet test BetterModMenu.sln
 ```
 
+There is no standalone typecheck command for this repository.
+
 ## Build
 
 Do not run build commands unless specifically asked. Building the mod requires `sts2.dll`:
@@ -40,5 +42,4 @@ Packaged archives are written to `artifacts/`.
 
 - Do not run dev server commands.
 - Do not run build commands unless specifically asked.
-- If a command fails, read the error and adjust before retrying.
 - Avoid `npm` and `yarn`; they are not used in this repository.
