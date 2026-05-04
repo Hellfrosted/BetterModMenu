@@ -24,7 +24,6 @@ obj/
 .vs/
 .idea/
 .rider/
-.serena/
 *.user
 *.user.*
 *.suo
@@ -41,9 +40,6 @@ TestResults/
 sts2.dll
 decompiled/
 
-# Local-only project instructions
-AGENTS.md
-docs/agents/
 .sync.local.yml
 
 # Ignore built mod outputs in the root folder
