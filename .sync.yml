@@ -1,0 +1,68 @@
+version: 1
+
+branches:
+  base: main
+  develop: indev
+  sync:
+    - main
+    - indev
+
+paths:
+  generated:
+    - .godot/
+    - .import/
+    - .mono/
+    - GodotSharp/
+    - bin/
+    - obj/
+    - build/
+    - artifacts/
+    - export/
+    - TestResults/
+    - data_*/
+
+auto_add:
+  allowlist:
+    - "*.cs"
+    - "*.csproj"
+    - "*.sln"
+    - "*.json"
+    - "*.md"
+    - ".github/**"
+    - "Data/**"
+    - "Patches/**"
+    - "Properties/**"
+    - "BetterModMenu.Tests/**"
+
+privacy:
+  denylist:
+    - ".env"
+    - ".env.*"
+    - "**/*secret*"
+    - "**/*token*"
+    - "**/*password*"
+    - "**/*credential*"
+    - "**/id_rsa"
+    - "**/id_ed25519"
+    - "**/*.pem"
+    - "**/*.key"
+    - "sts2.dll"
+    - "export_credentials.cfg"
+
+commands:
+  wsl:
+    install: none
+    check: dotnet test BetterModMenu.Tests/BetterModMenu.Tests.csproj
+    test: dotnet test BetterModMenu.Tests/BetterModMenu.Tests.csproj
+  windows:
+    install: none
+    check: dotnet test BetterModMenu.Tests/BetterModMenu.Tests.csproj
+    test: dotnet test BetterModMenu.Tests/BetterModMenu.Tests.csproj
+
+hooks:
+  enabled: true
+  auto_push: true
+  auto_merge: true
+  merge_mode: ff-only
+  run_checks_after_hook_merge: false
+  fail_commit_on_sync_failure: false

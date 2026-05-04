@@ -44,6 +44,7 @@ decompiled/
 # Local-only project instructions
 AGENTS.md
 docs/agents/
+.sync.local.yml
 
 # Ignore built mod outputs in the root folder
 BetterModMenu.dll
