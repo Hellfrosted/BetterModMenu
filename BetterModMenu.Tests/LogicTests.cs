@@ -547,6 +547,23 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void BuildHighlightedBbCode_HighlightsStartupWarningModNames()
+    {
+        string content = string.Join('\n',
+            "Mod STS2-QuickAnimationMode has a mod manifest that should be migrated! See logs for more info.",
+            "Assembly DLL for mod SoloOne failed to initialize! See logs for more info.",
+            "Running Modded. Loaded 19 mods WITH ERRORS!");
+
+        string highlighted = LogHighlightService.BuildHighlightedBbCode(content);
+        var modNames = LogHighlightService.ExtractHighlightedModNames(content);
+
+        StringAssert.Contains(highlighted, "[color=ff5a4e][b]STS2-QuickAnimationMode[/b][/color]");
+        StringAssert.Contains(highlighted, "[color=ff4d4d][b]SoloOne[/b][/color]");
+        StringAssert.Contains(highlighted, "[color=ff4040][b]Running Modded. Loaded 19 mods WITH ERRORS![/b][/color]");
+        CollectionAssert.AreEqual(new[] { "STS2-QuickAnimationMode", "SoloOne" }, modNames.ToArray());
+    }
+
+    [TestMethod]
     public void TryReadTail_CanReadLogOpenForSharedWriting()
     {
         string tempDirectory = CreateTempDirectory();
@@ -678,6 +695,21 @@ public class LogicTests
         Assert.IsTrue(layout.ContentHeight >= 560);
         Assert.IsTrue(layout.BodyFontSize >= 24);
         Assert.IsTrue(layout.ButtonFontSize >= 24);
+    }
+
+    [TestMethod]
+    public void FitTutorialDialogToViewport_KeepsDialogInsideInitial1080pWindow()
+    {
+        TutorialDialogLayout layout = ModdingScreenDialogRules.FitTutorialDialogToViewport(
+            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            viewportWidth: 1080,
+            viewportHeight: 720);
+
+        Assert.IsTrue(layout.PopupWidth <= 1000);
+        Assert.IsTrue(layout.PopupHeight <= 640);
+        Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
+        Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
+        Assert.IsTrue(layout.BodyFontSize >= 24);
     }
 
     [TestMethod]

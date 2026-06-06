@@ -1,3 +1,5 @@
+using System;
+
 namespace BetterModMenu.Patches;
 
 internal readonly record struct LogDialogLayout(
@@ -14,7 +16,11 @@ internal readonly record struct TutorialDialogLayout(
     int ContentWidth,
     int ContentHeight,
     int BodyFontSize,
-    int ButtonFontSize);
+    int ButtonFontSize,
+    int HorizontalMargin,
+    int VerticalMargin,
+    int ContentHorizontalPadding,
+    int ContentVerticalPadding);
 
 internal static class ModdingScreenDialogRules
 {
@@ -37,6 +43,23 @@ internal static class ModdingScreenDialogRules
             ContentWidth: 1140,
             ContentHeight: 590,
             BodyFontSize: 24,
-            ButtonFontSize: 24);
+            ButtonFontSize: 24,
+            HorizontalMargin: 80,
+            VerticalMargin: 80,
+            ContentHorizontalPadding: 120,
+            ContentVerticalPadding: 130);
+    }
+
+    public static TutorialDialogLayout FitTutorialDialogToViewport(TutorialDialogLayout preferred, int viewportWidth, int viewportHeight)
+    {
+        int popupWidth = Math.Max(720, Math.Min(preferred.PopupWidth, viewportWidth - preferred.HorizontalMargin));
+        int popupHeight = Math.Max(520, Math.Min(preferred.PopupHeight, viewportHeight - preferred.VerticalMargin));
+        return preferred with
+        {
+            PopupWidth = popupWidth,
+            PopupHeight = popupHeight,
+            ContentWidth = Math.Max(640, popupWidth - preferred.ContentHorizontalPadding),
+            ContentHeight = Math.Max(390, popupHeight - preferred.ContentVerticalPadding)
+        };
     }
 }

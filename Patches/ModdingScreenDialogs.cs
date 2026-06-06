@@ -44,18 +44,37 @@ internal static class ModdingScreenDialogs
             CustomMinimumSize = new Vector2(layout.ContentWidth, layout.ContentHeight)
         };
         ModdingScreenVanillaStyle.ApplyLogPanel(panel);
-        var label = new Label
+        var contentBox = new VBoxContainer
         {
-            Text = content,
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
+        var copyButton = new Button
+        {
+            Text = "Copy All",
+            TooltipText = "Copy the displayed log text to the clipboard"
+        };
+        ModdingScreenVanillaStyle.ApplyButton(copyButton);
+        copyButton.Pressed += () => DisplayServer.ClipboardSet(content);
+        contentBox.AddChild(copyButton);
+
+        var label = new RichTextLabel
+        {
+            BbcodeEnabled = true,
+            Text = LogHighlightService.BuildHighlightedBbCode(content),
+            SelectionEnabled = true,
+            ContextMenuEnabled = true,
+            ScrollActive = false,
+            FitContent = true,
             CustomMinimumSize = new Vector2(0, 0),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
-        ModdingScreenVanillaStyle.ApplyLabel(label);
+        label.AddThemeColorOverride("default_color", new Color(0.92f, 0.86f, 0.74f, 1f));
         label.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
 
-        scroll.AddChild(label);
+        contentBox.AddChild(label);
+        scroll.AddChild(contentBox);
         panel.AddChild(scroll);
         popup.AddChild(panel);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
@@ -66,25 +85,26 @@ internal static class ModdingScreenDialogs
 
     public static void ShowTutorialDialog(NModdingScreen screen, string version, Action onDismissed)
     {
-        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        TutorialDialogLayout layout = GetTutorialLayoutForScreen(screen);
         var popup = new AcceptDialog
         {
             Title = "Better Mod Menu v" + version,
-            DialogText = string.Empty
+            DialogText = TutorialContentBuilder.BuildBody()
         };
 
-        var panel = new PanelContainer
-        {
-            CustomMinimumSize = new Vector2(layout.ContentWidth, layout.ContentHeight)
-        };
-        ModdingScreenVanillaStyle.ApplyLogPanel(panel);
-        panel.AddChild(CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(), layout.BodyFontSize));
-        popup.AddChild(panel);
+        popup.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += onDismissed;
         popup.Canceled += onDismissed;
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
+        PopupTutorialDialog(screen, popup);
+        screen.Resized += () =>
+        {
+            if (!GodotObject.IsInstanceValid(popup) || !popup.Visible)
+                return;
+
+            PopupTutorialDialog(screen, popup);
+        };
     }
 
     public static void ShowRenameGroupDialog(NModdingScreen screen, string oldName, Action<string> onConfirmed)
@@ -144,5 +164,20 @@ internal static class ModdingScreenDialogs
         var okButton = popup.GetOkButton();
         okButton.AddThemeFontSizeOverride("font_size", fontSize);
         okButton.CustomMinimumSize = new Vector2(Mathf.Max(okButton.CustomMinimumSize.X, 72), 40);
+    }
+
+    private static TutorialDialogLayout GetTutorialLayoutForScreen(NModdingScreen screen)
+    {
+        var viewportSize = screen.GetViewportRect().Size;
+        return ModdingScreenDialogRules.FitTutorialDialogToViewport(
+            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            (int)viewportSize.X,
+            (int)viewportSize.Y);
+    }
+
+    private static void PopupTutorialDialog(NModdingScreen screen, AcceptDialog popup)
+    {
+        TutorialDialogLayout layout = GetTutorialLayoutForScreen(screen);
+        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
     }
 }
