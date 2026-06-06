@@ -120,15 +120,26 @@ internal static class ModListExportBuilder
 
     private static void AppendCsvValue(StringBuilder builder, string value)
     {
-        if (!RequiresEscaping(value))
+        string safeValue = NeutralizeFormulaPrefix(value);
+        if (!RequiresEscaping(safeValue))
         {
-            builder.Append(value);
+            builder.Append(safeValue);
             return;
         }
 
         builder.Append('"');
-        builder.Append(value.Replace("\"", "\"\""));
+        builder.Append(safeValue.Replace("\"", "\"\""));
         builder.Append('"');
+    }
+
+    private static string NeutralizeFormulaPrefix(string value)
+    {
+        return value.Length > 0 && IsFormulaPrefix(value[0]) ? "'" + value : value;
+    }
+
+    private static bool IsFormulaPrefix(char value)
+    {
+        return value is '=' or '+' or '-' or '@' or '\t' or '\r';
     }
 
     private static bool RequiresEscaping(string value)
