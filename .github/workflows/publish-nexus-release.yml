@@ -70,13 +70,16 @@ jobs:
             --dir release-assets \
             --pattern "BetterModMenu_v*.zip"
 
-          asset_path="$(find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' | head -n 1)"
+          asset_path="$(find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' ! -name '*_cloud.zip' | sort | head -n 1)"
           if [[ -z "$asset_path" ]]; then
-            echo "Expected BetterModMenu_v*.zip release asset was not found." >&2
+            echo "Expected default BetterModMenu_v*.zip release asset was not found." >&2
+            echo "Cloud-capable *_cloud.zip assets are optional sidecars and are not uploaded as the main Nexus file." >&2
             exit 1
           fi
 
+          cloud_asset_count="$(find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*_cloud.zip' | wc -l | tr -d ' ')"
           echo "path=$asset_path" >> "$GITHUB_OUTPUT"
+          echo "cloud_asset_count=$cloud_asset_count" >> "$GITHUB_OUTPUT"
 
       - name: Upload release asset to Nexus Mods
         id: nexus
@@ -99,6 +102,8 @@ jobs:
             echo "- Tag: \`${{ steps.release.outputs.tag }}\`"
             echo "- Version: \`${{ steps.release.outputs.version }}\`"
             echo "- File group ID: \`${{ vars.NEXUSMODS_FILE_GROUP_ID }}\`"
+            echo "- Uploaded asset: \`${{ steps.asset.outputs.path }}\`"
+            echo "- Optional cloud assets found: \`${{ steps.asset.outputs.cloud_asset_count }}\`"
             echo "- Uploaded file UID: \`${{ steps.nexus.outputs.file_uid }}\`"
             echo "- Release source: ${{ steps.release.outputs.release_url }}"
             echo "- Nexus file description source: GitHub release body"

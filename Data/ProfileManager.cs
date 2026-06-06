@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Reflection;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Saves;
 
@@ -21,6 +22,9 @@ public class ProfileSaveData
     public List<string> CustomGroups { get; set; } = new();
     public Dictionary<string, string> ModGroups { get; set; } = new();
     public HashSet<string> CollapsedGroups { get; set; } = new();
+    public TutorialState Tutorial { get; set; } = new();
+    public CloudBackupSettings CloudBackups { get; set; } = new();
+    public GameVersionDownloadSettings GameVersionDownloads { get; set; } = new();
 }
 
 public static class ProfileManager
@@ -33,9 +37,14 @@ public static class ProfileManager
         AllowTrailingCommas = true
     };
     private static readonly ProfileConfigPathResolver ConfigPaths = new("BetterModMenu", ".json5", ".jsonc", ".json");
+    private static readonly HashSet<ProfileBackupReason> AutomaticBackupsThisProcess = new();
     public static string? LastPersistenceError { get; private set; }
+    public static string? LastBackupError { get; private set; }
 
     public static string SavePath => ConfigPaths.SavePath;
+    internal static string ExportDirectory => Path.Combine(Path.GetDirectoryName(SavePath) ?? string.Empty, "exports");
+    internal static string BackupDirectory => Path.Combine(Path.GetDirectoryName(SavePath) ?? string.Empty, "backups");
+    internal static IReadOnlyList<string> ConfigExtensions => ConfigPaths.ConfigExtensions;
 
     public static bool TryGetPortableConfigPath(out string path) => ConfigPaths.TryGetPortableConfigPath(out path);
     public static bool TryGetPortableConfigPathForExtension(string extension, out string path) => ConfigPaths.TryGetPortableConfigPathForExtension(extension, out path);
@@ -48,6 +57,9 @@ public static class ProfileManager
     public static List<string> CustomGroups { get; set; } = new();
     public static Dictionary<string, string> ModGroups { get; set; } = new();
     public static HashSet<string> CollapsedGroups { get; set; } = new();
+    public static TutorialState Tutorial { get; set; } = new();
+    public static CloudBackupSettings CloudBackups { get; set; } = new();
+    public static GameVersionDownloadSettings GameVersionDownloads { get; set; } = new();
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
 
     public static void ResetState()
@@ -57,8 +69,12 @@ public static class ProfileManager
         CustomGroups = new();
         ModGroups = new();
         CollapsedGroups = new();
+        Tutorial = new();
+        CloudBackups = new();
+        GameVersionDownloads = new();
         ModGameplayImpactCache = new();
         LastPersistenceError = null;
+        LastBackupError = null;
     }
 
     public static ModProfile CurrentProfile
@@ -154,7 +170,10 @@ public static class ProfileManager
                 CurrentProfileIndex = CurrentProfileIndex,
                 CustomGroups = CustomGroups,
                 ModGroups = ModGroups,
-                CollapsedGroups = CollapsedGroups
+                CollapsedGroups = CollapsedGroups,
+                Tutorial = Tutorial,
+                CloudBackups = CloudBackups,
+                GameVersionDownloads = GameVersionDownloads
             };
             var json = JsonSerializer.Serialize(saveData, JsonOpts);
             tempPath = path + ".tmp";
@@ -180,6 +199,7 @@ public static class ProfileManager
             string savePath = SavePath;
             if (File.Exists(savePath))
             {
+                BackupExistingSaveOnce(savePath, ProfileBackupReason.RunStart, out _);
                 ConfigPaths.SetActiveConfigExtensionFromPath(savePath);
                 var json = File.ReadAllText(savePath);
                 try
@@ -192,6 +212,9 @@ public static class ProfileManager
                         CustomGroups = loaded.CustomGroups ?? new();
                         ModGroups = loaded.ModGroups ?? new();
                         CollapsedGroups = loaded.CollapsedGroups ?? new();
+                        Tutorial = loaded.Tutorial ?? new();
+                        CloudBackups = loaded.CloudBackups ?? new();
+                        GameVersionDownloads = loaded.GameVersionDownloads ?? new();
                     }
                 }
                 catch
@@ -229,6 +252,148 @@ public static class ProfileManager
             Profiles.Add(new ModProfile { Name = "Default" });
             NormalizeProfileIndex();
         }
+    }
+
+    internal static bool BackupExistingSave(ProfileBackupReason reason)
+    {
+        return TryBackupExistingSave(reason, out _);
+    }
+
+    internal static bool TryBackupExistingSave(ProfileBackupReason reason, out string backupPath)
+    {
+        return BackupExistingSave(SavePath, reason, out backupPath);
+    }
+
+    internal static bool TryBackupResumeOnce(out string backupPath)
+    {
+        return BackupExistingSaveOnce(SavePath, ProfileBackupReason.Resume, out backupPath);
+    }
+
+    internal static bool TryExportModList(IEnumerable<InstalledModExportInput> mods, out string exportPath)
+    {
+        var rows = ModListExportBuilder.BuildRows(mods, ModGroups, UnassignedGroupName);
+        if (ModListExportBuilder.TryWriteCsv(ExportDirectory, rows, DateTimeOffset.UtcNow, out exportPath, out string? error))
+        {
+            MirrorCloudBackup(CloudBackupKind.ModList, exportPath);
+            return true;
+        }
+
+        LastPersistenceError = error;
+        if (!string.IsNullOrEmpty(error))
+            ModLogger.Error($"Failed to export mod list: {error}");
+
+        return false;
+    }
+
+    internal static bool TryExportCurrentModList(out string exportPath)
+    {
+        var inputs = ModListExportInputCollector.Collect(ConfigExtensions);
+        return TryExportModList(inputs, out exportPath);
+    }
+
+    internal static bool TryReadLogViewerContent(out string title, out string content, out string? error)
+    {
+        return LogViewerService.TryReadLatestLog(
+            EnumerateLogCandidatePaths(),
+            LogViewerService.DefaultMaxLines,
+            LogViewerService.DefaultMaxChars,
+            out title,
+            out content,
+            out error);
+    }
+
+    internal static bool ShouldShowTutorial(string currentVersion)
+    {
+        return TutorialStateRules.ShouldShowTutorial(Tutorial, currentVersion);
+    }
+
+    internal static void MarkTutorialSeenAndSave(string currentVersion)
+    {
+        TutorialStateRules.MarkSeen(Tutorial, currentVersion);
+        SaveInMemoryState();
+    }
+
+    internal static bool TryBuildGameVersionDownloadPlan(out GameVersionDownloadPlan plan, out string? error)
+    {
+        return GameVersionSelectionRules.TryBuildDownloadPlan(GameVersionDownloads, out plan, out error);
+    }
+
+    internal static bool SaveCloudBackupDirectory(string directory)
+    {
+        CloudBackups = CloudBackupSettingsRules.WithDirectory(CloudBackups, directory);
+        return SaveInMemoryState();
+    }
+
+    private static bool BackupExistingSave(string savePath, ProfileBackupReason reason)
+    {
+        return BackupExistingSave(savePath, reason, out _);
+    }
+
+    private static bool BackupExistingSave(string savePath, ProfileBackupReason reason, out string backupPath)
+    {
+        bool backedUpSettings = BackupCurrentModSettings(reason, out string settingsBackupPath);
+        if (ProfileBackupService.TryBackupExistingSave(savePath, reason, DateTimeOffset.UtcNow, out backupPath, out string? error))
+        {
+            LastBackupError = null;
+            MirrorCloudBackup(CloudBackupKind.ProfileSettings, backupPath);
+            return true;
+        }
+
+        if (backedUpSettings && string.IsNullOrEmpty(error))
+        {
+            LastBackupError = null;
+            backupPath = settingsBackupPath;
+            return true;
+        }
+
+        LastBackupError = error;
+        if (!string.IsNullOrEmpty(error))
+            ModLogger.Error($"Failed to create {reason} profile backup for '{savePath}': {error}");
+
+        return false;
+    }
+
+    private static void MirrorCloudBackup(CloudBackupKind kind, string sourcePath)
+    {
+#if BETTERMODMENU_CLOUD_FEATURES
+        if (!CloudBackupService.TryMirrorFile(CloudBackups, kind, sourcePath, out _, out string? error) && !string.IsNullOrEmpty(error))
+            ModLogger.Error($"Failed to mirror BetterModMenu backup to cloud directory: {error}");
+#endif
+    }
+
+    private static bool BackupCurrentModSettings(ProfileBackupReason reason, out string settingsBackupPath)
+    {
+        var inputs = ModListExportInputCollector.Collect(ConfigExtensions);
+        if (ModSettingsBackupService.TryWriteSnapshot(BackupDirectory, inputs, reason, DateTimeOffset.UtcNow, out settingsBackupPath, out string? error))
+        {
+            MirrorCloudBackup(CloudBackupKind.ModSettings, settingsBackupPath);
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(error))
+            ModLogger.Error($"Failed to create {reason} mod-settings backup: {error}");
+
+        return false;
+    }
+
+    private static bool BackupExistingSaveOnce(string savePath, ProfileBackupReason reason, out string backupPath)
+    {
+        backupPath = string.Empty;
+        if (!BackupTriggerRules.ShouldCreateAutomaticBackup(AutomaticBackupsThisProcess, reason))
+            return false;
+
+        if (!BackupExistingSave(savePath, reason, out backupPath))
+            return false;
+
+        BackupTriggerRules.MarkAutomaticBackupCreated(AutomaticBackupsThisProcess, reason);
+        return true;
+    }
+
+    private static IEnumerable<string> EnumerateLogCandidatePaths()
+    {
+        string? configDirectory = Path.GetDirectoryName(SavePath);
+        string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+        return LogViewerService.BuildCandidatePaths(new[] { configDirectory, assemblyDirectory });
     }
 
     public static bool NormalizePersistedState(IEnumerable<string> installedModIds)

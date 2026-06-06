@@ -100,15 +100,13 @@ internal static class ModdingScreenGroupUi
 
         foreach (var row in rows)
         {
+            string modId = row.Mod?.manifest?.id ?? "";
+            if (string.IsNullOrEmpty(modId))
+                continue;
+
             string groupName = ModdingScreenConstants.UnassignedGroup;
-            if (row.Mod?.manifest != null)
-            {
-                string modId = row.Mod.manifest.id ?? "";
-                if (!string.IsNullOrEmpty(modId) &&
-                    assignedGroups.TryGetValue(modId, out string? assignedGroup) &&
-                    assignedGroup != null)
-                    groupName = assignedGroup;
-            }
+            if (assignedGroups.TryGetValue(modId, out string? assignedGroup) && assignedGroup != null)
+                groupName = assignedGroup;
 
             groups[groupName].Add(row);
 
@@ -175,12 +173,14 @@ internal static class ModdingScreenGroupUi
             Name = "ModGroupHeader_" + groupName,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
+        ModdingScreenVanillaStyle.ApplyGroupHeader(header);
 
         var collapseBtn = new Button
         {
             Text = isCollapsed ? "► " + groupName : "▼ " + groupName,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
+        ModdingScreenVanillaStyle.ApplyButton(collapseBtn);
         collapseBtn.Pressed += () =>
         {
             ToggleCollapsedGroup(groupName);
@@ -191,6 +191,7 @@ internal static class ModdingScreenGroupUi
         bool hasRows = groupRows.Count > 0;
         bool allEnabled = AreAllRowsEnabled(groupRows);
         var toggleAllBtn = new Button { Text = allEnabled ? "Disable All" : "Enable All", Disabled = !hasRows };
+        ModdingScreenVanillaStyle.ApplyButton(toggleAllBtn);
         toggleAllBtn.Pressed += () => toggleAllInGroup(groupName, !allEnabled);
         header.AddChild(toggleAllBtn);
 
@@ -201,24 +202,28 @@ internal static class ModdingScreenGroupUi
         }
 
         var renameBtn = new Button { Text = "Rename" };
+        ModdingScreenVanillaStyle.ApplyButton(renameBtn);
         renameBtn.Pressed += () => renameGroup(groupName);
         header.AddChild(renameBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
         var upBtn = new Button { Text = "^" };
+        ModdingScreenVanillaStyle.ApplySmallButton(upBtn);
         upBtn.Pressed += () => moveGroup(groupName, -1);
         header.AddChild(upBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
         var downBtn = new Button { Text = "v" };
+        ModdingScreenVanillaStyle.ApplySmallButton(downBtn);
         downBtn.Pressed += () => moveGroup(groupName, 1);
         header.AddChild(downBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
         var deleteBtn = new Button { Text = "Del" };
+        ModdingScreenVanillaStyle.ApplyButton(deleteBtn);
         deleteBtn.Pressed += () =>
         {
             if (ModdingScreenStateOps.DeleteGroup(groupName))

@@ -31,6 +31,12 @@ public static class NModdingScreenPatch
             OnRenameProfilePressed,
             OnDelProfilePressed,
             OnPortableModeToggled,
+            OnManualBackupPressed,
+            OnExportModListPressed,
+            OnViewLogsPressed,
+            OnTutorialPressed,
+            OnGameVersionPressed,
+            OnCloudBackupPressed,
             OnAddGroupRequested);
 
         RefreshProfileDropdown();
@@ -42,6 +48,8 @@ public static class NModdingScreenPatch
             {
                 RefreshGroupsUI();
                 UpdateChromeLayout(__instance);
+                MaybeCreateResumeBackup();
+                MaybeShowTutorial(__instance);
             }
         }).CallDeferred();
     }
@@ -94,6 +102,123 @@ public static class NModdingScreenPatch
 
         RefreshGroupsUI();
         return true;
+    }
+
+    private static void MaybeShowTutorial(NModdingScreen screen)
+    {
+        string currentVersion = ModVersionProvider.CurrentVersion;
+        if (!ProfileManager.ShouldShowTutorial(currentVersion))
+            return;
+
+        ModdingScreenDialogs.ShowTutorialDialog(screen, currentVersion, () =>
+        {
+            ProfileManager.MarkTutorialSeenAndSave(currentVersion);
+        });
+    }
+
+    private static void MaybeCreateResumeBackup()
+    {
+        ProfileManager.TryBackupResumeOnce(out _);
+    }
+
+    private static void OnManualBackupPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        if (ProfileManager.TryBackupExistingSave(ProfileBackupReason.Manual, out string backupPath))
+        {
+            ModdingScreenDialogs.ShowInfoDialog(screen, "Backup Created", "BetterModMenu profile settings were backed up to:\n" + backupPath);
+            return;
+        }
+
+        string message = string.IsNullOrWhiteSpace(ProfileManager.LastBackupError)
+            ? "No existing profile save was found to back up yet."
+            : "Backup failed:\n" + ProfileManager.LastBackupError;
+        ModdingScreenDialogs.ShowInfoDialog(screen, "Backup Not Created", message);
+        ProfileManager.ModLogger.Error("Manual backup was requested but no existing profile save could be backed up.");
+    }
+
+    private static void OnExportModListPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        if (!ProfileManager.TryExportCurrentModList(out string exportPath))
+        {
+            string message = string.IsNullOrWhiteSpace(ProfileManager.LastPersistenceError)
+                ? "The mod list could not be exported."
+                : "Export failed:\n" + ProfileManager.LastPersistenceError;
+            ModdingScreenDialogs.ShowInfoDialog(screen, "Export Failed", message);
+            return;
+        }
+
+        ModdingScreenDialogs.ShowInfoDialog(screen, "CSV Export Created", "The installed mod list was exported to:\n" + exportPath);
+        ProfileManager.ModLogger.Info($"Exported BetterModMenu mod list to '{exportPath}'.");
+    }
+
+    private static void OnViewLogsPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        if (ProfileManager.TryReadLogViewerContent(out string title, out string content, out string? error))
+        {
+            ModdingScreenDialogs.ShowLogDialog(screen, title, content);
+            return;
+        }
+
+        ModdingScreenDialogs.ShowInfoDialog(screen, "Logs Not Found", error ?? "No known log file could be opened.");
+    }
+
+    private static void OnTutorialPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        ModdingScreenDialogs.ShowTutorialDialog(screen, ModVersionProvider.CurrentVersion, () => { });
+    }
+
+    private static void OnGameVersionPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        if (!ProfileManager.TryBuildGameVersionDownloadPlan(out var plan, out string? error))
+        {
+            ModdingScreenDialogs.ShowInfoDialog(
+                screen,
+                "Game Version Download",
+                "Configure GameVersionDownloads in the BetterModMenu profile save with SteamDB app, depot, and manifest ids.\n\n" + (error ?? "No download plan could be built."));
+            return;
+        }
+
+        ModdingScreenDialogs.ShowLogDialog(
+            screen,
+            "Game Version Download",
+            "Selected version: " + plan.Version.DisplayName + "\nInstall directory: " + plan.InstallDirectory + "\n\nSteamCMD command:\n" + plan.CommandLine);
+    }
+
+    private static void OnCloudBackupPressed()
+    {
+#if BETTERMODMENU_CLOUD_FEATURES
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        ModdingScreenDialogs.ShowCloudBackupDialog(screen, ProfileManager.CloudBackups.Directory, directory =>
+        {
+            if (ProfileManager.SaveCloudBackupDirectory(directory))
+            {
+                string message = string.IsNullOrWhiteSpace(ProfileManager.CloudBackups.Directory)
+                    ? "Cloud backup mirroring is disabled."
+                    : "Cloud backup mirroring is enabled for:\n" + ProfileManager.CloudBackups.Directory;
+                ModdingScreenDialogs.ShowInfoDialog(screen, "Cloud Backups", message);
+                return;
+            }
+
+            ModdingScreenDialogs.ShowInfoDialog(screen, "Cloud Backups", "Cloud backup settings could not be saved:\n" + ProfileManager.LastPersistenceError);
+        });
+#endif
     }
 
     public static void RefreshGroupsUI()

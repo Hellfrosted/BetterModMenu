@@ -40,9 +40,9 @@ public static class NModMenuRowPatch
             { 
                 Text = "Gameplay",
                 TooltipText = "This mod affects gameplay.",
-                Modulate = new Color(1f, 0.5f, 0.3f),
                 VerticalAlignment = VerticalAlignment.Center
             };
+            warningLabel.AddThemeColorOverride("font_color", new Color(1f, 0.67f, 0.36f));
             container.AddChild(warningLabel);
             
             var spacer = new Control { CustomMinimumSize = new Vector2(10, 0) };
@@ -57,6 +57,7 @@ public static class NModMenuRowPatch
             CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
             TooltipText = orderTooltip
         };
+        ModdingScreenVanillaStyle.ApplySmallButton(upBtn);
         upBtn.Pressed += () => QueueMoveModOrder(__instance, modId, -1);
         container.AddChild(upBtn);
 
@@ -66,10 +67,12 @@ public static class NModMenuRowPatch
             CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
             TooltipText = orderTooltip
         };
+        ModdingScreenVanillaStyle.ApplySmallButton(downBtn);
         downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 
         var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0) };
+        ModdingScreenVanillaStyle.ApplyOptionButton(groupDropdown);
 
         groupDropdown.ItemSelected += (idx) =>
         {
@@ -107,7 +110,7 @@ public static class NModMenuRowPatch
         if (!GodotObject.IsInstanceValid(row) || !GodotObject.IsInstanceValid(container))
             return;
 
-        groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0);
+        groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, ModdingScreenConstants.ToolbarControlHeight);
         if (warningLabel != null)
             warningLabel.Text = "Gameplay";
 
@@ -115,7 +118,7 @@ public static class NModMenuRowPatch
         bool isCompact = row.Size.X > 0 && row.Size.X - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;
         if (isCompact)
         {
-            groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, 0);
+            groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, ModdingScreenConstants.ToolbarControlHeight);
         }
 
         float width = container.GetCombinedMinimumSize().X;

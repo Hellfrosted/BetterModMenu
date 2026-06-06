@@ -16,14 +16,15 @@ internal static class ModdingScreenConstants
     public const float TopBarFallbackWidth = 360f;
     public const float TopBarButtonMinWidth = 62f;
     public const float TopBarButtonCompactWidth = 52f;
+    public const float ToolbarControlHeight = 30f;
 
-    public const float GroupBarYOffset = 35f;
-    public const float GroupBarCompactThreshold = 360f;
+    public const float GroupBarCompactThreshold = 980f;
     public const float GroupBarFallbackX = 550f;
     public const float GroupBarFallbackY = 30f;
     public const float GroupBarFallbackWidth = 400f;
     public const float GroupBarWideHeight = 28f;
     public const float GroupBarCompactHeight = 58f;
+    public const float GroupBarListGap = 4f;
     public const float GroupInputWideWidth = 140f;
     public const float GroupInputCompactWidth = 120f;
 
@@ -34,4 +35,5 @@ internal static class ModdingScreenConstants
     public const float RowNativeTickboxReserveWidth = 84f;
     public const float RowMinimumLeftContentWidth = 480f;
     public const float GroupHeaderScrollbarReserveWidth = 52f;
+    public const float ScrollFitTolerance = 1f;
 }

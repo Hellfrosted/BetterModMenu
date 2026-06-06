@@ -13,9 +13,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Data\BackupTriggerRules.cs" Link="Data\BackupTriggerRules.cs" />
+    <Compile Include="..\Data\CloudBackupSettingsRules.cs" Link="Data\CloudBackupSettingsRules.cs" />
+    <Compile Include="..\Data\CloudBackupService.cs" Link="Data\CloudBackupService.cs" />
+    <Compile Include="..\Data\GameVersionSelectionRules.cs" Link="Data\GameVersionSelectionRules.cs" />
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
+    <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
+    <Compile Include="..\Data\ModListExportBuilder.cs" Link="Data\ModListExportBuilder.cs" />
+    <Compile Include="..\Data\ModSettingsBackupService.cs" Link="Data\ModSettingsBackupService.cs" />
+    <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />
+    <Compile Include="..\Data\ReleasePackageRules.cs" Link="Data\ReleasePackageRules.cs" />
     <Compile Include="..\Data\ProfileStateRules.cs" Link="Data\ProfileStateRules.cs" />
+    <Compile Include="..\Data\TutorialContentBuilder.cs" Link="Data\TutorialContentBuilder.cs" />
+    <Compile Include="..\Data\TutorialStateRules.cs" Link="Data\TutorialStateRules.cs" />
     <Compile Include="..\Patches\ModdingGroupRules.cs" Link="Patches\ModdingGroupRules.cs" />
+    <Compile Include="..\Patches\ModdingScreenDialogRules.cs" Link="Patches\ModdingScreenDialogRules.cs" />
+    <Compile Include="..\Patches\ModdingScreenLayoutRules.cs" Link="Patches\ModdingScreenLayoutRules.cs" />
     <Compile Include="..\Patches\ModdingScreenConstants.cs" Link="Patches\ModdingScreenConstants.cs" />
+    <Compile Include="..\Patches\ModOrderRules.cs" Link="Patches\ModOrderRules.cs" />
   </ItemGroup>
 </Project>

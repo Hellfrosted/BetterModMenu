@@ -28,6 +28,38 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 
 - Portable Mode stores `mod_profiles.json`, `mod_profiles.jsonc`, or `mod_profiles.json5` beside the mod files.
 - Otherwise, the file is stored under `mod_data/BetterModMenu/`.
+- Cloud-capable builds can mirror backups and CSV exports to a synced directory when `CloudBackups` is enabled in the profile save:
+
+```json
+"CloudBackups": {
+  "Enabled": true,
+  "Directory": "C:\\Users\\you\\OneDrive\\BetterModMenu",
+  "MirrorProfileBackups": true,
+  "MirrorModSettingsBackups": true,
+  "MirrorModListExports": true
+}
+```
+- Game-version command previews use SteamDB-derived app, depot, and manifest ids from `GameVersionDownloads` in the profile save:
+
+```json
+"GameVersionDownloads": {
+  "Enabled": true,
+  "SteamCmdPath": "steamcmd",
+  "InstallRootDirectory": "C:\\Games\\STS2 Versions",
+  "SelectedVersion": "0.99.1",
+  "Versions": [
+    {
+      "DisplayName": "0.99.1",
+      "AppId": 2868840,
+      "DepotId": 2868841,
+      "ManifestId": 1234567890123456789
+    }
+  ]
+}
+```
+
+The in-game `Game` action previews the SteamCMD command; it does not launch downloads itself.
+In cloud-capable builds, the in-game `Cloud` action sets or clears the synced mirror folder.
 
 ## Build
 
@@ -44,6 +76,11 @@ dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:Packag
 ```
 
 Packaged archives are written to `artifacts/`.
+Cloud-capable builds are opt-in and produce a separate `_cloud` archive:
+
+```powershell
+dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:PackageModOnBuild=true -p:IncludeCloudFeatures=true
+```
 
 Published GitHub releases can be mirrored to Nexus Mods through `publish-nexus-release.yml`.
 

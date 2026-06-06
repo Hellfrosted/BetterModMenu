@@ -10,6 +10,9 @@ internal sealed class ModdingScreenSession
     public List<Node> GeneratedGroupNodes { get; } = new();
     public GroupBarControls? GroupBarControls { get; set; }
     public bool LayoutSignalsConnected { get; set; }
+    public bool ModsScrollbarPersistenceSignalsConnected { get; set; }
+    public Vector2? OriginalModsScrollPosition { get; set; }
+    public Vector2? OriginalModsScrollSize { get; set; }
     public TopBarControls? TopBarControls { get; set; }
     public int TickboxSuppressionDepth { get; set; }
 
@@ -20,6 +23,9 @@ internal sealed class ModdingScreenSession
         GeneratedGroupNodes.Clear();
         GroupBarControls = null;
         LayoutSignalsConnected = false;
+        ModsScrollbarPersistenceSignalsConnected = false;
+        OriginalModsScrollPosition = null;
+        OriginalModsScrollSize = null;
         TopBarControls = null;
         TickboxSuppressionDepth = 0;
     }

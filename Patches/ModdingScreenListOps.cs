@@ -19,14 +19,15 @@ internal static class ModdingScreenListOps
         if (index == -1)
             return false;
 
-        int newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= list.Count)
+        var modIds = list.Select(mod => mod.Id ?? "").ToList();
+        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(modIds);
+        if (!ModOrderRules.TryBuildMove(modIds, assignedGroups, modId, direction, out var move))
             return false;
 
-        var originalItem = list[index];
-        var swappedItem = list[newIndex];
-        list[index] = swappedItem;
-        list[newIndex] = originalItem;
+        var originalList = list.ToList();
+        var movedItem = list[move.FromIndex];
+        list.RemoveAt(move.FromIndex);
+        list.Insert(move.InsertIndex, movedItem);
 
         try
         {
@@ -39,8 +40,8 @@ internal static class ModdingScreenListOps
             ProfileManager.ModLogger.Error($"Failed to persist mod order change:\n{ex}");
         }
 
-        list[index] = originalItem;
-        list[newIndex] = swappedItem;
+        list.Clear();
+        list.AddRange(originalList);
         try
         {
             SaveManager.Instance?.SaveSettings();

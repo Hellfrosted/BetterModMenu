@@ -10,6 +10,10 @@
 
   <PropertyGroup>
     <PackageModOnBuild Condition="'$(PackageModOnBuild)' == ''">false</PackageModOnBuild>
+    <IncludeCloudFeatures Condition="'$(IncludeCloudFeatures)' == ''">false</IncludeCloudFeatures>
+    <CloudPackageSuffix Condition="'$(IncludeCloudFeatures)' == 'true'">_cloud</CloudPackageSuffix>
+    <CloudPackageSuffix Condition="'$(IncludeCloudFeatures)' != 'true'"></CloudPackageSuffix>
+    <DefineConstants Condition="'$(IncludeCloudFeatures)' == 'true'">$(DefineConstants);BETTERMODMENU_CLOUD_FEATURES</DefineConstants>
     <ArtifactsDir Condition="'$(ArtifactsDir)' == ''">$(ProjectDir)artifacts\</ArtifactsDir>
     <Sts2DllPath Condition="'$(Sts2DllPath)' == '' and '$(STS2_DLL_PATH)' != ''">$(STS2_DLL_PATH)</Sts2DllPath>
   </PropertyGroup>
@@ -35,7 +39,7 @@
       <JsonFileContent>$([System.IO.File]::ReadAllText('$(ProjectDir)BetterModMenu.json'))</JsonFileContent>
       <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
       <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
-      <BaseZipName>$(AssemblyName)_v$(ModVersion)</BaseZipName>
+      <BaseZipName>$(AssemblyName)_v$(ModVersion)$(CloudPackageSuffix)</BaseZipName>
       <ModStagingDir>$(ArtifactsDir)$(BaseZipName)\</ModStagingDir>
       <ZipFilePath>$(ArtifactsDir)$(BaseZipName).zip</ZipFilePath>
     </PropertyGroup>
