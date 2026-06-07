@@ -8,33 +8,10 @@ using MegaCrit.Sts2.Core.Saves;
 
 namespace BetterModMenu.Data;
 
-public class ModProfile
-{
-    public string Name { get; set; } = "Default";
-    public HashSet<string> DisabledMods { get; set; } = new();
-}
-
-public class ProfileSaveData
-{
-    public List<ModProfile> Profiles { get; set; } = new();
-    public int CurrentProfileIndex { get; set; } = 0;
-
-    public List<string> CustomGroups { get; set; } = new();
-    public Dictionary<string, string> ModGroups { get; set; } = new();
-    public HashSet<string> CollapsedGroups { get; set; } = new();
-    public TutorialState Tutorial { get; set; } = new();
-    public CloudBackupSettings CloudBackups { get; set; } = new();
-}
-
 public static class ProfileManager
 {
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
     private const string UnassignedGroupName = "Unassigned";
-    private static readonly JsonSerializerOptions JsonOpts = new() { 
-        WriteIndented = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
     private static readonly ProfileConfigPathResolver ConfigPaths = new("BetterModMenu", ".json5", ".jsonc", ".json");
     private static readonly HashSet<ProfileBackupReason> AutomaticBackupsThisProcess = new();
     public static string? LastPersistenceError { get; private set; }
@@ -146,45 +123,21 @@ public static class ProfileManager
 
     public static bool SaveToPath(string path)
     {
-        string? tempPath = null;
+        LastPersistenceError = null;
+        if (ProfileSaveStorage.TryWrite(path, CaptureSaveData(), ConfigPaths.SetActiveConfigExtensionFromPath, out string? error))
+            return true;
+
+        LastPersistenceError = error;
         try
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new InvalidOperationException("No writable config path could be resolved.");
-
-            ConfigPaths.SetActiveConfigExtensionFromPath(path);
-            LastPersistenceError = null;
-
-            var folder = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-
-            var saveData = new ProfileSaveData
-            {
-                Profiles = Profiles,
-                CurrentProfileIndex = CurrentProfileIndex,
-                CustomGroups = CustomGroups,
-                ModGroups = ModGroups,
-                CollapsedGroups = CollapsedGroups,
-                Tutorial = Tutorial,
-                CloudBackups = CloudBackups
-            };
-            var json = JsonSerializer.Serialize(saveData, JsonOpts);
-            tempPath = path + ".tmp";
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, path, true);
-            return true;
+            throw new InvalidOperationException(error ?? "Failed to save mod profiles.");
         }
         catch (Exception ex)
         {
-            LastPersistenceError = ex.Message;
-            if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
-                File.Delete(tempPath);
             ModLogger.Error($"Failed to save mod profiles to '{path}':\n{ex}");
-            return false;
         }
+
+        return false;
     }
 
     public static void LoadProfiles()
@@ -194,37 +147,9 @@ public static class ProfileManager
             ResetState();
             string savePath = SavePath;
             if (File.Exists(savePath))
-            {
                 BackupExistingSaveOnce(savePath, ProfileBackupReason.RunStart, out _);
-                ConfigPaths.SetActiveConfigExtensionFromPath(savePath);
-                var json = File.ReadAllText(savePath);
-                try
-                {
-                    var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json, JsonOpts);
-                    if (loaded != null && loaded.Profiles != null && loaded.Profiles.Count > 0)
-                    {
-                        Profiles = loaded.Profiles;
-                        CurrentProfileIndex = loaded.CurrentProfileIndex;
-                        CustomGroups = loaded.CustomGroups ?? new();
-                        ModGroups = loaded.ModGroups ?? new();
-                        CollapsedGroups = loaded.CollapsedGroups ?? new();
-                        Tutorial = loaded.Tutorial ?? new();
-                        CloudBackups = loaded.CloudBackups ?? new();
-                    }
-                }
-                catch
-                {
-                    // Fallback for legacy format
-                    var legacy = JsonSerializer.Deserialize<List<ModProfile>>(json, JsonOpts);
-                    if (legacy != null) Profiles = legacy;
-                }
-            }
-            if (Profiles.Count == 0)
-            {
-                Profiles.Add(new ModProfile { Name = "Default" });
-            }
 
-            NormalizeProfileIndex();
+            ApplySaveData(ProfileSaveStorage.LoadOrDefault(savePath, ConfigPaths.SetActiveConfigExtensionFromPath));
         }
         catch (JsonException ex)
         {
@@ -346,73 +271,32 @@ public static class ProfileManager
 
     private static ProfileSaveData CaptureSaveData()
     {
-        return new ProfileSaveData
-        {
-            Profiles = Profiles,
-            CurrentProfileIndex = CurrentProfileIndex,
-            CustomGroups = CustomGroups,
-            ModGroups = ModGroups,
-            CollapsedGroups = CollapsedGroups,
-            Tutorial = Tutorial,
-            CloudBackups = CloudBackups
-        };
+        return ProfileSaveStorage.Capture(
+            Profiles,
+            CurrentProfileIndex,
+            CustomGroups,
+            ModGroups,
+            CollapsedGroups,
+            Tutorial,
+            CloudBackups);
     }
 
     private static void ApplySaveData(ProfileSaveData saveData)
     {
-        Profiles = saveData.Profiles ?? new();
-        CurrentProfileIndex = saveData.CurrentProfileIndex;
-        CustomGroups = saveData.CustomGroups ?? new();
-        ModGroups = saveData.ModGroups ?? new();
-        CollapsedGroups = saveData.CollapsedGroups ?? new();
-        Tutorial = saveData.Tutorial ?? new();
-        CloudBackups = saveData.CloudBackups ?? new();
+        var normalized = ProfileSaveStorage.Normalize(saveData);
+        Profiles = normalized.Profiles;
+        CurrentProfileIndex = normalized.CurrentProfileIndex;
+        CustomGroups = normalized.CustomGroups;
+        ModGroups = normalized.ModGroups;
+        CollapsedGroups = normalized.CollapsedGroups;
+        Tutorial = normalized.Tutorial;
+        CloudBackups = normalized.CloudBackups;
         NormalizeProfileIndex();
     }
 
     private static bool TryReadProfileSaveData(string path, out ProfileSaveData saveData, out string? error)
     {
-        saveData = new ProfileSaveData();
-        error = null;
-
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            {
-                error = "Backup file was not found.";
-                return false;
-            }
-
-            var json = File.ReadAllText(path);
-            try
-            {
-                var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json, JsonOpts);
-                if (loaded != null && loaded.Profiles != null && loaded.Profiles.Count > 0)
-                {
-                    saveData = loaded;
-                    return true;
-                }
-            }
-            catch (JsonException)
-            {
-                error = null;
-            }
-
-            var legacy = JsonSerializer.Deserialize<List<ModProfile>>(json, JsonOpts);
-            if (legacy != null && legacy.Count > 0)
-            {
-                saveData = new ProfileSaveData { Profiles = legacy };
-                return true;
-            }
-
-            error = "Backup file does not contain any profiles.";
-            return false;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
+        return ProfileSaveStorage.TryReadExisting(path, out saveData, out error);
     }
 
     private static bool BackupExistingSave(string savePath, ProfileBackupReason reason, out string backupPath)

@@ -82,7 +82,7 @@ public static class NModMenuRowPatch
         groupDropdown.ItemSelected += (idx) =>
         {
             bool hadPreviousAssignment = Data.ProfileManager.ModGroups.TryGetValue(modId, out string? previousAssignedGroup);
-            string previousVisibleGroup = ModdingScreenStateOps.GetAssignedGroup(modId);
+            string previousVisibleGroup = ModdingGroupStateOps.GetAssignedGroup(modId);
             var selectedText = groupDropdown.GetItemText((int)idx);
 
             if (selectedText == ModdingScreenConstants.UnassignedGroup)
@@ -97,7 +97,7 @@ public static class NModMenuRowPatch
                 else
                     Data.ProfileManager.ModGroups.Remove(modId);
 
-                ModdingScreenStateOps.SyncGroupDropdown(groupDropdown, previousVisibleGroup);
+                ModdingGroupStateOps.SyncGroupDropdown(groupDropdown, previousVisibleGroup);
                 return;
             }
 

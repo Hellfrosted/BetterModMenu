@@ -245,6 +245,69 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void BuildGroupLayout_SortsRowsAndGroupsBySavedOrder()
+    {
+        var rows = new[]
+        {
+            new ModdingScreenGroupLayoutRow<string>("Boss Mod", "boss"),
+            new ModdingScreenGroupLayoutRow<string>("Unassigned Mod", "free"),
+            new ModdingScreenGroupLayoutRow<string>("Elite Mod", "elite")
+        };
+        var assignedGroups = new Dictionary<string, string>
+        {
+            ["boss"] = "Bosses",
+            ["elite"] = "Elites"
+        };
+        var modOrder = new Dictionary<string, int>
+        {
+            ["elite"] = 0,
+            ["free"] = 1,
+            ["boss"] = 2
+        };
+
+        var layout = ModdingScreenGroupLayoutBuilder.Build(
+            rows,
+            assignedGroups,
+            new[] { "Bosses", "Elites" },
+            new HashSet<string> { "Elites" },
+            modOrder,
+            ModdingScreenConstants.UnassignedGroup);
+
+        CollectionAssert.AreEqual(
+            new[] { ModdingScreenConstants.UnassignedGroup, "Bosses", "Elites" },
+            layout.Groups.Select(group => group.Name).ToList());
+        CollectionAssert.AreEqual(new[] { "Unassigned Mod" }, layout.Groups[0].Rows.Select(row => row.Item).ToList());
+        CollectionAssert.AreEqual(new[] { "Boss Mod" }, layout.Groups[1].Rows.Select(row => row.Item).ToList());
+        CollectionAssert.AreEqual(new[] { "Elite Mod" }, layout.Groups[2].Rows.Select(row => row.Item).ToList());
+        Assert.IsFalse(layout.Groups[0].IsCollapsed);
+        Assert.IsTrue(layout.Groups[2].IsCollapsed);
+    }
+
+    [TestMethod]
+    public void BuildGroupLayout_OmitsEmptyUnassignedGroup()
+    {
+        var rows = new[]
+        {
+            new ModdingScreenGroupLayoutRow<string>("Boss Mod", "boss")
+        };
+        var assignedGroups = new Dictionary<string, string>
+        {
+            ["boss"] = "Bosses"
+        };
+
+        var layout = ModdingScreenGroupLayoutBuilder.Build(
+            rows,
+            assignedGroups,
+            new[] { "Bosses" },
+            Array.Empty<string>().ToHashSet(),
+            new Dictionary<string, int>(),
+            ModdingScreenConstants.UnassignedGroup);
+
+        CollectionAssert.AreEqual(new[] { "Bosses" }, layout.Groups.Select(group => group.Name).ToList());
+        CollectionAssert.AreEqual(new[] { "Boss Mod" }, layout.Groups[0].Rows.Select(row => row.Item).ToList());
+    }
+
+    [TestMethod]
     public void TryBuildMove_RepositionsModAcrossInterveningGroups_when_GroupedMoveRequested()
     {
         var modIds = new List<string> { "A", "X", "B", "C" };
@@ -321,6 +384,68 @@ public class LogicTests
             Assert.IsTrue(backedUp, error);
             Assert.AreEqual(Path.Combine(tempDirectory, "backups", "mod_profiles.20260605-210000.runstart.json5"), backupPath);
             Assert.AreEqual(File.ReadAllText(savePath), File.ReadAllText(backupPath));
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void ProfileSaveStorage_RoundTripsCurrentSaveData()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string savePath = Path.Combine(tempDirectory, "mod_profiles.json5");
+            var saveData = new ProfileSaveData
+            {
+                Profiles = new List<ModProfile>
+                {
+                    new() { Name = "Bosses", DisabledMods = new HashSet<string> { "mod-a" } }
+                },
+                CurrentProfileIndex = 0,
+                CustomGroups = new List<string> { "Bosses" },
+                ModGroups = new Dictionary<string, string> { ["mod-a"] = "Bosses" },
+                CollapsedGroups = new HashSet<string> { "Bosses" }
+            };
+
+            bool wrote = ProfileSaveStorage.TryWrite(savePath, saveData, _ => { }, out string? error);
+            var loaded = ProfileSaveStorage.LoadOrDefault(savePath, _ => { });
+
+            Assert.IsTrue(wrote, error);
+            Assert.AreEqual("Bosses", loaded.Profiles[0].Name);
+            Assert.IsTrue(loaded.Profiles[0].DisabledMods.Contains("mod-a"));
+            Assert.AreEqual("Bosses", loaded.CustomGroups[0]);
+            Assert.AreEqual("Bosses", loaded.ModGroups["mod-a"]);
+            Assert.IsTrue(loaded.CollapsedGroups.Contains("Bosses"));
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void ProfileSaveStorage_LoadOrDefault_ReadsLegacyProfileList()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string savePath = Path.Combine(tempDirectory, "mod_profiles.json");
+            File.WriteAllText(savePath, """
+            [
+              {
+                "Name": "Legacy",
+                "DisabledMods": ["mod-a"]
+              }
+            ]
+            """);
+
+            var loaded = ProfileSaveStorage.LoadOrDefault(savePath, _ => { });
+
+            Assert.AreEqual("Legacy", loaded.Profiles[0].Name);
+            Assert.IsTrue(loaded.Profiles[0].DisabledMods.Contains("mod-a"));
         }
         finally
         {

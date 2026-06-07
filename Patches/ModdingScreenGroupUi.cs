@@ -20,10 +20,16 @@ internal static class ModdingScreenGroupUi
     {
         var rows = CollectRowsAndClearGeneratedNodes(modRowContainer, generatedGroupNodes);
         var modOrder = BuildModOrderLookup();
-        SortRows(rows, modOrder);
-        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(rows.Select(row => row.Mod?.manifest?.id ?? ""));
-        var groups = GroupRows(rows, assignedGroups);
-        BuildGroupHeaders(modRowContainer, generatedGroupNodes, groups, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
+        var assignedGroups = ModdingGroupStateOps.BuildAssignedGroupLookup(rows.Select(row => row.Mod?.manifest?.id ?? ""));
+        var layout = ModdingScreenGroupLayoutBuilder.Build(
+            rows.Select(row => new ModdingScreenGroupLayoutRow<NModMenuRow>(row, row.Mod?.manifest?.id ?? "")),
+            assignedGroups,
+            ProfileManager.CustomGroups,
+            ProfileManager.CollapsedGroups,
+            modOrder,
+            ModdingScreenConstants.UnassignedGroup);
+        SyncGroupDropdowns(layout);
+        BuildGroupHeaders(modRowContainer, generatedGroupNodes, layout.Groups, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
     }
 
     private static List<NModMenuRow> CollectRowsAndClearGeneratedNodes(Control container, List<Node> generatedGroupNodes)
@@ -70,75 +76,36 @@ internal static class ModdingScreenGroupUi
         return modOrder;
     }
 
-    private static void SortRows(List<NModMenuRow> rows, IReadOnlyDictionary<string, int> modOrder)
+    private static void SyncGroupDropdowns(ModdingScreenGroupLayout<NModMenuRow> layout)
     {
-        rows.Sort((left, right) =>
+        foreach (var group in layout.Groups)
         {
-            int leftIndex = GetModIndex(left);
-            int rightIndex = GetModIndex(right);
-            return leftIndex.CompareTo(rightIndex);
-            
-            int GetModIndex(NModMenuRow row)
+            foreach (var row in group.Rows)
             {
-                string modId = row.Mod?.manifest?.id ?? "";
-                return !string.IsNullOrEmpty(modId) && modOrder.TryGetValue(modId, out int index)
-                    ? index
-                    : int.MaxValue;
+                var dropdown = row.Item.GetNodeOrNull<OptionButton>(ModdingScreenConstants.GroupDropdownPath);
+                if (dropdown != null)
+                    ModdingGroupStateOps.SyncGroupDropdown(dropdown, group.Name);
             }
-        });
-    }
-
-    private static Dictionary<string, List<NModMenuRow>> GroupRows(List<NModMenuRow> rows, IReadOnlyDictionary<string, string> assignedGroups)
-    {
-        var groups = new Dictionary<string, List<NModMenuRow>>
-        {
-            [ModdingScreenConstants.UnassignedGroup] = new()
-        };
-
-        foreach (var groupName in ProfileManager.CustomGroups)
-            groups[groupName] = new();
-
-        foreach (var row in rows)
-        {
-            string modId = row.Mod?.manifest?.id ?? "";
-            if (string.IsNullOrEmpty(modId))
-                continue;
-
-            string groupName = ModdingScreenConstants.UnassignedGroup;
-            if (assignedGroups.TryGetValue(modId, out string? assignedGroup) && assignedGroup != null)
-                groupName = assignedGroup;
-
-            groups[groupName].Add(row);
-
-            var dropdown = row.GetNodeOrNull<OptionButton>(ModdingScreenConstants.GroupDropdownPath);
-            if (dropdown != null)
-                ModdingScreenStateOps.SyncGroupDropdown(dropdown, groupName);
         }
-
-        return groups;
     }
 
     private static void BuildGroupHeaders(
         Control container,
         List<Node> generatedGroupNodes,
-        Dictionary<string, List<NModMenuRow>> groups,
+        IReadOnlyList<ModdingScreenGroupLayoutGroup<NModMenuRow>> groups,
         Action refreshGroupsUI,
         Action<string> renameGroup,
         Action<string, int> moveGroup,
         Action<string, bool> toggleAllInGroup)
     {
         int index = 0;
-        var groupCounts = groups.ToDictionary(entry => entry.Key, entry => entry.Value.Count);
-        foreach (var groupName in ProfileStateRules.BuildVisibleGroupOrder(groupCounts, ProfileManager.CustomGroups, ModdingScreenConstants.UnassignedGroup))
+        foreach (var group in groups)
         {
-            if (!groups.TryGetValue(groupName, out var groupRows))
-                continue;
-
-            bool isCollapsed = ProfileManager.CollapsedGroups.Contains(groupName);
+            var groupRows = group.Rows.Select(row => row.Item).ToList();
 
             var separator = new ColorRect
             {
-                Name = "ModGroupSep_" + groupName,
+                Name = "ModGroupSep_" + group.Name,
                 CustomMinimumSize = new Vector2(0, 4),
                 Color = new Color(0, 0, 0, 0)
             };
@@ -146,7 +113,7 @@ internal static class ModdingScreenGroupUi
             container.MoveChild(separator, index++);
             generatedGroupNodes.Add(separator);
 
-            var header = BuildGroupHeader(groupName, groupRows, isCollapsed, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
+            var header = BuildGroupHeader(group.Name, groupRows, group.IsCollapsed, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
             generatedGroupNodes.Add(header);
             container.AddChild(header);
             container.MoveChild(header, index++);
@@ -154,7 +121,7 @@ internal static class ModdingScreenGroupUi
             foreach (var row in groupRows)
             {
                 container.MoveChild(row, index++);
-                row.Visible = !isCollapsed;
+                row.Visible = !group.IsCollapsed;
             }
         }
     }
@@ -248,7 +215,7 @@ internal static class ModdingScreenGroupUi
         ModdingScreenVanillaStyle.ApplyButton(deleteBtn);
         deleteBtn.Pressed += () =>
         {
-            if (ModdingScreenStateOps.DeleteGroup(groupName))
+            if (ModdingGroupStateOps.DeleteGroup(groupName))
                 refreshGroupsUI();
         };
         header.AddChild(deleteBtn);

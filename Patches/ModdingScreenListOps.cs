@@ -20,7 +20,7 @@ internal static class ModdingScreenListOps
             return false;
 
         var modIds = list.Select(mod => mod.Id ?? "").ToList();
-        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(modIds);
+        var assignedGroups = ModdingGroupStateOps.BuildAssignedGroupLookup(modIds);
         if (!ModOrderRules.TryBuildMove(modIds, assignedGroups, modId, direction, out var move))
             return false;
 
@@ -61,7 +61,7 @@ internal static class ModdingScreenListOps
         if (options == null)
             return false;
 
-        var assignedGroups = ModdingScreenStateOps.BuildAssignedGroupLookup(
+        var assignedGroups = ModdingGroupStateOps.BuildAssignedGroupLookup(
             modRowContainer.GetChildren()
                 .OfType<NModMenuRow>()
                 .Select(row => row.Mod?.manifest?.id ?? ""));

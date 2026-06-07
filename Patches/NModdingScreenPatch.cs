@@ -21,11 +21,8 @@ public static class NModdingScreenPatch
     [HarmonyPostfix]
     public static void Postfix_Ready(NModdingScreen __instance)
     {
-        ModdingScreenContext.TrackCurrentScreen(__instance);
-        var session = ModdingScreenContext.GetSession(__instance);
-        ModdingScreenChromeOps.PrepareScreen(
+        ModdingScreenActionFlow.Ready(
             __instance,
-            session,
             OnProfileSelected,
             OnNewProfilePressed,
             OnRenameProfilePressed,
@@ -37,21 +34,11 @@ public static class NModdingScreenPatch
             OnViewLogsPressed,
             OnTutorialPressed,
             OnCloudBackupPressed,
-            OnAddGroupRequested);
-
-        RefreshProfileDropdown();
-        RefreshGroupsUI();
-        UpdateChromeLayout(__instance);
-        Callable.From(() =>
-        {
-            if (IsCurrentScreen(__instance))
-            {
-                RefreshGroupsUI();
-                UpdateChromeLayout(__instance);
-                MaybeCreateResumeBackup();
-                MaybeShowTutorial(__instance);
-            }
-        }).CallDeferred();
+            OnAddGroupRequested,
+            RefreshGroupsUI,
+            RenameGroup,
+            MoveGroup,
+            ToggleAllInGroup);
     }
 
     [HarmonyPatch(nameof(NModdingScreen._ExitTree))]
@@ -78,14 +65,14 @@ public static class NModdingScreenPatch
 
     private static void UpdateChromeLayout(NModdingScreen screen)
     {
-        ModdingScreenChromeOps.UpdateLayout(screen, ModdingScreenContext.GetSession(screen));
+        ModdingScreenActionFlow.UpdateChromeLayout(screen);
     }
 
     private static void OnPortableModeToggled(bool isToggled)
     {
         try
         {
-            if (!ModdingScreenStateOps.SetPortableMode(isToggled))
+            if (!ModdingPortableModeOps.SetPortableMode(isToggled))
                 ProfileManager.ModLogger.Error("Portable mode state changed in the UI but could not be persisted.");
         }
         catch (System.Exception ex)
@@ -97,28 +84,11 @@ public static class NModdingScreenPatch
 
     private static bool OnAddGroupRequested(string groupName)
     {
-        if (!ModdingScreenStateOps.TryAddGroup(groupName))
+        if (!ModdingGroupStateOps.TryAddGroup(groupName))
             return false;
 
         RefreshGroupsUI();
         return true;
-    }
-
-    private static void MaybeShowTutorial(NModdingScreen screen)
-    {
-        string currentVersion = ModVersionProvider.CurrentVersion;
-        if (!ProfileManager.ShouldShowTutorial(currentVersion))
-            return;
-
-        ModdingScreenDialogs.ShowTutorialDialog(screen, currentVersion, () =>
-        {
-            ProfileManager.MarkTutorialSeenAndSave(currentVersion);
-        });
-    }
-
-    private static void MaybeCreateResumeBackup()
-    {
-        ProfileManager.TryBackupResumeOnce(out _);
     }
 
     private static void OnManualBackupPressed()
@@ -248,9 +218,8 @@ public static class NModdingScreenPatch
         if (!TryGetCurrentScreen(out var screen) || screen == null)
             return;
 
-        ModdingScreenChromeOps.RefreshGroupsUI(
+        ModdingScreenActionFlow.RefreshGroupsUI(
             screen,
-            ModdingScreenContext.GetSession(screen),
             RefreshGroupsUI,
             RenameGroup,
             MoveGroup,
@@ -259,7 +228,7 @@ public static class NModdingScreenPatch
 
     private static void MoveGroup(string grpName, int direction)
     {
-        if (ModdingScreenStateOps.TryMoveGroup(grpName, direction))
+        if (ModdingGroupStateOps.TryMoveGroup(grpName, direction))
             RefreshGroupsUI();
     }
 
@@ -270,7 +239,7 @@ public static class NModdingScreenPatch
 
         ModdingScreenDialogs.ShowRenameGroupDialog(screen, oldName, newName =>
         {
-            if (ModdingScreenStateOps.TryRenameGroup(oldName, newName))
+            if (ModdingGroupStateOps.TryRenameGroup(oldName, newName))
                 RefreshGroupsUI();
         });
     }
@@ -305,17 +274,7 @@ public static class NModdingScreenPatch
         if (!TryGetCurrentScreen(out var screen) || screen == null)
             return;
 
-        var topBarControls = ModdingScreenContext.GetSession(screen).TopBarControls;
-        if (topBarControls == null || !GodotObject.IsInstanceValid(topBarControls.ProfileDropdown))
-            return;
-
-        ProfileManager.NormalizeProfileIndex();
-        topBarControls.ProfileDropdown.Clear();
-        for (int i = 0; i < ProfileManager.Profiles.Count; i++)
-            topBarControls.ProfileDropdown.AddItem(ProfileManager.Profiles[i].Name, i);
-
-        topBarControls.ProfileDropdown.Select(ProfileManager.CurrentProfileIndex);
-        UpdateChromeLayout(screen);
+        ModdingScreenActionFlow.RefreshProfileDropdown(screen);
     }
 
     private static void OnProfileSelected(long index)
