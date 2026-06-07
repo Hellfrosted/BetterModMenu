@@ -195,7 +195,7 @@ public static class NModdingScreenPatch
         ModdingScreenDialogs.ShowInfoDialog(
             screen,
             "CSV Export Created",
-            "Created a spreadsheet-friendly mod list with mod names, versions, links, enabled state, and group names.\n\nCSV file:\n" + exportPath);
+            "Created a spreadsheet-friendly mod list with mod names, versions, enabled state, and group names.\n\nCSV file:\n" + exportPath);
         ProfileManager.ModLogger.Info($"Exported BetterModMenu mod list to '{exportPath}'.");
     }
 

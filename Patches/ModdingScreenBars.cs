@@ -220,7 +220,7 @@ internal static class ModdingScreenBars
         var exportButton = new Button
         {
             Text = "CSV",
-            TooltipText = "CSV: export a spreadsheet-friendly installed-mod list with versions, links, enabled state, and group names."
+            TooltipText = "CSV: export a spreadsheet-friendly installed-mod list with versions, enabled state, and group names."
         };
         ModdingScreenVanillaStyle.ApplyButton(exportButton);
         exportButton.Pressed += onExportModListPressed;

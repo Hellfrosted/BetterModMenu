@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using MegaCrit.Sts2.Core.Saves;
 
@@ -31,8 +30,7 @@ internal static class ModListExportInputCollector
             if (string.IsNullOrWhiteSpace(modId))
                 continue;
 
-            string? directory = Directory.Exists(mod.path) ? mod.path : Path.GetDirectoryName(mod.path);
-            string manifestPath = !string.IsNullOrWhiteSpace(directory)
+            string manifestPath = ModInstallPathResolver.TryGetDirectoryFromPath(mod.path, out string directory)
                 ? ManifestScanner.FindManifestPath(directory, modId, manifestExtensions) ?? string.Empty
                 : string.Empty;
 

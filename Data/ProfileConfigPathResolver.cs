@@ -138,29 +138,10 @@ internal sealed class ProfileConfigPathResolver
     {
         directory = string.Empty;
         var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(candidate => candidate.manifest?.id == _modId);
-        string path = (mod != null && !string.IsNullOrEmpty(mod.path))
-            ? mod.path
-            : (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty);
-
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        if (Directory.Exists(path))
-        {
-            directory = Path.GetFullPath(path);
+        if (ModInstallPathResolver.TryGetDirectoryFromPath(mod?.path, out directory))
             return true;
-        }
 
-        if (File.Exists(path))
-        {
-            string? parentDirectory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(parentDirectory) && Directory.Exists(parentDirectory))
-            {
-                directory = Path.GetFullPath(parentDirectory);
-                return true;
-            }
-        }
-
-        return false;
+        string fallbackPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+        return ModInstallPathResolver.TryGetDirectoryFromPath(fallbackPath, out directory);
     }
 }

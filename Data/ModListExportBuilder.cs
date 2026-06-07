@@ -14,14 +14,13 @@ internal sealed class ModListExportRow
     public string ModId { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
-    public string Link { get; init; } = string.Empty;
     public bool Enabled { get; init; }
     public string Group { get; init; } = string.Empty;
 }
 
 internal static class ModListExportBuilder
 {
-    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Link", "Enabled", "Group"];
+    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group"];
 
     public static List<ModListExportRow> BuildRows(
         IEnumerable<InstalledModExportInput> mods,
@@ -46,7 +45,6 @@ internal static class ModListExportBuilder
                 row.ModId,
                 row.Name,
                 row.Version,
-                row.Link,
                 row.Enabled ? "TRUE" : "FALSE",
                 row.Group);
         }
@@ -97,7 +95,6 @@ internal static class ModListExportBuilder
             ModId = modId,
             Name = manifestInfo.Name,
             Version = manifestInfo.Version,
-            Link = manifestInfo.Link,
             Enabled = mod.Enabled,
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
                 ? group

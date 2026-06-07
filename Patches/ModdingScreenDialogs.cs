@@ -160,9 +160,16 @@ internal static class ModdingScreenDialogs
             DialogText = string.Empty
         };
 
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(layout.ContentWidth, layout.ContentHeight),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
         var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(), layout.BodyFontSize);
         label.CustomMinimumSize = new Vector2(layout.ContentWidth, 0);
-        popup.AddChild(label);
+        scroll.AddChild(label);
+        popup.AddChild(scroll);
         popup.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += onDismissed;

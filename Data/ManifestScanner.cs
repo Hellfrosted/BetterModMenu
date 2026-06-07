@@ -10,11 +10,12 @@ internal sealed class ModManifestInfo
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
-    public string Link { get; init; } = string.Empty;
 }
 
 internal static class ManifestScanner
 {
+    private const string LegacyManifestBaseName = "mod_manifest";
+
     private static bool IsSafeManifestId(string modId)
     {
         return !string.IsNullOrWhiteSpace(modId) &&
@@ -53,7 +54,60 @@ internal static class ManifestScanner
                 return fullCandidate;
         }
 
+        foreach (var extension in extensions)
+        {
+            string normalizedExtension = extension.StartsWith(".") ? extension : "." + extension;
+            string candidate = Path.Combine(directory, LegacyManifestBaseName + normalizedExtension);
+            if (IsMatchingManifestPath(fullDirectory, candidate, modId))
+                return Path.GetFullPath(candidate);
+        }
+
+        foreach (var extension in extensions)
+        {
+            string normalizedExtension = extension.StartsWith(".") ? extension : "." + extension;
+            foreach (string candidate in Directory.EnumerateFiles(fullDirectory, "*" + normalizedExtension, SearchOption.TopDirectoryOnly))
+            {
+                if (IsMatchingManifestPath(fullDirectory, candidate, modId))
+                    return Path.GetFullPath(candidate);
+            }
+        }
+
         return null;
+    }
+
+    private static bool IsMatchingManifestPath(string fullDirectory, string candidate, string expectedId)
+    {
+        string fullCandidate = Path.GetFullPath(candidate);
+        return IsPathWithinDirectory(fullDirectory, fullCandidate) &&
+            File.Exists(fullCandidate) &&
+            TryReadManifestId(fullCandidate, out string manifestId) &&
+            string.Equals(manifestId, expectedId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryReadManifestId(string manifestPath, out string manifestId)
+    {
+        manifestId = string.Empty;
+        try
+        {
+            string content = File.ReadAllText(manifestPath);
+            var docOpts = new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true
+            };
+
+            using var doc = JsonDocument.Parse(content, docOpts);
+            manifestId = ReadString(doc.RootElement, "id");
+            return !string.IsNullOrWhiteSpace(manifestId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 
     public static bool TryReadAffectsGameplay(string manifestPath, string expectedId, out bool affectsGameplay)
@@ -111,8 +165,7 @@ internal static class ManifestScanner
         {
             Id = manifestId,
             Name = ReadString(doc.RootElement, "name"),
-            Version = ReadString(doc.RootElement, "version"),
-            Link = ReadFirstString(doc.RootElement, "link", "url", "homepage", "website", "source")
+            Version = ReadString(doc.RootElement, "version")
         };
         return true;
     }
@@ -140,18 +193,6 @@ internal static class ManifestScanner
 
         version = ReadString(doc.RootElement, "version");
         return !string.IsNullOrWhiteSpace(version);
-    }
-
-    private static string ReadFirstString(JsonElement element, params string[] propertyNames)
-    {
-        foreach (string propertyName in propertyNames)
-        {
-            string value = ReadString(element, propertyName);
-            if (!string.IsNullOrWhiteSpace(value))
-                return value;
-        }
-
-        return string.Empty;
     }
 
     private static string ReadString(JsonElement element, string propertyName)

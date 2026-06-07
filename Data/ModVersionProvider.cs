@@ -5,26 +5,26 @@ namespace BetterModMenu.Data;
 
 internal static class ModVersionProvider
 {
+    private static readonly string[] ManifestExtensions = [".json", ".jsonc", ".json5"];
+
     public static string CurrentVersion => ReadVersionFromLoadedModManifest("BetterModMenu");
 
     public static string ReadVersionFromLoadedModManifest(string modId)
     {
-        var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(candidate => candidate.manifest?.id == modId);
         string? manifestPath = null;
-        if (!string.IsNullOrWhiteSpace(mod?.path))
-        {
-            string? directory = Directory.Exists(mod.path) ? mod.path : Path.GetDirectoryName(mod.path);
-            if (!string.IsNullOrWhiteSpace(directory))
-                manifestPath = Path.Combine(directory, modId + ".json");
-        }
+        var mod = MegaCrit.Sts2.Core.Modding.ModManager.Mods.FirstOrDefault(candidate => candidate.manifest?.id == modId);
+        if (ModInstallPathResolver.TryGetDirectoryFromPath(mod?.path, out string directory))
+            manifestPath = ManifestScanner.FindManifestPath(directory, modId, ManifestExtensions);
 
-        if (string.IsNullOrWhiteSpace(manifestPath) || !File.Exists(manifestPath))
+        if (string.IsNullOrWhiteSpace(manifestPath))
         {
             string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-            manifestPath = Path.Combine(assemblyDirectory, modId + ".json");
+            if (ModInstallPathResolver.TryGetDirectoryFromPath(assemblyDirectory, out string fallbackDirectory))
+                manifestPath = ManifestScanner.FindManifestPath(fallbackDirectory, modId, ManifestExtensions);
         }
 
-        return ManifestScanner.TryReadVersion(manifestPath, modId, out string version)
+        return !string.IsNullOrWhiteSpace(manifestPath) &&
+            ManifestScanner.TryReadVersion(manifestPath, modId, out string version)
             ? version
             : string.Empty;
     }

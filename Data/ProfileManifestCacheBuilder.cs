@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using MegaCrit.Sts2.Core.Logging;
 
 namespace BetterModMenu.Data;
@@ -17,11 +16,10 @@ internal static class ProfileManifestCacheBuilder
         foreach (var mod in mods)
         {
             string modId = mod.manifest?.id ?? string.Empty;
-            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(mod.path))
+            if (string.IsNullOrEmpty(modId))
                 continue;
 
-            string? directory = Directory.Exists(mod.path) ? mod.path : Path.GetDirectoryName(mod.path);
-            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            if (!ModInstallPathResolver.TryGetDirectoryFromPath(mod.path, out string directory))
                 continue;
 
             string? manifestPath = ManifestScanner.FindManifestPath(directory, modId, configExtensions);

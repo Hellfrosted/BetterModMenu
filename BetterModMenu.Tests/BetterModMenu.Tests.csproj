@@ -19,6 +19,7 @@
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
+    <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />
     <Compile Include="..\Data\ModListExportBuilder.cs" Link="Data\ModListExportBuilder.cs" />
     <Compile Include="..\Data\ModSettingsBackupService.cs" Link="Data\ModSettingsBackupService.cs" />
     <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />

@@ -65,6 +65,53 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void FindManifestPath_ReturnsLegacyModManifestWhenExactManifestIsMissing()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string legacyPath = Path.Combine(tempDirectory, "mod_manifest.json");
+            File.WriteAllText(legacyPath, """
+            {
+              "id": "MultiHitDamage"
+            }
+            """);
+
+            string? manifestPath = ManifestScanner.FindManifestPath(tempDirectory, "MultiHitDamage", new[] { ".json" });
+
+            Assert.AreEqual(legacyPath, manifestPath);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void FindManifestPath_ReturnsTopLevelManifestWithMatchingId()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string manifestPath = Path.Combine(tempDirectory, "p9.json");
+            File.WriteAllText(manifestPath, """
+            {
+              "id": "P9"
+            }
+            """);
+            File.WriteAllText(Path.Combine(tempDirectory, "config.json"), "{ }");
+
+            string? foundPath = ManifestScanner.FindManifestPath(tempDirectory, "P9", new[] { ".json" });
+
+            Assert.AreEqual(manifestPath, foundPath);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
     public void FindManifestPath_RejectsUnsafeManifestIds()
     {
         string tempDirectory = CreateTempDirectory();
@@ -78,6 +125,44 @@ public class LogicTests
 
             Assert.IsNull(traversed);
             Assert.IsNull(rooted);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryGetDirectoryFromPath_ReturnsDirectoryForFolderOrFilePath()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string manifestPath = Path.Combine(tempDirectory, "BetterModMenu.json");
+            File.WriteAllText(manifestPath, "{ }");
+
+            Assert.IsTrue(ModInstallPathResolver.TryGetDirectoryFromPath(tempDirectory, out string directoryFromFolder));
+            Assert.AreEqual(Path.GetFullPath(tempDirectory), directoryFromFolder);
+
+            Assert.IsTrue(ModInstallPathResolver.TryGetDirectoryFromPath(manifestPath, out string directoryFromFile));
+            Assert.AreEqual(Path.GetFullPath(tempDirectory), directoryFromFile);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryGetDirectoryFromPath_ReturnsFalseForMissingWorkshopPlaceholderPath()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string missingPath = Path.Combine(tempDirectory, "workshop-content", "BetterModMenu.json");
+
+            Assert.IsFalse(ModInstallPathResolver.TryGetDirectoryFromPath(missingPath, out string directory));
+            Assert.AreEqual(string.Empty, directory);
         }
         finally
         {
@@ -310,22 +395,21 @@ public class LogicTests
                 ModId = "Example.Mod",
                 Name = "Example, Mod",
                 Version = "1.2.3",
-                Link = "https://example.com/mod",
                 Enabled = true,
                 Group = "QoL \"Core\""
             }
         });
 
         string expected = string.Join(Environment.NewLine,
-            "Mod Id,Name,Version,Link,Enabled,Group",
-            "Example.Mod,\"Example, Mod\",1.2.3,https://example.com/mod,TRUE,\"QoL \"\"Core\"\"\"",
+            "Mod Id,Name,Version,Enabled,Group",
+            "Example.Mod,\"Example, Mod\",1.2.3,TRUE,\"QoL \"\"Core\"\"\"",
             string.Empty);
 
         Assert.AreEqual(expected, csv);
     }
 
     [TestMethod]
-    public void TryReadManifestInfo_ReadsVersionAndBestAvailableLink()
+    public void TryReadManifestInfo_ReadsSpecManifestInfo()
     {
         string tempDirectory = CreateTempDirectory();
         try
@@ -335,8 +419,7 @@ public class LogicTests
             {
               "id": "Example.Mod",
               "name": "Example Mod",
-              "version": "1.2.3",
-              "website": "https://example.com/mod"
+              "version": "1.2.3"
             }
             """);
 
@@ -346,7 +429,6 @@ public class LogicTests
             Assert.AreEqual("Example.Mod", info.Id);
             Assert.AreEqual("Example Mod", info.Name);
             Assert.AreEqual("1.2.3", info.Version);
-            Assert.AreEqual("https://example.com/mod", info.Link);
         }
         finally
         {
@@ -365,8 +447,7 @@ public class LogicTests
             {
               "id": "Example.Mod",
               "name": "Example Mod",
-              "version": "1.2.3",
-              "source": "https://example.com/source"
+              "version": "1.2.3"
             }
             """);
 
@@ -387,7 +468,6 @@ public class LogicTests
             Assert.AreEqual("Example.Mod", rows[0].ModId);
             Assert.AreEqual("Example Mod", rows[0].Name);
             Assert.AreEqual("1.2.3", rows[0].Version);
-            Assert.AreEqual("https://example.com/source", rows[0].Link);
             Assert.IsFalse(rows[0].Enabled);
             Assert.AreEqual("Core", rows[0].Group);
         }
@@ -415,7 +495,7 @@ public class LogicTests
 
             Assert.IsTrue(wrote, error);
             Assert.AreEqual(Path.Combine(tempDirectory, "mod_list.20260605-220000-2.csv"), exportPath);
-            Assert.IsTrue(File.ReadAllText(exportPath).StartsWith("Mod Id,Name,Version,Link,Enabled,Group", StringComparison.Ordinal));
+            Assert.IsTrue(File.ReadAllText(exportPath).StartsWith("Mod Id,Name,Version,Enabled,Group", StringComparison.Ordinal));
         }
         finally
         {
@@ -747,6 +827,17 @@ public class LogicTests
         Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
         Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
         Assert.IsTrue(layout.BodyFontSize >= 22);
+    }
+
+    [TestMethod]
+    public void FitTutorialDialogToViewport_ReservesRoomForDialogButtons()
+    {
+        TutorialDialogLayout layout = ModdingScreenDialogRules.FitTutorialDialogToViewport(
+            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            viewportWidth: 1080,
+            viewportHeight: 720);
+
+        Assert.IsTrue(layout.PopupHeight - layout.ContentHeight >= 180);
     }
 
     [TestMethod]

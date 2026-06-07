@@ -47,7 +47,7 @@ internal static class ModdingScreenDialogRules
             HorizontalMargin: 140,
             VerticalMargin: 80,
             ContentHorizontalPadding: 120,
-            ContentVerticalPadding: 130);
+            ContentVerticalPadding: 190);
     }
 
     public static TutorialDialogLayout FitTutorialDialogToViewport(TutorialDialogLayout preferred, int viewportWidth, int viewportHeight)
