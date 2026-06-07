@@ -178,6 +178,7 @@ internal static class ModdingScreenGroupUi
         var collapseBtn = new Button
         {
             Text = isCollapsed ? "► " + groupName : "▼ " + groupName,
+            TooltipText = isCollapsed ? "Show the mods in this group." : "Hide the mods in this group without changing whether they are enabled.",
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         ModdingScreenVanillaStyle.ApplyButton(collapseBtn);
@@ -190,7 +191,12 @@ internal static class ModdingScreenGroupUi
 
         bool hasRows = groupRows.Count > 0;
         bool allEnabled = AreAllRowsEnabled(groupRows);
-        var toggleAllBtn = new Button { Text = allEnabled ? "Disable All" : "Enable All", Disabled = !hasRows };
+        var toggleAllBtn = new Button
+        {
+            Text = allEnabled ? "Disable All" : "Enable All",
+            TooltipText = allEnabled ? "Turn off every mod in this group." : "Turn on every mod in this group.",
+            Disabled = !hasRows
+        };
         ModdingScreenVanillaStyle.ApplyButton(toggleAllBtn);
         toggleAllBtn.Pressed += () => toggleAllInGroup(groupName, !allEnabled);
         header.AddChild(toggleAllBtn);
@@ -201,28 +207,44 @@ internal static class ModdingScreenGroupUi
             return header;
         }
 
-        var renameBtn = new Button { Text = "Rename" };
+        var renameBtn = new Button
+        {
+            Text = "Rename",
+            TooltipText = "Rename this group. Mods already in it stay in it."
+        };
         ModdingScreenVanillaStyle.ApplyButton(renameBtn);
         renameBtn.Pressed += () => renameGroup(groupName);
         header.AddChild(renameBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
-        var upBtn = new Button { Text = "^" };
+        var upBtn = new Button
+        {
+            Text = "^",
+            TooltipText = "Move this group higher in the mod list."
+        };
         ModdingScreenVanillaStyle.ApplySmallButton(upBtn);
         upBtn.Pressed += () => moveGroup(groupName, -1);
         header.AddChild(upBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
-        var downBtn = new Button { Text = "v" };
+        var downBtn = new Button
+        {
+            Text = "v",
+            TooltipText = "Move this group lower in the mod list."
+        };
         ModdingScreenVanillaStyle.ApplySmallButton(downBtn);
         downBtn.Pressed += () => moveGroup(groupName, 1);
         header.AddChild(downBtn);
 
         header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
 
-        var deleteBtn = new Button { Text = "Del" };
+        var deleteBtn = new Button
+        {
+            Text = "Del",
+            TooltipText = "Delete this group label. The mods stay installed and move back to Unassigned."
+        };
         ModdingScreenVanillaStyle.ApplyButton(deleteBtn);
         deleteBtn.Pressed += () =>
         {

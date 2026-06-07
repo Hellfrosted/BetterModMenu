@@ -38,13 +38,13 @@ internal static class ModdingScreenDialogRules
     public static TutorialDialogLayout GetTutorialDialogLayout()
     {
         return new TutorialDialogLayout(
-            PopupWidth: 1260,
-            PopupHeight: 720,
-            ContentWidth: 1140,
-            ContentHeight: 590,
-            BodyFontSize: 24,
+            PopupWidth: 820,
+            PopupHeight: 620,
+            ContentWidth: 700,
+            ContentHeight: 500,
+            BodyFontSize: 22,
             ButtonFontSize: 24,
-            HorizontalMargin: 80,
+            HorizontalMargin: 140,
             VerticalMargin: 80,
             ContentHorizontalPadding: 120,
             ContentVerticalPadding: 130);

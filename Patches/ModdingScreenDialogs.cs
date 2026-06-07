@@ -7,6 +7,8 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenDialogs
 {
+    private const int MaxVisibleBackupChoices = 12;
+
     public static void ShowInfoDialog(NModdingScreen screen, string title, string message)
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
@@ -21,7 +23,73 @@ internal static class ModdingScreenDialogs
         popup.AddChild(label);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(760, 220));
+        popup.PopupCentered(new Vector2I(860, 300));
+    }
+
+    public static void ShowConfirmDialog(NModdingScreen screen, string title, string message, Action onConfirmed)
+    {
+        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        var popup = new ConfirmationDialog
+        {
+            Title = title,
+            DialogText = string.Empty
+        };
+
+        var label = CreateReadableBodyLabel(message, layout.BodyFontSize);
+        label.CustomMinimumSize = new Vector2(Mathf.Min(760, layout.ContentWidth), 0);
+        popup.AddChild(label);
+        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
+        var cancelButton = popup.GetCancelButton();
+        cancelButton.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
+        cancelButton.CustomMinimumSize = new Vector2(Mathf.Max(cancelButton.CustomMinimumSize.X, 96), 40);
+        popup.Confirmed += onConfirmed;
+        screen.AddChild(popup);
+        popup.PopupCentered(new Vector2I(900, 360));
+    }
+
+    public static void ShowBackupSelectionDialog(NModdingScreen screen, IReadOnlyList<ProfileBackupEntry> backups, Action<string> onConfirmed)
+    {
+        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        var visibleBackups = backups.Take(MaxVisibleBackupChoices).ToList();
+        var popup = new ConfirmationDialog
+        {
+            Title = "Load Backup",
+            DialogText = string.Empty
+        };
+
+        var body = new VBoxContainer();
+        var helpLabel = CreateReadableBodyLabel(
+            backups.Count > visibleBackups.Count
+                ? "Choose a backup to load. Showing the newest " + visibleBackups.Count + " of " + backups.Count + " backups."
+                : "Choose a backup to load. Installed mod files are not changed.",
+            20);
+        helpLabel.CustomMinimumSize = new Vector2(520, 0);
+        body.AddChild(helpLabel);
+
+        var backupDropdown = new OptionButton
+        {
+            CustomMinimumSize = new Vector2(520, ModdingScreenConstants.ToolbarControlHeight),
+            TooltipText = "Backups are ordered from newest to oldest."
+        };
+        ModdingScreenVanillaStyle.ApplyOptionButton(backupDropdown);
+        for (int i = 0; i < visibleBackups.Count; i++)
+            backupDropdown.AddItem(visibleBackups[i].Label, i);
+        backupDropdown.Select(0);
+        body.AddChild(backupDropdown);
+
+        popup.AddChild(body);
+        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
+        var cancelButton = popup.GetCancelButton();
+        cancelButton.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
+        cancelButton.CustomMinimumSize = new Vector2(Mathf.Max(cancelButton.CustomMinimumSize.X, 96), 40);
+        popup.Confirmed += () =>
+        {
+            int selectedIndex = backupDropdown.Selected;
+            if (selectedIndex >= 0 && selectedIndex < visibleBackups.Count)
+                onConfirmed(visibleBackups[selectedIndex].Path);
+        };
+        screen.AddChild(popup);
+        popup.PopupCentered(new Vector2I(640, 220));
     }
 
     public static void ShowLogDialog(NModdingScreen screen, string title, string content)
@@ -89,9 +157,12 @@ internal static class ModdingScreenDialogs
         var popup = new AcceptDialog
         {
             Title = "Better Mod Menu v" + version,
-            DialogText = TutorialContentBuilder.BuildBody()
+            DialogText = string.Empty
         };
 
+        var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(), layout.BodyFontSize);
+        label.CustomMinimumSize = new Vector2(layout.ContentWidth, 0);
+        popup.AddChild(label);
         popup.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += onDismissed;
@@ -109,20 +180,20 @@ internal static class ModdingScreenDialogs
 
     public static void ShowRenameGroupDialog(NModdingScreen screen, string oldName, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Rename Group", oldName, onConfirmed);
+        ShowTextInputDialog(screen, "Rename Group", oldName, "This changes the group label for every mod currently assigned to it.", onConfirmed);
     }
 
     public static void ShowRenameProfileDialog(NModdingScreen screen, string currentName, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Rename Profile", currentName, onConfirmed);
+        ShowTextInputDialog(screen, "Rename Profile", currentName, "This changes the profile name only. The enabled and disabled mods in the profile stay the same.", onConfirmed);
     }
 
     public static void ShowCloudBackupDialog(NModdingScreen screen, string currentDirectory, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Cloud Backup Folder", currentDirectory, onConfirmed);
+        ShowTextInputDialog(screen, "Cloud Backup Folder", currentDirectory, "Enter a OneDrive, Dropbox, or other synced folder. Leave it blank to turn cloud mirroring off.", onConfirmed);
     }
 
-    private static void ShowTextInputDialog(NModdingScreen screen, string title, string initialText, Action<string> onConfirmed)
+    private static void ShowTextInputDialog(NModdingScreen screen, string title, string initialText, string helpText, Action<string> onConfirmed)
     {
         var popup = new AcceptDialog
         {
@@ -130,18 +201,24 @@ internal static class ModdingScreenDialogs
             DialogText = string.Empty
         };
 
+        var body = new VBoxContainer();
+        var helpLabel = CreateReadableBodyLabel(helpText, 20);
+        helpLabel.CustomMinimumSize = new Vector2(440, 0);
+        body.AddChild(helpLabel);
+
         var input = new LineEdit
         {
             Text = initialText,
-            CustomMinimumSize = new Vector2(250, 0)
+            CustomMinimumSize = new Vector2(440, 0)
         };
         ModdingScreenVanillaStyle.ApplyLineEdit(input);
+        body.AddChild(input);
 
-        popup.AddChild(input);
+        popup.AddChild(body);
         popup.Confirmed += () => onConfirmed(input.Text);
 
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(300, 100));
+        popup.PopupCentered(new Vector2I(520, 180));
     }
 
     private static Label CreateReadableBodyLabel(string text, int fontSize)

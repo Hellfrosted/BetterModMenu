@@ -24,10 +24,10 @@ internal static class ModdingScreenChromeOps
         Action onDeleteProfilePressed,
         Action<bool> onPortableModeToggled,
         Action onManualBackupPressed,
+        Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
         Action onTutorialPressed,
-        Action onGameVersionPressed,
         Action onCloudBackupPressed,
         Func<string, bool> onAddGroupRequested)
     {
@@ -36,7 +36,7 @@ internal static class ModdingScreenChromeOps
         EnsureLayoutSignals(screen, session);
         EnsureScrollbarPersistenceSignals(screen, session);
         EnsureTopBar(session, onProfileSelected, onNewProfilePressed, onRenameProfilePressed, onDeleteProfilePressed);
-        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onExportModListPressed, onViewLogsPressed, onTutorialPressed, onGameVersionPressed, onCloudBackupPressed, onAddGroupRequested);
+        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onLoadBackupPressed, onExportModListPressed, onViewLogsPressed, onTutorialPressed, onCloudBackupPressed, onAddGroupRequested);
     }
 
     public static void RefreshGroupsUI(
@@ -158,10 +158,10 @@ internal static class ModdingScreenChromeOps
         ModdingScreenSession session,
         Action<bool> onPortableModeToggled,
         Action onManualBackupPressed,
+        Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
         Action onTutorialPressed,
-        Action onGameVersionPressed,
         Action onCloudBackupPressed,
         Func<string, bool> onAddGroupRequested)
     {
@@ -181,10 +181,10 @@ internal static class ModdingScreenChromeOps
             portableModeEnabled,
             onPortableModeToggled,
             onManualBackupPressed,
+            onLoadBackupPressed,
             onExportModListPressed,
             onViewLogsPressed,
             onTutorialPressed,
-            onGameVersionPressed,
             onCloudBackupPressed,
             onAddGroupRequested);
 

@@ -16,7 +16,6 @@
     <Compile Include="..\Data\BackupTriggerRules.cs" Link="Data\BackupTriggerRules.cs" />
     <Compile Include="..\Data\CloudBackupSettingsRules.cs" Link="Data\CloudBackupSettingsRules.cs" />
     <Compile Include="..\Data\CloudBackupService.cs" Link="Data\CloudBackupService.cs" />
-    <Compile Include="..\Data\GameVersionSelectionRules.cs" Link="Data\GameVersionSelectionRules.cs" />
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />

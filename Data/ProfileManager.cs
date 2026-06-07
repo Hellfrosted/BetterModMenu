@@ -24,7 +24,6 @@ public class ProfileSaveData
     public HashSet<string> CollapsedGroups { get; set; } = new();
     public TutorialState Tutorial { get; set; } = new();
     public CloudBackupSettings CloudBackups { get; set; } = new();
-    public GameVersionDownloadSettings GameVersionDownloads { get; set; } = new();
 }
 
 public static class ProfileManager
@@ -59,7 +58,6 @@ public static class ProfileManager
     public static HashSet<string> CollapsedGroups { get; set; } = new();
     public static TutorialState Tutorial { get; set; } = new();
     public static CloudBackupSettings CloudBackups { get; set; } = new();
-    public static GameVersionDownloadSettings GameVersionDownloads { get; set; } = new();
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
 
     public static void ResetState()
@@ -71,7 +69,6 @@ public static class ProfileManager
         CollapsedGroups = new();
         Tutorial = new();
         CloudBackups = new();
-        GameVersionDownloads = new();
         ModGameplayImpactCache = new();
         LastPersistenceError = null;
         LastBackupError = null;
@@ -172,8 +169,7 @@ public static class ProfileManager
                 ModGroups = ModGroups,
                 CollapsedGroups = CollapsedGroups,
                 Tutorial = Tutorial,
-                CloudBackups = CloudBackups,
-                GameVersionDownloads = GameVersionDownloads
+                CloudBackups = CloudBackups
             };
             var json = JsonSerializer.Serialize(saveData, JsonOpts);
             tempPath = path + ".tmp";
@@ -214,7 +210,6 @@ public static class ProfileManager
                         CollapsedGroups = loaded.CollapsedGroups ?? new();
                         Tutorial = loaded.Tutorial ?? new();
                         CloudBackups = loaded.CloudBackups ?? new();
-                        GameVersionDownloads = loaded.GameVersionDownloads ?? new();
                     }
                 }
                 catch
@@ -269,6 +264,31 @@ public static class ProfileManager
         return BackupExistingSaveOnce(SavePath, ProfileBackupReason.Resume, out backupPath);
     }
 
+    internal static bool TryRestoreProfileBackup(string backupPath, out string? error)
+    {
+        error = null;
+        var previousState = CaptureSaveData();
+
+        if (!TryReadProfileSaveData(backupPath, out var restoredState, out error))
+        {
+            LastBackupError = error;
+            return false;
+        }
+
+        ApplySaveData(restoredState);
+        if (SaveInMemoryState())
+        {
+            LastBackupError = null;
+            return true;
+        }
+
+        error = LastPersistenceError ?? "The restored profile save could not be written.";
+        LastBackupError = error;
+        ApplySaveData(previousState);
+        SaveInMemoryState();
+        return false;
+    }
+
     internal static bool TryExportModList(IEnumerable<InstalledModExportInput> mods, out string exportPath)
     {
         var rows = ModListExportBuilder.BuildRows(mods, ModGroups, UnassignedGroupName);
@@ -313,11 +333,6 @@ public static class ProfileManager
         SaveInMemoryState();
     }
 
-    internal static bool TryBuildGameVersionDownloadPlan(out GameVersionDownloadPlan plan, out string? error)
-    {
-        return GameVersionSelectionRules.TryBuildDownloadPlan(GameVersionDownloads, out plan, out error);
-    }
-
     internal static bool SaveCloudBackupDirectory(string directory)
     {
         CloudBackups = CloudBackupSettingsRules.WithDirectory(CloudBackups, directory);
@@ -327,6 +342,77 @@ public static class ProfileManager
     private static bool BackupExistingSave(string savePath, ProfileBackupReason reason)
     {
         return BackupExistingSave(savePath, reason, out _);
+    }
+
+    private static ProfileSaveData CaptureSaveData()
+    {
+        return new ProfileSaveData
+        {
+            Profiles = Profiles,
+            CurrentProfileIndex = CurrentProfileIndex,
+            CustomGroups = CustomGroups,
+            ModGroups = ModGroups,
+            CollapsedGroups = CollapsedGroups,
+            Tutorial = Tutorial,
+            CloudBackups = CloudBackups
+        };
+    }
+
+    private static void ApplySaveData(ProfileSaveData saveData)
+    {
+        Profiles = saveData.Profiles ?? new();
+        CurrentProfileIndex = saveData.CurrentProfileIndex;
+        CustomGroups = saveData.CustomGroups ?? new();
+        ModGroups = saveData.ModGroups ?? new();
+        CollapsedGroups = saveData.CollapsedGroups ?? new();
+        Tutorial = saveData.Tutorial ?? new();
+        CloudBackups = saveData.CloudBackups ?? new();
+        NormalizeProfileIndex();
+    }
+
+    private static bool TryReadProfileSaveData(string path, out ProfileSaveData saveData, out string? error)
+    {
+        saveData = new ProfileSaveData();
+        error = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                error = "Backup file was not found.";
+                return false;
+            }
+
+            var json = File.ReadAllText(path);
+            try
+            {
+                var loaded = JsonSerializer.Deserialize<ProfileSaveData>(json, JsonOpts);
+                if (loaded != null && loaded.Profiles != null && loaded.Profiles.Count > 0)
+                {
+                    saveData = loaded;
+                    return true;
+                }
+            }
+            catch (JsonException)
+            {
+                error = null;
+            }
+
+            var legacy = JsonSerializer.Deserialize<List<ModProfile>>(json, JsonOpts);
+            if (legacy != null && legacy.Count > 0)
+            {
+                saveData = new ProfileSaveData { Profiles = legacy };
+                return true;
+            }
+
+            error = "Backup file does not contain any profiles.";
+            return false;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     private static bool BackupExistingSave(string savePath, ProfileBackupReason reason, out string backupPath)

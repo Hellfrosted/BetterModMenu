@@ -45,10 +45,10 @@ internal sealed class GroupBarControls
         HBoxContainer secondaryRow,
         CheckButton portableToggle,
         Button backupButton,
+        Button loadBackupButton,
         Button exportButton,
         Button logsButton,
         Button tutorialButton,
-        Button gameVersionButton,
         Button? cloudButton,
         Label groupLabel,
         LineEdit newGroupInput,
@@ -60,10 +60,10 @@ internal sealed class GroupBarControls
         SecondaryRow = secondaryRow;
         PortableToggle = portableToggle;
         BackupButton = backupButton;
+        LoadBackupButton = loadBackupButton;
         ExportButton = exportButton;
         LogsButton = logsButton;
         TutorialButton = tutorialButton;
-        GameVersionButton = gameVersionButton;
         CloudButton = cloudButton;
         GroupLabel = groupLabel;
         NewGroupInput = newGroupInput;
@@ -76,10 +76,10 @@ internal sealed class GroupBarControls
     public HBoxContainer SecondaryRow { get; }
     public CheckButton PortableToggle { get; }
     public Button BackupButton { get; }
+    public Button LoadBackupButton { get; }
     public Button ExportButton { get; }
     public Button LogsButton { get; }
     public Button TutorialButton { get; }
-    public Button GameVersionButton { get; }
     public Button? CloudButton { get; }
     public Label GroupLabel { get; }
     public LineEdit NewGroupInput { get; }
@@ -90,10 +90,10 @@ internal sealed class GroupBarControls
     {
         MoveChild(PortableToggle, PrimaryRow);
         MoveChild(BackupButton, PrimaryRow);
+        MoveChild(LoadBackupButton, PrimaryRow);
         MoveChild(ExportButton, PrimaryRow);
         MoveChild(LogsButton, PrimaryRow);
         MoveChild(TutorialButton, PrimaryRow);
-        MoveChild(GameVersionButton, PrimaryRow);
         if (CloudButton != null)
             MoveChild(CloudButton, PrimaryRow);
         MoveChild(FlexibleSpacer, PrimaryRow);
@@ -137,7 +137,11 @@ internal static class ModdingScreenBars
         var topBar = new HBoxContainer();
         topBar.Name = "BetterModMenuTopBar";
 
-        var profileLabel = new Label { Text = "Profile:" };
+        var profileLabel = new Label
+        {
+            Text = "Profile:",
+            TooltipText = "Saved enabled/disabled mod setup."
+        };
         ModdingScreenVanillaStyle.ApplyLabel(profileLabel, muted: true);
         topBar.AddChild(profileLabel);
 
@@ -172,10 +176,10 @@ internal static class ModdingScreenBars
         bool portableModeEnabled,
         Action<bool> onPortableModeToggled,
         Action onManualBackupPressed,
+        Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
         Action onTutorialPressed,
-        Action onGameVersionPressed,
         Action onCloudBackupPressed,
         Func<string, bool> onAddGroupRequested)
     {
@@ -185,17 +189,39 @@ internal static class ModdingScreenBars
         groupBar.AddChild(primaryRow);
         groupBar.AddChild(secondaryRow);
 
-        var portableToggle = new CheckButton { Text = "Portable Mode", ButtonPressed = portableModeEnabled };
+        var portableToggle = new CheckButton
+        {
+            Text = "Portable Mode",
+            ButtonPressed = portableModeEnabled,
+            TooltipText = "Portable Mode: save Better Mod Menu data beside the mod files instead of the normal game save folder."
+        };
         ModdingScreenVanillaStyle.ApplyButton(portableToggle);
         portableToggle.Toggled += isToggled => onPortableModeToggled(isToggled);
         primaryRow.AddChild(portableToggle);
 
-        var backupButton = new Button { Text = "Backup", TooltipText = "Back up BetterModMenu profile settings" };
+        var backupButton = new Button
+        {
+            Text = "Backup",
+            TooltipText = "Backup: save copies of your profiles, groups, and current enabled-mod settings."
+        };
         ModdingScreenVanillaStyle.ApplyButton(backupButton);
         backupButton.Pressed += onManualBackupPressed;
         primaryRow.AddChild(backupButton);
 
-        var exportButton = new Button { Text = "CSV", TooltipText = "Export installed mod list as CSV" };
+        var loadBackupButton = new Button
+        {
+            Text = "Load",
+            TooltipText = "Load: choose a Better Mod Menu profile and group backup to restore."
+        };
+        ModdingScreenVanillaStyle.ApplyButton(loadBackupButton);
+        loadBackupButton.Pressed += onLoadBackupPressed;
+        primaryRow.AddChild(loadBackupButton);
+
+        var exportButton = new Button
+        {
+            Text = "CSV",
+            TooltipText = "CSV: export a spreadsheet-friendly installed-mod list with versions, links, enabled state, and group names."
+        };
         ModdingScreenVanillaStyle.ApplyButton(exportButton);
         exportButton.Pressed += onExportModListPressed;
         primaryRow.AddChild(exportButton);
@@ -205,19 +231,18 @@ internal static class ModdingScreenBars
         logsButton.Pressed += onViewLogsPressed;
         primaryRow.AddChild(logsButton);
 
-        var tutorialButton = new Button { Text = "Help", TooltipText = "Reopen the BetterModMenu tutorial" };
+        var tutorialButton = new Button { Text = "Help", TooltipText = "Help: explain what each Better Mod Menu control does." };
         ModdingScreenVanillaStyle.ApplyButton(tutorialButton);
         tutorialButton.Pressed += onTutorialPressed;
         primaryRow.AddChild(tutorialButton);
 
-        var gameVersionButton = new Button { Text = "Game", TooltipText = "Show configured SteamCMD game-version download command" };
-        ModdingScreenVanillaStyle.ApplyButton(gameVersionButton);
-        gameVersionButton.Pressed += onGameVersionPressed;
-        primaryRow.AddChild(gameVersionButton);
-
         Button? cloudButton = null;
 #if BETTERMODMENU_CLOUD_FEATURES
-        cloudButton = new Button { Text = "Cloud", TooltipText = "Configure cloud-synced backup mirror directory" };
+        cloudButton = new Button
+        {
+            Text = "Cloud",
+            TooltipText = "Cloud: choose a synced folder where backups and CSV exports should also be copied."
+        };
         ModdingScreenVanillaStyle.ApplyButton(cloudButton);
         cloudButton.Pressed += onCloudBackupPressed;
         primaryRow.AddChild(cloudButton);
@@ -226,15 +251,28 @@ internal static class ModdingScreenBars
         var flexibleSpacer = new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         primaryRow.AddChild(flexibleSpacer);
 
-        var groupLabel = new Label { Text = "Group:" };
+        var groupLabel = new Label
+        {
+            Text = "Group:",
+            TooltipText = "Custom labels for organizing mods."
+        };
         ModdingScreenVanillaStyle.ApplyLabel(groupLabel, muted: true);
         primaryRow.AddChild(groupLabel);
 
-        var newGroupInput = new LineEdit { PlaceholderText = "Name...", CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupInputWideWidth, 0) };
+        var newGroupInput = new LineEdit
+        {
+            PlaceholderText = "Group name...",
+            TooltipText = "Type a new group name, then press Add.",
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupInputWideWidth, 0)
+        };
         ModdingScreenVanillaStyle.ApplyLineEdit(newGroupInput);
         primaryRow.AddChild(newGroupInput);
 
-        var newGroupBtn = new Button { Text = "+ Add" };
+        var newGroupBtn = new Button
+        {
+            Text = "+ Add",
+            TooltipText = "Add this group name to the mod list."
+        };
         ModdingScreenVanillaStyle.ApplyButton(newGroupBtn);
         newGroupBtn.Pressed += () =>
         {
@@ -243,6 +281,6 @@ internal static class ModdingScreenBars
         };
         primaryRow.AddChild(newGroupBtn);
 
-        return new GroupBarControls(groupBar, primaryRow, secondaryRow, portableToggle, backupButton, exportButton, logsButton, tutorialButton, gameVersionButton, cloudButton, groupLabel, newGroupInput, newGroupBtn, flexibleSpacer);
+        return new GroupBarControls(groupBar, primaryRow, secondaryRow, portableToggle, backupButton, loadBackupButton, exportButton, logsButton, tutorialButton, cloudButton, groupLabel, newGroupInput, newGroupBtn, flexibleSpacer);
     }
 }

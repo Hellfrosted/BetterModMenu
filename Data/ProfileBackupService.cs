@@ -10,8 +10,54 @@ internal enum ProfileBackupReason
     Manual
 }
 
+internal readonly record struct ProfileBackupEntry(string Path, string Label);
+
 internal static class ProfileBackupService
 {
+    public static bool TryListBackups(
+        string savePath,
+        IReadOnlyCollection<string> configExtensions,
+        out IReadOnlyList<ProfileBackupEntry> backups,
+        out string? error)
+    {
+        backups = Array.Empty<ProfileBackupEntry>();
+        error = null;
+
+        try
+        {
+            string? directory = Path.GetDirectoryName(savePath);
+            if (string.IsNullOrWhiteSpace(directory))
+                return false;
+
+            string backupDirectory = Path.Combine(directory, "backups");
+            if (!Directory.Exists(backupDirectory))
+                return false;
+
+            string baseName = Path.GetFileNameWithoutExtension(savePath);
+            var extensions = configExtensions
+                .Where(extension => !string.IsNullOrWhiteSpace(extension))
+                .Select(NormalizeExtension)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            backups = Directory
+                .EnumerateFiles(backupDirectory, baseName + ".*")
+                .Select(path => new FileInfo(path))
+                .Where(file => extensions.Contains(file.Extension))
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ThenByDescending(file => file.Name, StringComparer.Ordinal)
+                .Select(file => new ProfileBackupEntry(file.FullName, BuildBackupLabel(file)))
+                .ToList();
+
+            return backups.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            backups = Array.Empty<ProfileBackupEntry>();
+            return false;
+        }
+    }
+
     public static bool TryBackupExistingSave(string savePath, ProfileBackupReason reason, DateTimeOffset timestamp, out string backupPath, out string? error)
     {
         backupPath = string.Empty;
@@ -64,5 +110,29 @@ internal static class ProfileBackupService
             if (!File.Exists(candidate))
                 return candidate;
         }
+    }
+
+    private static string NormalizeExtension(string extension)
+    {
+        return extension.StartsWith(".", StringComparison.Ordinal) ? extension : "." + extension;
+    }
+
+    private static string BuildBackupLabel(FileInfo file)
+    {
+        return $"{file.LastWriteTime:yyyy-MM-dd HH:mm} - {GetReasonLabel(file.Name)}";
+    }
+
+    private static string GetReasonLabel(string fileName)
+    {
+        if (fileName.Contains(".manual.", StringComparison.OrdinalIgnoreCase))
+            return "Manual backup";
+
+        if (fileName.Contains(".resume.", StringComparison.OrdinalIgnoreCase))
+            return "Auto backup";
+
+        if (fileName.Contains(".runstart.", StringComparison.OrdinalIgnoreCase))
+            return "Startup backup";
+
+        return "Backup";
     }
 }

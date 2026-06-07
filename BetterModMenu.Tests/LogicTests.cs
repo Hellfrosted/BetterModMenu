@@ -267,6 +267,40 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void TryListBackups_ReturnsProfileBackupsNewestFirst()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string savePath = Path.Combine(tempDirectory, "mod_profiles.json");
+            string backupDirectory = Path.Combine(tempDirectory, "backups");
+            Directory.CreateDirectory(backupDirectory);
+            string oldBackup = Path.Combine(backupDirectory, "mod_profiles.20260605-210000.manual.json");
+            string newBackup = Path.Combine(backupDirectory, "mod_profiles.20260606-210000.manual.json");
+            string settingsBackup = Path.Combine(backupDirectory, "mod_settings.20260607-210000.manual.json");
+            File.WriteAllText(oldBackup, "{ \"Profiles\": [{ \"Name\": \"Old\" }] }");
+            File.WriteAllText(newBackup, "{ \"Profiles\": [{ \"Name\": \"New\" }] }");
+            File.WriteAllText(settingsBackup, "[]");
+            File.SetLastWriteTimeUtc(oldBackup, new DateTime(2026, 6, 5, 21, 0, 0, DateTimeKind.Utc));
+            File.SetLastWriteTimeUtc(newBackup, new DateTime(2026, 6, 6, 21, 0, 0, DateTimeKind.Utc));
+            File.SetLastWriteTimeUtc(settingsBackup, new DateTime(2026, 6, 7, 21, 0, 0, DateTimeKind.Utc));
+
+            bool found = ProfileBackupService.TryListBackups(savePath, new[] { ".json", ".json5", ".jsonc" }, out var backups, out string? error);
+
+            Assert.IsTrue(found, error);
+            Assert.AreEqual(2, backups.Count);
+            Assert.AreEqual(newBackup, backups[0].Path);
+            Assert.AreEqual(oldBackup, backups[1].Path);
+            StringAssert.Contains(backups[0].Label, "2026-06-06");
+            StringAssert.Contains(backups[0].Label, "Manual backup");
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
     public void BuildCsv_EscapesExcelFriendlyModExportRows()
     {
         string csv = ModListExportBuilder.BuildCsv(new[]
@@ -473,10 +507,12 @@ public class LogicTests
         string body = TutorialContentBuilder.BuildBody();
 
         StringAssert.Contains(body, "profiles");
+        StringAssert.Contains(body, "Portable Mode");
         StringAssert.Contains(body, "Backup");
         StringAssert.Contains(body, "CSV");
         StringAssert.Contains(body, "Logs");
-        StringAssert.Contains(body, "Game");
+        StringAssert.Contains(body, "Load lets you choose");
+        Assert.IsFalse(body.Contains("timestamped safety", StringComparison.OrdinalIgnoreCase));
         StringAssert.Contains(body, "cloud behavior stays opt-in");
     }
 
@@ -688,12 +724,13 @@ public class LogicTests
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
 
-        Assert.IsTrue(layout.PopupWidth >= 1000);
-        Assert.IsTrue(layout.PopupHeight >= 700);
+        Assert.IsTrue(layout.PopupWidth <= 900);
+        Assert.IsTrue(layout.PopupHeight <= 640);
         Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
         Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
-        Assert.IsTrue(layout.ContentHeight >= 560);
-        Assert.IsTrue(layout.BodyFontSize >= 24);
+        Assert.IsTrue(layout.ContentWidth <= 720);
+        Assert.IsTrue(layout.ContentHeight >= 480);
+        Assert.IsTrue(layout.BodyFontSize >= 22);
         Assert.IsTrue(layout.ButtonFontSize >= 24);
     }
 
@@ -709,7 +746,7 @@ public class LogicTests
         Assert.IsTrue(layout.PopupHeight <= 640);
         Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
         Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
-        Assert.IsTrue(layout.BodyFontSize >= 24);
+        Assert.IsTrue(layout.BodyFontSize >= 22);
     }
 
     [TestMethod]
@@ -724,121 +761,6 @@ public class LogicTests
         Assert.IsFalse(BackupTriggerRules.ShouldCreateAutomaticBackup(completedReasons, ProfileBackupReason.RunStart));
         Assert.IsTrue(BackupTriggerRules.ShouldCreateAutomaticBackup(completedReasons, ProfileBackupReason.Resume));
         Assert.IsFalse(BackupTriggerRules.ShouldCreateAutomaticBackup(completedReasons, ProfileBackupReason.Manual));
-    }
-
-    [TestMethod]
-    public void TrySelectVersion_SelectsValidatedSteamDbDerivedVersionByName()
-    {
-        var entries = new[]
-        {
-            new GameVersionEntry
-            {
-                DisplayName = "0.99.1",
-                AppId = 2868840,
-                DepotId = 2868841,
-                ManifestId = 1234567890123456789,
-                BuildId = "example"
-            }
-        };
-
-        bool selected = GameVersionSelectionRules.TrySelectVersion(entries, "0.99.1", out var entry, out string? error);
-
-        Assert.IsTrue(selected, error);
-        Assert.AreEqual((uint)2868840, entry.AppId);
-        Assert.AreEqual((uint)2868841, entry.DepotId);
-        Assert.AreEqual((ulong)1234567890123456789, entry.ManifestId);
-    }
-
-    [TestMethod]
-    public void TrySelectVersion_RejectsIncompleteSteamDbDerivedVersion()
-    {
-        var entries = new[]
-        {
-            new GameVersionEntry
-            {
-                DisplayName = "Broken",
-                AppId = 2868840,
-                DepotId = 0,
-                ManifestId = 123
-            }
-        };
-
-        bool selected = GameVersionSelectionRules.TrySelectVersion(entries, "Broken", out _, out string? error);
-
-        Assert.IsFalse(selected);
-        Assert.AreEqual("Steam depot id is required.", error);
-    }
-
-    [TestMethod]
-    public void BuildSteamCmdDownloadDepotArguments_UsesAppDepotAndManifestIds()
-    {
-        var entry = new GameVersionEntry
-        {
-            DisplayName = "0.99.1",
-            AppId = 2868840,
-            DepotId = 2868841,
-            ManifestId = 1234567890123456789
-        };
-
-        var args = GameVersionSelectionRules.BuildSteamCmdDownloadDepotArguments(entry, @"C:\Games\STS2-0.99.1");
-
-        CollectionAssert.AreEqual(new[]
-        {
-            "+force_install_dir",
-            @"C:\Games\STS2-0.99.1",
-            "+login",
-            "anonymous",
-            "+download_depot",
-            "2868840",
-            "2868841",
-            "1234567890123456789",
-            "+quit"
-        }, args.ToArray());
-    }
-
-    [TestMethod]
-    public void TryBuildDownloadPlan_UsesSelectedVersionAndQuotesSteamCmdCommand()
-    {
-        var settings = new GameVersionDownloadSettings
-        {
-            Enabled = true,
-            SteamCmdPath = @"C:\Program Files\steamcmd\steamcmd.exe",
-            InstallRootDirectory = @"C:\Games\STS2 Versions",
-            SelectedVersion = "0.99.1",
-            Versions =
-            [
-                new GameVersionEntry
-                {
-                    DisplayName = "0.99.1",
-                    AppId = 2868840,
-                    DepotId = 2868841,
-                    ManifestId = 1234567890123456789
-                }
-            ]
-        };
-
-        bool built = GameVersionSelectionRules.TryBuildDownloadPlan(settings, out var plan, out string? error);
-
-        Assert.IsTrue(built, error);
-        Assert.AreEqual(@"C:\Games\STS2 Versions\0.99.1", plan.InstallDirectory);
-        Assert.AreEqual("\"C:\\Program Files\\steamcmd\\steamcmd.exe\" +force_install_dir \"C:\\Games\\STS2 Versions\\0.99.1\" +login anonymous +download_depot 2868840 2868841 1234567890123456789 +quit", plan.CommandLine);
-    }
-
-    [TestMethod]
-    public void TryBuildDownloadPlan_RequiresExplicitEnablement()
-    {
-        var settings = new GameVersionDownloadSettings
-        {
-            Enabled = false,
-            SteamCmdPath = "steamcmd",
-            InstallRootDirectory = @"C:\Games",
-            SelectedVersion = "0.99.1"
-        };
-
-        bool built = GameVersionSelectionRules.TryBuildDownloadPlan(settings, out _, out string? error);
-
-        Assert.IsFalse(built);
-        Assert.AreEqual("Game version downloads are not enabled.", error);
     }
 
     [TestMethod]

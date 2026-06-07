@@ -49,7 +49,7 @@ public static class NModMenuRowPatch
             container.AddChild(spacer);
         }
 
-        const string orderTooltip = "Reorders the saved mod list for the next launch. Slay the Spire 2 may still override dependency order, so this is not guaranteed multiplayer synchronization.";
+        const string orderTooltip = "Move this mod in the saved load order for the next launch. Dependency rules may still move it during startup.";
 
         var upBtn = new Button
         {
@@ -71,7 +71,12 @@ public static class NModMenuRowPatch
         downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 
-        var groupDropdown = new OptionButton { Name = "GroupDropdown", CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0) };
+        var groupDropdown = new OptionButton
+        {
+            Name = "GroupDropdown",
+            TooltipText = "Choose which custom group this mod appears under. This does not enable, disable, install, or uninstall the mod.",
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0)
+        };
         ModdingScreenVanillaStyle.ApplyOptionButton(groupDropdown);
 
         groupDropdown.ItemSelected += (idx) =>
