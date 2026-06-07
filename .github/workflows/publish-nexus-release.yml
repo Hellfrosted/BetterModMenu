@@ -42,18 +42,14 @@ jobs:
           version="${tag#v}"
           version="${version#V}"
           release_url="$(gh release view "$tag" --repo "${{ github.repository }}" --json url --jq '.url')"
-          release_body="$(gh release view "$tag" --repo "${{ github.repository }}" --json body --jq '.body // ""')"
-
-          if [[ -z "$release_body" ]]; then
-            release_body="Automated upload from GitHub release $tag."
-          fi
+          file_description="$(printf 'Automated upload from GitHub release %s.\nSource: %s\nTested on <game version>' "$tag" "$release_url")"
 
           {
             echo "tag=$tag"
             echo "version=$version"
             echo "release_url=$release_url"
-            echo "release_body<<EOF"
-            printf '%s\n' "$release_body"
+            echo "file_description<<EOF"
+            printf '%s\n' "$file_description"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -90,7 +86,7 @@ jobs:
           filename: ${{ steps.asset.outputs.path }}
           version: ${{ steps.release.outputs.version }}
           display_name: Better Mod Menu ${{ steps.release.outputs.version }}
-          description: ${{ steps.release.outputs.release_body }}
+          description: ${{ steps.release.outputs.file_description }}
           file_category: main
 
       - name: Summarize upload
@@ -106,5 +102,5 @@ jobs:
             echo "- Optional cloud assets found: \`${{ steps.asset.outputs.cloud_asset_count }}\`"
             echo "- Uploaded file UID: \`${{ steps.nexus.outputs.file_uid }}\`"
             echo "- Release source: ${{ steps.release.outputs.release_url }}"
-            echo "- Nexus file description source: GitHub release body"
+            echo "- Nexus file description: generated short upload note"
           } >> "$GITHUB_STEP_SUMMARY"
