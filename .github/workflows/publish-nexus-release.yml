@@ -42,7 +42,7 @@ jobs:
           version="${tag#v}"
           version="${version#V}"
           release_url="$(gh release view "$tag" --repo "${{ github.repository }}" --json url --jq '.url')"
-          release_body="$(gh release view "$tag" --repo "${{ github.repository }}" --json body --jq '.body // \"\"')"
+          release_body="$(gh release view "$tag" --repo "${{ github.repository }}" --json body --jq '.body // ""')"
 
           if [[ -z "$release_body" ]]; then
             release_body="Automated upload from GitHub release $tag."
