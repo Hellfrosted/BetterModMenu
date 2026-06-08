@@ -1,10 +1,9 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Logging;
-using MegaCrit.Sts2.Core.Modding;
 
 namespace BetterModMenu;
 
-[ModInitializer("Initialize")]
+[MegaCrit.Sts2.Core.Modding.ModInitializer("Initialize")]
 public static class Main
 {
     public const string ModId = "BetterModMenu";
@@ -19,7 +18,7 @@ public static class Main
 
         var harmony = new Harmony(ModId);
         harmony.PatchAll();
-        
+
         Logger.Info("BetterModMenu initialized successfully.");
     }
 }
