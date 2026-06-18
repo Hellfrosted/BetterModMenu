@@ -8,10 +8,16 @@ namespace BetterModMenu.Patches;
 internal static class ModdingScreenDialogs
 {
     private const int MaxVisibleBackupChoices = 12;
+    private const int LogPopupWidth = 1080;
+    private const int LogPopupHeight = 680;
+    private const int LogContentWidth = 1020;
+    private const int LogContentHeight = 600;
+    private const int LogBodyFontSize = 22;
+    private const int LogButtonFontSize = 22;
 
     public static void ShowInfoDialog(NModdingScreen screen, string title, string message)
     {
-        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
         var popup = new AcceptDialog
         {
             Title = title,
@@ -28,7 +34,7 @@ internal static class ModdingScreenDialogs
 
     public static void ShowConfirmDialog(NModdingScreen screen, string title, string message, Action onConfirmed)
     {
-        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
         var popup = new ConfirmationDialog
         {
             Title = title,
@@ -49,7 +55,7 @@ internal static class ModdingScreenDialogs
 
     public static void ShowBackupSelectionDialog(NModdingScreen screen, IReadOnlyList<ProfileBackupEntry> backups, Action<string> onConfirmed)
     {
-        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
+        TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
         var visibleBackups = backups.Take(MaxVisibleBackupChoices).ToList();
         var popup = new ConfirmationDialog
         {
@@ -94,7 +100,6 @@ internal static class ModdingScreenDialogs
 
     public static void ShowLogDialog(NModdingScreen screen, string title, string content)
     {
-        LogDialogLayout layout = ModdingScreenDialogRules.GetLogDialogLayout();
         var popup = new AcceptDialog
         {
             Title = title,
@@ -109,7 +114,7 @@ internal static class ModdingScreenDialogs
         };
         var panel = new PanelContainer
         {
-            CustomMinimumSize = new Vector2(layout.ContentWidth, layout.ContentHeight)
+            CustomMinimumSize = new Vector2(LogContentWidth, LogContentHeight)
         };
         ModdingScreenVanillaStyle.ApplyLogPanel(panel);
         var contentBox = new VBoxContainer
@@ -139,15 +144,15 @@ internal static class ModdingScreenDialogs
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
         label.AddThemeColorOverride("default_color", new Color(0.92f, 0.86f, 0.74f, 1f));
-        label.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
+        label.AddThemeFontSizeOverride("font_size", LogBodyFontSize);
 
         contentBox.AddChild(label);
         scroll.AddChild(contentBox);
         panel.AddChild(scroll);
         popup.AddChild(panel);
-        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
+        ApplyReadableDialogButtons(popup, LogButtonFontSize);
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
+        popup.PopupCentered(new Vector2I(LogPopupWidth, LogPopupHeight));
     }
 
 
@@ -254,7 +259,7 @@ internal static class ModdingScreenDialogs
     {
         var viewportSize = screen.GetViewportRect().Size;
         return ModdingScreenDialogRules.FitTutorialDialogToViewport(
-            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            ModdingScreenDialogRules.GetPreferredTutorialDialogLayout(),
             (int)viewportSize.X,
             (int)viewportSize.Y);
     }

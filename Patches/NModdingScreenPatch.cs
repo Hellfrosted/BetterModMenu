@@ -259,8 +259,7 @@ public static class NModdingScreenPatch
         if (modRowContainer == null)
             return;
 
-        using var autoSaveSuppression = new ModdingScreenSuppressionScope(screen, suppressAutoSave: true, suppressTickboxes: false);
-        using var tickboxSuppression = new ModdingScreenSuppressionScope(screen, suppressAutoSave: false, suppressTickboxes: true);
+        using var suppression = new ModdingScreenSuppressionScope(screen);
         if (ModdingScreenListOps.ApplyToggleAllInGroup(modRowContainer, groupName, isToggled))
         {
             ProfileManager.SaveInMemoryState();
@@ -291,8 +290,7 @@ public static class NModdingScreenPatch
 
         if (TryGetCurrentScreen(out var screen) && screen != null)
         {
-            using var autoSaveSuppression = new ModdingScreenSuppressionScope(screen, suppressAutoSave: true, suppressTickboxes: false);
-            using var tickboxSuppression = new ModdingScreenSuppressionScope(screen, suppressAutoSave: false, suppressTickboxes: true);
+            using var suppression = new ModdingScreenSuppressionScope(screen);
             screen.OnModEnabledOrDisabled();
 
             var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);

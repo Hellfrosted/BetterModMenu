@@ -94,12 +94,11 @@ internal static class ModdingGroupStateOps
         if (index == -1)
             return false;
 
-        var validation = ModdingGroupRules.ValidateRename(ProfileManager.CustomGroups, oldName, newName, out string trimmedName);
-        if (validation == GroupNameValidationResult.Unchanged)
-            return true;
-
-        if (validation != GroupNameValidationResult.Valid)
+        if (!ModdingGroupRules.CanRename(ProfileManager.CustomGroups, oldName, newName, out string trimmedName, out bool unchanged))
             return false;
+
+        if (unchanged)
+            return true;
 
         var previousState = CaptureState();
         ProfileManager.CustomGroups[index] = trimmedName;

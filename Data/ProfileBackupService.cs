@@ -98,18 +98,7 @@ internal static class ProfileBackupService
     private static string GetUniqueBackupPath(string backupDirectory, string savePath, ProfileBackupReason reason, DateTimeOffset timestamp)
     {
         string fileName = BuildBackupFileName(savePath, reason, timestamp);
-        string candidate = Path.Combine(backupDirectory, fileName);
-        if (!File.Exists(candidate))
-            return candidate;
-
-        string baseName = Path.GetFileNameWithoutExtension(fileName);
-        string extension = Path.GetExtension(fileName);
-        for (int i = 2; ; i++)
-        {
-            candidate = Path.Combine(backupDirectory, $"{baseName}-{i}{extension}");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
+        return FileNameCollisionRules.GetUniquePath(backupDirectory, fileName);
     }
 
     private static string NormalizeExtension(string extension)

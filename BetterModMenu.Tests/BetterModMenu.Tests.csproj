@@ -16,6 +16,7 @@
     <Compile Include="..\Data\BackupTriggerRules.cs" Link="Data\BackupTriggerRules.cs" />
     <Compile Include="..\Data\CloudBackupSettingsRules.cs" Link="Data\CloudBackupSettingsRules.cs" />
     <Compile Include="..\Data\CloudBackupService.cs" Link="Data\CloudBackupService.cs" />
+    <Compile Include="..\Data\FileNameCollisionRules.cs" Link="Data\FileNameCollisionRules.cs" />
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
@@ -25,7 +26,6 @@
     <Compile Include="..\Data\ProfileModels.cs" Link="Data\ProfileModels.cs" />
     <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />
     <Compile Include="..\Data\ProfileSaveStorage.cs" Link="Data\ProfileSaveStorage.cs" />
-    <Compile Include="..\Data\ReleasePackageRules.cs" Link="Data\ReleasePackageRules.cs" />
     <Compile Include="..\Data\ProfileStateRules.cs" Link="Data\ProfileStateRules.cs" />
     <Compile Include="..\Data\TutorialContentBuilder.cs" Link="Data\TutorialContentBuilder.cs" />
     <Compile Include="..\Data\TutorialStateRules.cs" Link="Data\TutorialStateRules.cs" />

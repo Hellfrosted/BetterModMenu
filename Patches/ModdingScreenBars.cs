@@ -3,22 +3,18 @@ using Godot;
 
 namespace BetterModMenu.Patches;
 
-internal sealed class TopBarControls
+internal sealed class TopBarControls(
+    HBoxContainer bar,
+    OptionButton profileDropdown,
+    Button newProfileButton,
+    Button renameProfileButton,
+    Button deleteProfileButton)
 {
-    public TopBarControls(HBoxContainer bar, OptionButton profileDropdown, Button newProfileButton, Button renameProfileButton, Button deleteProfileButton)
-    {
-        Bar = bar;
-        ProfileDropdown = profileDropdown;
-        NewProfileButton = newProfileButton;
-        RenameProfileButton = renameProfileButton;
-        DeleteProfileButton = deleteProfileButton;
-    }
-
-    public HBoxContainer Bar { get; }
-    public OptionButton ProfileDropdown { get; }
-    public Button NewProfileButton { get; }
-    public Button RenameProfileButton { get; }
-    public Button DeleteProfileButton { get; }
+    public HBoxContainer Bar { get; } = bar;
+    public OptionButton ProfileDropdown { get; } = profileDropdown;
+    public Button NewProfileButton { get; } = newProfileButton;
+    public Button RenameProfileButton { get; } = renameProfileButton;
+    public Button DeleteProfileButton { get; } = deleteProfileButton;
 
     public void SetCompact(bool isCompact)
     {
@@ -37,54 +33,36 @@ internal sealed class TopBarControls
     }
 }
 
-internal sealed class GroupBarControls
+internal sealed class GroupBarControls(
+    VBoxContainer bar,
+    HBoxContainer primaryRow,
+    HBoxContainer secondaryRow,
+    CheckButton portableToggle,
+    Button backupButton,
+    Button loadBackupButton,
+    Button exportButton,
+    Button logsButton,
+    Button tutorialButton,
+    Button? cloudButton,
+    Label groupLabel,
+    LineEdit newGroupInput,
+    Button newGroupButton,
+    Control flexibleSpacer)
 {
-    public GroupBarControls(
-        VBoxContainer bar,
-        HBoxContainer primaryRow,
-        HBoxContainer secondaryRow,
-        CheckButton portableToggle,
-        Button backupButton,
-        Button loadBackupButton,
-        Button exportButton,
-        Button logsButton,
-        Button tutorialButton,
-        Button? cloudButton,
-        Label groupLabel,
-        LineEdit newGroupInput,
-        Button newGroupButton,
-        Control flexibleSpacer)
-    {
-        Bar = bar;
-        PrimaryRow = primaryRow;
-        SecondaryRow = secondaryRow;
-        PortableToggle = portableToggle;
-        BackupButton = backupButton;
-        LoadBackupButton = loadBackupButton;
-        ExportButton = exportButton;
-        LogsButton = logsButton;
-        TutorialButton = tutorialButton;
-        CloudButton = cloudButton;
-        GroupLabel = groupLabel;
-        NewGroupInput = newGroupInput;
-        NewGroupButton = newGroupButton;
-        FlexibleSpacer = flexibleSpacer;
-    }
-
-    public VBoxContainer Bar { get; }
-    public HBoxContainer PrimaryRow { get; }
-    public HBoxContainer SecondaryRow { get; }
-    public CheckButton PortableToggle { get; }
-    public Button BackupButton { get; }
-    public Button LoadBackupButton { get; }
-    public Button ExportButton { get; }
-    public Button LogsButton { get; }
-    public Button TutorialButton { get; }
-    public Button? CloudButton { get; }
-    public Label GroupLabel { get; }
-    public LineEdit NewGroupInput { get; }
-    public Button NewGroupButton { get; }
-    public Control FlexibleSpacer { get; }
+    public VBoxContainer Bar { get; } = bar;
+    public HBoxContainer PrimaryRow { get; } = primaryRow;
+    public HBoxContainer SecondaryRow { get; } = secondaryRow;
+    public CheckButton PortableToggle { get; } = portableToggle;
+    public Button BackupButton { get; } = backupButton;
+    public Button LoadBackupButton { get; } = loadBackupButton;
+    public Button ExportButton { get; } = exportButton;
+    public Button LogsButton { get; } = logsButton;
+    public Button TutorialButton { get; } = tutorialButton;
+    public Button? CloudButton { get; } = cloudButton;
+    public Label GroupLabel { get; } = groupLabel;
+    public LineEdit NewGroupInput { get; } = newGroupInput;
+    public Button NewGroupButton { get; } = newGroupButton;
+    public Control FlexibleSpacer { get; } = flexibleSpacer;
 
     public void SetCompact(bool isCompact)
     {

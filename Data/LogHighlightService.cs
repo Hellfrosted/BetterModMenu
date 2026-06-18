@@ -24,26 +24,6 @@ internal static partial class LogHighlightService
         return builder.ToString();
     }
 
-    public static IReadOnlyList<string> ExtractHighlightedModNames(string content)
-    {
-        var names = new List<string>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (Match match in ManifestMigrationWarningRegex().Matches(content))
-            Add(match.Groups["mod"].Value);
-
-        foreach (Match match in DllInitializationWarningRegex().Matches(content))
-            Add(match.Groups["mod"].Value);
-
-        return names;
-
-        void Add(string name)
-        {
-            if (!string.IsNullOrWhiteSpace(name) && seen.Add(name))
-                names.Add(name);
-        }
-    }
-
     private static void AppendHighlightedLine(StringBuilder builder, string line)
     {
         Match manifestMatch = ManifestMigrationWarningRegex().Match(line);

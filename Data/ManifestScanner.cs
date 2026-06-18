@@ -10,6 +10,7 @@ internal sealed class ModManifestInfo
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
+    public bool AffectsGameplay { get; init; }
 }
 
 internal static class ManifestScanner
@@ -78,27 +79,12 @@ internal static class ManifestScanner
     private static bool IsMatchingManifestPath(string fullDirectory, string candidate, string expectedId)
     {
         string fullCandidate = Path.GetFullPath(candidate);
-        return IsPathWithinDirectory(fullDirectory, fullCandidate) &&
-            File.Exists(fullCandidate) &&
-            TryReadManifestId(fullCandidate, out string manifestId) &&
-            string.Equals(manifestId, expectedId, StringComparison.OrdinalIgnoreCase);
-    }
+        if (!IsPathWithinDirectory(fullDirectory, fullCandidate) || !File.Exists(fullCandidate))
+            return false;
 
-    private static bool TryReadManifestId(string manifestPath, out string manifestId)
-    {
-        manifestId = string.Empty;
         try
         {
-            string content = File.ReadAllText(manifestPath);
-            var docOpts = new JsonDocumentOptions
-            {
-                CommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            };
-
-            using var doc = JsonDocument.Parse(content, docOpts);
-            manifestId = ReadString(doc.RootElement, "id");
-            return !string.IsNullOrWhiteSpace(manifestId);
+            return TryReadManifestInfo(fullCandidate, expectedId, out _);
         }
         catch (JsonException)
         {
@@ -110,69 +96,10 @@ internal static class ManifestScanner
         }
     }
 
-    public static bool TryReadAffectsGameplay(string manifestPath, string expectedId, out bool affectsGameplay)
-    {
-        affectsGameplay = false;
-
-        string content = File.ReadAllText(manifestPath);
-        var docOpts = new JsonDocumentOptions
-        {
-            CommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
-
-        using var doc = JsonDocument.Parse(content, docOpts);
-        if (!doc.RootElement.TryGetProperty("id", out var idProp) || idProp.ValueKind != JsonValueKind.String)
-            return false;
-
-        string manifestId = idProp.GetString() ?? "";
-        if (!string.Equals(manifestId, expectedId, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        if (!doc.RootElement.TryGetProperty("affects_gameplay", out var gameplayProp))
-            return true;
-
-        affectsGameplay = gameplayProp.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => false
-        };
-
-        return true;
-    }
-
     public static bool TryReadManifestInfo(string manifestPath, string expectedId, out ModManifestInfo manifestInfo)
     {
         manifestInfo = new ModManifestInfo();
 
-        string content = File.ReadAllText(manifestPath);
-        var docOpts = new JsonDocumentOptions
-        {
-            CommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
-
-        using var doc = JsonDocument.Parse(content, docOpts);
-        if (!doc.RootElement.TryGetProperty("id", out var idProp) || idProp.ValueKind != JsonValueKind.String)
-            return false;
-
-        string manifestId = idProp.GetString() ?? string.Empty;
-        if (!string.Equals(manifestId, expectedId, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        manifestInfo = new ModManifestInfo
-        {
-            Id = manifestId,
-            Name = ReadString(doc.RootElement, "name"),
-            Version = ReadString(doc.RootElement, "version")
-        };
-        return true;
-    }
-
-    public static bool TryReadVersion(string manifestPath, string expectedId, out string version)
-    {
-        version = string.Empty;
         if (string.IsNullOrWhiteSpace(manifestPath) || !File.Exists(manifestPath))
             return false;
 
@@ -184,15 +111,21 @@ internal static class ManifestScanner
         };
 
         using var doc = JsonDocument.Parse(content, docOpts);
-        if (!doc.RootElement.TryGetProperty("id", out var idProp) ||
-            idProp.ValueKind != JsonValueKind.String ||
-            !string.Equals(idProp.GetString(), expectedId, StringComparison.OrdinalIgnoreCase))
+        string manifestId = ReadString(doc.RootElement, "id");
+        if (string.IsNullOrWhiteSpace(manifestId) ||
+            !string.Equals(manifestId, expectedId, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        version = ReadString(doc.RootElement, "version");
-        return !string.IsNullOrWhiteSpace(version);
+        manifestInfo = new ModManifestInfo
+        {
+            Id = manifestId,
+            Name = ReadString(doc.RootElement, "name"),
+            Version = ReadString(doc.RootElement, "version"),
+            AffectsGameplay = ReadBoolean(doc.RootElement, "affects_gameplay")
+        };
+        return true;
     }
 
     private static string ReadString(JsonElement element, string propertyName)
@@ -200,5 +133,10 @@ internal static class ManifestScanner
         return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
             ? property.GetString() ?? string.Empty
             : string.Empty;
+    }
+
+    private static bool ReadBoolean(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True;
     }
 }

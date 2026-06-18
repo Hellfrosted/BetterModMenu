@@ -66,16 +66,6 @@ internal static class ModSettingsBackupService
     private static string GetUniqueBackupPath(string directory, ProfileBackupReason reason, DateTimeOffset timestamp)
     {
         string fileName = BuildBackupFileName(reason, timestamp);
-        string candidate = Path.Combine(directory, fileName);
-        if (!File.Exists(candidate))
-            return candidate;
-
-        string baseName = Path.GetFileNameWithoutExtension(fileName);
-        for (int i = 2; ; i++)
-        {
-            candidate = Path.Combine(directory, $"{baseName}-{i}.json");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
+        return FileNameCollisionRules.GetUniquePath(directory, fileName);
     }
 }

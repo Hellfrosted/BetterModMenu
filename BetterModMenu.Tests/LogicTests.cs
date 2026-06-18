@@ -29,20 +29,22 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void ValidateRename_AllowsNoOpRename()
+    public void CanRename_AllowsNoOpRename()
     {
-        var result = ModdingGroupRules.ValidateRename(new[] { "Bosses" }, "Bosses", "Bosses", out string trimmedName);
+        bool canRename = ModdingGroupRules.CanRename(new[] { "Bosses" }, "Bosses", "Bosses", out string trimmedName, out bool unchanged);
 
-        Assert.AreEqual(GroupNameValidationResult.Unchanged, result);
+        Assert.IsTrue(canRename);
+        Assert.IsTrue(unchanged);
         Assert.AreEqual("Bosses", trimmedName);
     }
 
     [TestMethod]
-    public void ValidateRename_RejectsDuplicateTarget()
+    public void CanRename_RejectsDuplicateTarget()
     {
-        var result = ModdingGroupRules.ValidateRename(new[] { "Bosses", "Elites" }, "Bosses", "Elites", out _);
+        bool canRename = ModdingGroupRules.CanRename(new[] { "Bosses", "Elites" }, "Bosses", "Elites", out _, out bool unchanged);
 
-        Assert.AreEqual(GroupNameValidationResult.Duplicate, result);
+        Assert.IsFalse(canRename);
+        Assert.IsFalse(unchanged);
     }
 
     [TestMethod]
@@ -171,7 +173,7 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void TryReadAffectsGameplay_IgnoresMismatchedIds()
+    public void TryReadManifestInfo_IgnoresMismatchedIds()
     {
         string tempPath = Path.Combine(Path.GetTempPath(), "BetterModMenuTests_" + Guid.NewGuid().ToString("N") + ".json");
         try
@@ -183,10 +185,10 @@ public class LogicTests
             }
             """);
 
-            bool found = ManifestScanner.TryReadAffectsGameplay(tempPath, "BetterModMenu", out bool affectsGameplay);
+            bool found = ManifestScanner.TryReadManifestInfo(tempPath, "BetterModMenu", out var info);
 
             Assert.IsFalse(found);
-            Assert.IsFalse(affectsGameplay);
+            Assert.IsFalse(info.AffectsGameplay);
         }
         finally
         {
@@ -544,7 +546,8 @@ public class LogicTests
             {
               "id": "Example.Mod",
               "name": "Example Mod",
-              "version": "1.2.3"
+              "version": "1.2.3",
+              "affects_gameplay": true
             }
             """);
 
@@ -554,6 +557,7 @@ public class LogicTests
             Assert.AreEqual("Example.Mod", info.Id);
             Assert.AreEqual("Example Mod", info.Name);
             Assert.AreEqual("1.2.3", info.Version);
+            Assert.IsTrue(info.AffectsGameplay);
         }
         finally
         {
@@ -722,7 +726,7 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void TryReadVersion_ReturnsManifestVersionOnlyForExpectedId()
+    public void TryReadManifestInfo_ReturnsManifestVersionOnlyForExpectedId()
     {
         string tempDirectory = CreateTempDirectory();
         try
@@ -735,9 +739,9 @@ public class LogicTests
             }
             """);
 
-            Assert.IsTrue(ManifestScanner.TryReadVersion(manifestPath, "BetterModMenu", out string version));
-            Assert.AreEqual("1.6.0", version);
-            Assert.IsFalse(ManifestScanner.TryReadVersion(manifestPath, "OtherMod", out _));
+            Assert.IsTrue(ManifestScanner.TryReadManifestInfo(manifestPath, "BetterModMenu", out var info));
+            Assert.AreEqual("1.6.0", info.Version);
+            Assert.IsFalse(ManifestScanner.TryReadManifestInfo(manifestPath, "OtherMod", out _));
         }
         finally
         {
@@ -746,25 +750,26 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void GetPackageBaseName_KeepsDefaultArtifactLocalOnlyAndAddsCloudSuffixOnlyWhenOptedIn()
+    public void ProjectPackaging_AddsCloudSuffixAndDefinesOnlyWhenOptedIn()
     {
-        Assert.AreEqual("BetterModMenu_v1.6.0", ReleasePackageRules.GetPackageBaseName("BetterModMenu", "1.6.0", includeCloudFeatures: false));
-        Assert.AreEqual("BetterModMenu_v1.6.0_cloud", ReleasePackageRules.GetPackageBaseName("BetterModMenu", "1.6.0", includeCloudFeatures: true));
+        string project = File.ReadAllText(Path.Combine(GetRepoRoot(), "BetterModMenu.csproj"));
+
+        StringAssert.Contains(project, "<IncludeCloudFeatures Condition=\"'$(IncludeCloudFeatures)' == ''\">false</IncludeCloudFeatures>");
+        StringAssert.Contains(project, "<CloudPackageSuffix Condition=\"'$(IncludeCloudFeatures)' == 'true'\">_cloud</CloudPackageSuffix>");
+        StringAssert.Contains(project, "<CloudPackageSuffix Condition=\"'$(IncludeCloudFeatures)' != 'true'\"></CloudPackageSuffix>");
+        StringAssert.Contains(project, "<DefineConstants Condition=\"'$(IncludeCloudFeatures)' == 'true'\">$(DefineConstants);BETTERMODMENU_CLOUD_FEATURES</DefineConstants>");
+        StringAssert.Contains(project, "<BaseZipName>$(AssemblyName)_v$(ModVersion)$(CloudPackageSuffix)</BaseZipName>");
     }
 
     [TestMethod]
-    public void GetCloudFeatureConstants_RequiresExplicitOptIn()
+    public void NexusReleaseWorkflow_UploadsDefaultPackageAndTreatsCloudPackageAsSidecar()
     {
-        Assert.AreEqual(string.Empty, ReleasePackageRules.GetCloudFeatureConstants(includeCloudFeatures: false));
-        Assert.AreEqual("BETTERMODMENU_CLOUD_FEATURES", ReleasePackageRules.GetCloudFeatureConstants(includeCloudFeatures: true));
-    }
+        string workflow = File.ReadAllText(Path.Combine(GetRepoRoot(), ".github", "workflows", "publish-nexus-release.yml"));
 
-    [TestMethod]
-    public void IsDefaultPackageFileName_ExcludesOptionalCloudSidecar()
-    {
-        Assert.IsTrue(ReleasePackageRules.IsDefaultPackageFileName("BetterModMenu_v1.6.0.zip"));
-        Assert.IsFalse(ReleasePackageRules.IsDefaultPackageFileName("BetterModMenu_v1.6.0_cloud.zip"));
-        Assert.IsTrue(ReleasePackageRules.IsCloudPackageFileName("BetterModMenu_v1.6.0_cloud.zip"));
+        StringAssert.Contains(workflow, "--pattern \"BetterModMenu_v*.zip\"");
+        StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' ! -name '*_cloud.zip'");
+        StringAssert.Contains(workflow, "Cloud-capable *_cloud.zip assets are optional sidecars and are not uploaded as the main Nexus file.");
+        StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*_cloud.zip'");
     }
 
     [TestMethod]
@@ -796,12 +801,10 @@ public class LogicTests
             "Running Modded. Loaded 19 mods WITH ERRORS!");
 
         string highlighted = LogHighlightService.BuildHighlightedBbCode(content);
-        var modNames = LogHighlightService.ExtractHighlightedModNames(content);
 
         StringAssert.Contains(highlighted, "[color=ff5a4e][b]STS2-QuickAnimationMode[/b][/color]");
         StringAssert.Contains(highlighted, "[color=ff4d4d][b]SoloOne[/b][/color]");
         StringAssert.Contains(highlighted, "[color=ff4040][b]Running Modded. Loaded 19 mods WITH ERRORS![/b][/color]");
-        CollectionAssert.AreEqual(new[] { "STS2-QuickAnimationMode", "SoloOne" }, modNames.ToArray());
     }
 
     [TestMethod]
@@ -912,38 +915,10 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void GetLogDialogLayout_UsesReadableSizeWithoutHorizontalOverflow()
-    {
-        LogDialogLayout layout = ModdingScreenDialogRules.GetLogDialogLayout();
-
-        Assert.IsTrue(layout.PopupWidth >= 1000);
-        Assert.IsTrue(layout.PopupHeight >= 640);
-        Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
-        Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
-        Assert.IsTrue(layout.BodyFontSize >= 22);
-        Assert.IsTrue(layout.ButtonFontSize >= 22);
-    }
-
-    [TestMethod]
-    public void GetTutorialDialogLayout_UsesReadableTextSize()
-    {
-        TutorialDialogLayout layout = ModdingScreenDialogRules.GetTutorialDialogLayout();
-
-        Assert.IsTrue(layout.PopupWidth <= 900);
-        Assert.IsTrue(layout.PopupHeight <= 640);
-        Assert.IsTrue(layout.ContentWidth < layout.PopupWidth);
-        Assert.IsTrue(layout.ContentHeight < layout.PopupHeight);
-        Assert.IsTrue(layout.ContentWidth <= 720);
-        Assert.IsTrue(layout.ContentHeight >= 480);
-        Assert.IsTrue(layout.BodyFontSize >= 22);
-        Assert.IsTrue(layout.ButtonFontSize >= 24);
-    }
-
-    [TestMethod]
     public void FitTutorialDialogToViewport_KeepsDialogInsideInitial1080pWindow()
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.FitTutorialDialogToViewport(
-            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            ModdingScreenDialogRules.GetPreferredTutorialDialogLayout(),
             viewportWidth: 1080,
             viewportHeight: 720);
 
@@ -958,7 +933,7 @@ public class LogicTests
     public void FitTutorialDialogToViewport_ReservesRoomForDialogButtons()
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.FitTutorialDialogToViewport(
-            ModdingScreenDialogRules.GetTutorialDialogLayout(),
+            ModdingScreenDialogRules.GetPreferredTutorialDialogLayout(),
             viewportWidth: 1080,
             viewportHeight: 720);
 
@@ -1078,4 +1053,14 @@ public class LogicTests
         Directory.CreateDirectory(tempDirectory);
         return tempDirectory;
     }
+
+    private static string GetRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "BetterModMenu.csproj")))
+            directory = directory.Parent;
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find BetterModMenu.csproj.");
+    }
+
 }

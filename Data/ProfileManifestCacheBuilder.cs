@@ -28,8 +28,8 @@ internal static class ProfileManifestCacheBuilder
 
             try
             {
-                if (ManifestScanner.TryReadAffectsGameplay(manifestPath, modId, out bool affectsGameplay))
-                    targetCache[modId] = affectsGameplay;
+                if (ManifestScanner.TryReadManifestInfo(manifestPath, modId, out var manifestInfo))
+                    targetCache[modId] = manifestInfo.AffectsGameplay;
             }
             catch (Exception ex)
             {

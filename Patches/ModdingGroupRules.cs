@@ -3,14 +3,6 @@ using System.Collections.Generic;
 
 namespace BetterModMenu.Patches;
 
-internal enum GroupNameValidationResult
-{
-    Invalid,
-    Duplicate,
-    Unchanged,
-    Valid
-}
-
 internal static class ModdingGroupRules
 {
     public static bool CanAdd(IReadOnlyCollection<string> existingGroups, string groupName, out string trimmedName)
@@ -21,17 +13,19 @@ internal static class ModdingGroupRules
             !existingGroups.Contains(trimmedName);
     }
 
-    public static GroupNameValidationResult ValidateRename(IReadOnlyCollection<string> existingGroups, string oldName, string newName, out string trimmedName)
+    public static bool CanRename(IReadOnlyCollection<string> existingGroups, string oldName, string newName, out string trimmedName, out bool unchanged)
     {
         trimmedName = newName.Trim();
+        unchanged = false;
         if (string.IsNullOrEmpty(trimmedName) || string.Equals(trimmedName, ModdingScreenConstants.UnassignedGroup, StringComparison.Ordinal))
-            return GroupNameValidationResult.Invalid;
+            return false;
 
         if (string.Equals(trimmedName, oldName, StringComparison.Ordinal))
-            return GroupNameValidationResult.Unchanged;
+        {
+            unchanged = true;
+            return true;
+        }
 
-        return existingGroups.Contains(trimmedName)
-            ? GroupNameValidationResult.Duplicate
-            : GroupNameValidationResult.Valid;
+        return !existingGroups.Contains(trimmedName);
     }
 }

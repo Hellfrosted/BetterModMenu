@@ -147,16 +147,6 @@ internal static class ModListExportBuilder
     private static string GetUniqueExportPath(string directory, DateTimeOffset timestamp)
     {
         string fileName = BuildExportFileName(timestamp);
-        string candidate = Path.Combine(directory, fileName);
-        if (!File.Exists(candidate))
-            return candidate;
-
-        string baseName = Path.GetFileNameWithoutExtension(fileName);
-        for (int i = 2; ; i++)
-        {
-            candidate = Path.Combine(directory, $"{baseName}-{i}.csv");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
+        return FileNameCollisionRules.GetUniquePath(directory, fileName);
     }
 }

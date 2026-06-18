@@ -24,8 +24,9 @@ internal static class ModVersionProvider
         }
 
         return !string.IsNullOrWhiteSpace(manifestPath) &&
-            ManifestScanner.TryReadVersion(manifestPath, modId, out string version)
-            ? version
+            ManifestScanner.TryReadManifestInfo(manifestPath, modId, out var manifestInfo) &&
+            !string.IsNullOrWhiteSpace(manifestInfo.Version)
+            ? manifestInfo.Version
             : string.Empty;
     }
 }
