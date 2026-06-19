@@ -15,6 +15,7 @@
     <CloudPackageSuffix Condition="'$(IncludeCloudFeatures)' != 'true'"></CloudPackageSuffix>
     <DefineConstants Condition="'$(IncludeCloudFeatures)' == 'true'">$(DefineConstants);BETTERMODMENU_CLOUD_FEATURES</DefineConstants>
     <ArtifactsDir Condition="'$(ArtifactsDir)' == ''">$(ProjectDir)artifacts\</ArtifactsDir>
+    <PrepareWorkshopWorkspaceOnBuild Condition="'$(PrepareWorkshopWorkspaceOnBuild)' == ''">false</PrepareWorkshopWorkspaceOnBuild>
     <Sts2DllPath Condition="'$(Sts2DllPath)' == '' and '$(STS2_DLL_PATH)' != ''">$(STS2_DLL_PATH)</Sts2DllPath>
   </PropertyGroup>
 
@@ -60,5 +61,23 @@
     <RemoveDir Directories="$(ModStagingDir)" />
     
     <Message Text="Successfully packaged: $(ZipFilePath)" Importance="High" />
+  </Target>
+
+  <Target Name="PrepareWorkshopWorkspace" AfterTargets="Build" Condition="'$(PrepareWorkshopWorkspaceOnBuild)' == 'true'">
+    <PropertyGroup>
+      <WorkshopWorkspaceDir>$(ArtifactsDir)workshop\BetterModMenu\</WorkshopWorkspaceDir>
+      <WorkshopContentDir>$(WorkshopWorkspaceDir)content\</WorkshopContentDir>
+      <WorkshopPreviewImage>$(ProjectDir)workshop\image.png</WorkshopPreviewImage>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(WorkshopPreviewImage)')" Text="Steam Workshop preview image not found. Add workshop\image.png before preparing the uploader workspace." />
+
+    <MakeDir Directories="$(WorkshopContentDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopContentDir)" />
+    <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(WorkshopContentDir)" />
+    <Copy SourceFiles="$(ProjectDir)workshop\workshop.json" DestinationFolder="$(WorkshopWorkspaceDir)" />
+    <Copy SourceFiles="$(WorkshopPreviewImage)" DestinationFolder="$(WorkshopWorkspaceDir)" />
+
+    <Message Text="Prepared Steam Workshop uploader workspace: $(WorkshopWorkspaceDir)" Importance="High" />
   </Target>
 </Project>

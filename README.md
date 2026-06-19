@@ -80,9 +80,6 @@ Cloud-capable builds are opt-in and produce a separate `_cloud` archive:
 dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:PackageModOnBuild=true -p:IncludeCloudFeatures=true
 ```
 
-Published GitHub releases can be mirrored to Nexus Mods through `publish-nexus-release.yml`.
-Workshop readiness notes are tracked in [docs/workshop-readiness.md](docs/workshop-readiness.md).
-
 ## License
 
 MIT. See [LICENSE](LICENSE).

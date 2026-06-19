@@ -1,0 +1,14 @@
+{
+  "title": "Better Mod Menu",
+  "description": "Adds profiles, custom groups, saved ordering, backups, CSV export, and log viewing to the Slay the Spire 2 mod screen.",
+  "visibility": "private",
+  "changeNote": "Initial Steam Workshop preparation.",
+  "tags": [
+    "tool",
+    "ui",
+    "quality of life"
+  ],
+  "dependencies": [],
+  "minBranch": null,
+  "maxBranch": null
+}
