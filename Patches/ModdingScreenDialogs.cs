@@ -101,39 +101,42 @@ internal static class ModdingScreenDialogs
             DialogText = string.Empty
         };
 
+        popup.AddChild(CreateLogDialogBody(layout, content, () => OpenLogFolder(screen, logPath)));
+        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
+        screen.AddChild(popup);
+        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
+    }
+
+    private static Control CreateLogDialogBody(LogDialogLayout layout, string content, Action onOpenFolderPressed)
+    {
+        LogLevelFilter includedLevels = LogLevelFilter.All;
+        string displayedContent = content;
+        var dialogBox = new VBoxContainer
+        {
+            CustomMinimumSize = new Vector2(layout.PanelWidth, layout.PanelHeight + layout.ActionRowHeight + layout.ToolbarGap),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
+        dialogBox.AddThemeConstantOverride("separation", layout.ToolbarGap);
+
+        var toolbarPanel = new PanelContainer
+        {
+            CustomMinimumSize = new Vector2(layout.PanelWidth, layout.ActionRowHeight),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyLogToolbarPanel(toolbarPanel);
+        var actionRow = new HBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            CustomMinimumSize = new Vector2(0, layout.ActionRowHeight)
+        };
+        actionRow.AddThemeConstantOverride("separation", 8);
+
         var panel = new PanelContainer
         {
             CustomMinimumSize = new Vector2(layout.PanelWidth, layout.PanelHeight)
         };
         ModdingScreenVanillaStyle.ApplyLogPanel(panel);
-        var panelBox = new VBoxContainer
-        {
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill
-        };
-        var actionRow = new HBoxContainer
-        {
-            CustomMinimumSize = new Vector2(0, layout.ActionRowHeight),
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
-        };
-        var copyButton = new Button
-        {
-            Text = "Copy All",
-            TooltipText = "Copy the full displayed log text to the clipboard"
-        };
-        ModdingScreenVanillaStyle.ApplyButton(copyButton);
-        copyButton.Pressed += () => DisplayServer.ClipboardSet(content);
-        actionRow.AddChild(copyButton);
-
-        var openFolderButton = new Button
-        {
-            Text = "Open Folder",
-            TooltipText = "Open the folder that contains this log file."
-        };
-        ModdingScreenVanillaStyle.ApplyButton(openFolderButton);
-        openFolderButton.Pressed += () => OpenLogFolder(screen, logPath);
-        actionRow.AddChild(openFolderButton);
-        panelBox.AddChild(actionRow);
 
         var scroll = new ScrollContainer
         {
@@ -151,7 +154,7 @@ internal static class ModdingScreenDialogs
         var label = new RichTextLabel
         {
             BbcodeEnabled = true,
-            Text = LogHighlightService.BuildHighlightedBbCode(content),
+            Text = LogHighlightService.BuildHighlightedBbCode(displayedContent),
             SelectionEnabled = true,
             ContextMenuEnabled = true,
             ScrollActive = false,
@@ -160,17 +163,84 @@ internal static class ModdingScreenDialogs
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
-        label.AddThemeColorOverride("default_color", new Color(0.92f, 0.86f, 0.74f, 1f));
+        label.AddThemeColorOverride("default_color", new Color(0.96f, 0.91f, 0.82f, 1f));
+        label.AddThemeColorOverride("selection_color", new Color(0.86f, 0.62f, 0.27f, 0.38f));
         label.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
+
+        void RefreshLogText()
+        {
+            displayedContent = LogLevelFilterService.Filter(content, includedLevels);
+            label.Text = LogHighlightService.BuildHighlightedBbCode(displayedContent);
+        }
+
+        var copyButton = new Button
+        {
+            Text = "Copy All",
+            TooltipText = "Copy the full displayed log text to the clipboard"
+        };
+        ModdingScreenVanillaStyle.ApplyButton(copyButton);
+        copyButton.Pressed += () => DisplayServer.ClipboardSet(displayedContent);
+        actionRow.AddChild(copyButton);
+
+        var openFolderButton = new Button
+        {
+            Text = "Open Folder",
+            TooltipText = "Open the folder that contains this log file."
+        };
+        ModdingScreenVanillaStyle.ApplyButton(openFolderButton);
+        openFolderButton.Pressed += onOpenFolderPressed;
+        actionRow.AddChild(openFolderButton);
+
+        var spacer = new Control
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        actionRow.AddChild(spacer);
+
+        var levelLabel = new Label
+        {
+            Text = "Levels",
+            TooltipText = "Checked levels are shown. Uncheck a level to exclude it."
+        };
+        ModdingScreenVanillaStyle.ApplyLabel(levelLabel);
+        levelLabel.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
+        actionRow.AddChild(levelLabel);
+
+        actionRow.AddChild(CreateLogLevelToggle("Debug", LogLevelFilter.Debug));
+        actionRow.AddChild(CreateLogLevelToggle("Info", LogLevelFilter.Info));
+        actionRow.AddChild(CreateLogLevelToggle("Warn", LogLevelFilter.Warning));
+        actionRow.AddChild(CreateLogLevelToggle("Error", LogLevelFilter.Error));
+        actionRow.AddChild(CreateLogLevelToggle("Other", LogLevelFilter.Other));
 
         contentBox.AddChild(label);
         scroll.AddChild(contentBox);
-        panelBox.AddChild(scroll);
-        panel.AddChild(panelBox);
-        popup.AddChild(panel);
-        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
-        screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
+        panel.AddChild(scroll);
+        toolbarPanel.AddChild(actionRow);
+        dialogBox.AddChild(toolbarPanel);
+        dialogBox.AddChild(panel);
+
+        CheckButton CreateLogLevelToggle(string text, LogLevelFilter level)
+        {
+            var toggle = new CheckButton
+            {
+                Text = text,
+                ButtonPressed = true,
+                TooltipText = "Show or hide " + text.ToLowerInvariant() + " log lines."
+            };
+            ModdingScreenVanillaStyle.ApplyButton(toggle);
+            toggle.CustomMinimumSize = new Vector2(Mathf.Max(toggle.CustomMinimumSize.X, 82), 34);
+            toggle.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
+            toggle.Toggled += pressed =>
+            {
+                includedLevels = pressed
+                    ? includedLevels | level
+                    : includedLevels & ~level;
+                RefreshLogText();
+            };
+            return toggle;
+        }
+
+        return dialogBox;
     }
 
     private static void OpenLogFolder(NModdingScreen screen, string logPath)

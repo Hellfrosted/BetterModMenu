@@ -7,6 +7,8 @@ internal static class ModdingScreenVanillaStyle
     private static readonly Color GoldBorderColor = new(0.86f, 0.62f, 0.27f, 0.95f);
     private static readonly Color TextColor = new(0.92f, 0.86f, 0.74f, 1f);
     private static readonly Color MutedTextColor = new(0.72f, 0.66f, 0.58f, 1f);
+    private static readonly Color LogPanelColor = new(0.035f, 0.032f, 0.03f, 0.98f);
+    private static readonly Color ToolbarPanelColor = new(0.17f, 0.16f, 0.15f, 0.96f);
 
     public static void ApplyGroupHeader(HBoxContainer header)
     {
@@ -16,6 +18,10 @@ internal static class ModdingScreenVanillaStyle
     public static void ApplyButton(Button button)
     {
         button.CustomMinimumSize = new Vector2(Mathf.Max(button.CustomMinimumSize.X, 64), 30);
+        button.AddThemeColorOverride("font_color", TextColor);
+        button.AddThemeColorOverride("font_hover_color", TextColor);
+        button.AddThemeColorOverride("font_pressed_color", TextColor);
+        button.AddThemeColorOverride("font_focus_color", TextColor);
     }
 
     public static void ApplySmallButton(Button button)
@@ -42,10 +48,15 @@ internal static class ModdingScreenVanillaStyle
 
     public static void ApplyLogPanel(Control control)
     {
-        control.AddThemeStyleboxOverride("panel", BuildPanelBox(new Color(0.035f, 0.032f, 0.03f, 0.96f), GoldBorderColor, 1));
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(LogPanelColor, GoldBorderColor, 1, 0));
     }
 
-    private static StyleBoxFlat BuildPanelBox(Color background, Color border, int borderWidth)
+    public static void ApplyLogToolbarPanel(Control control)
+    {
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(ToolbarPanelColor, new Color(1f, 0.95f, 0.86f, 0.18f), 1, 4));
+    }
+
+    private static StyleBoxFlat BuildPanelBox(Color background, Color border, int borderWidth, int shadowSize)
     {
         var style = new StyleBoxFlat
         {
@@ -53,7 +64,7 @@ internal static class ModdingScreenVanillaStyle
             BorderColor = border,
             CornerDetail = 1,
             ShadowColor = new Color(0f, 0f, 0f, 0.55f),
-            ShadowSize = 4,
+            ShadowSize = shadowSize,
             ShadowOffset = new Vector2(1, 2)
         };
         style.SetBorderWidthAll(borderWidth);

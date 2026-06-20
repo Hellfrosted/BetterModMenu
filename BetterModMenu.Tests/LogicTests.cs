@@ -728,6 +728,7 @@ public class LogicTests
         StringAssert.Contains(body, "Backup");
         StringAssert.Contains(body, "CSV");
         StringAssert.Contains(body, "Logs");
+        StringAssert.Contains(body, "level toggles");
         StringAssert.Contains(body, "Load lets you choose");
         Assert.IsFalse(body.Contains("timestamped safety", StringComparison.OrdinalIgnoreCase));
         StringAssert.Contains(body, "cloud behavior stays opt-in");
@@ -835,6 +836,49 @@ public class LogicTests
 
         StringAssert.Contains(highlighted, "[color=f0b14a][b]WARNING: base game reported a stale manifest[/b][/color]");
         StringAssert.Contains(highlighted, "[color=ff4040][b]System.Exception: load failed[/b][/color]");
+    }
+
+    [TestMethod]
+    public void Classify_RecognizesCommonLogLevelVariants()
+    {
+        Assert.AreEqual(LogLevelFilter.Debug, LogLevelFilterService.Classify("[DEBUG] Debug message"));
+        Assert.AreEqual(LogLevelFilter.Debug, LogLevelFilterService.Classify("[lb]DEBUG[rb] Escaped debug message"));
+        Assert.AreEqual(LogLevelFilter.Info, LogLevelFilterService.Classify("[Server thread/INFO] Informational message"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("[WARN] Warning message"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("[Server thread/WARN] Warning message"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("WARN: warning message"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("WARN: operation failed"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("WARNING: warning message"));
+        Assert.AreEqual(LogLevelFilter.Warning, LogLevelFilterService.Classify("WARNING: Running Modded. Loaded 19 mods WITH ERRORS!"));
+        Assert.AreEqual(LogLevelFilter.Error, LogLevelFilterService.Classify("[ERROR] Error message"));
+        Assert.AreEqual(LogLevelFilter.Error, LogLevelFilterService.Classify("[Server thread/ERROR] Error message"));
+        Assert.AreEqual(LogLevelFilter.Error, LogLevelFilterService.Classify("[ERR] Error message"));
+        Assert.AreEqual(LogLevelFilter.Error, LogLevelFilterService.Classify("System.Exception: load failed"));
+        Assert.AreEqual(LogLevelFilter.Other, LogLevelFilterService.Classify("plain continuation line"));
+    }
+
+    [TestMethod]
+    public void Filter_CanShowOnlyOneLevelOrExcludeAnyLevel()
+    {
+        string content = string.Join('\n',
+            "[DEBUG] debug line",
+            "[INFO] info line",
+            "[WARN] warning line",
+            "[ERROR] error line",
+            "plain continuation");
+
+        Assert.AreEqual("[DEBUG] debug line", LogLevelFilterService.Filter(content, LogLevelFilter.Debug));
+        Assert.AreEqual("[INFO] info line", LogLevelFilterService.Filter(content, LogLevelFilter.Info));
+        Assert.AreEqual("[WARN] warning line", LogLevelFilterService.Filter(content, LogLevelFilter.Warning));
+        Assert.AreEqual("[ERROR] error line", LogLevelFilterService.Filter(content, LogLevelFilter.Error));
+
+        string withoutDebug = LogLevelFilterService.Filter(content, LogLevelFilter.All & ~LogLevelFilter.Debug);
+
+        Assert.IsFalse(withoutDebug.Contains("debug line", StringComparison.Ordinal));
+        StringAssert.Contains(withoutDebug, "info line");
+        StringAssert.Contains(withoutDebug, "warning line");
+        StringAssert.Contains(withoutDebug, "error line");
+        StringAssert.Contains(withoutDebug, "plain continuation");
     }
 
     [TestMethod]
@@ -1092,8 +1136,10 @@ public class LogicTests
         LogDialogLayout layout = ModdingScreenDialogRules.GetPreferredLogDialogLayout();
 
         Assert.IsTrue(layout.ActionRowHeight >= 40);
+        Assert.IsTrue(layout.ToolbarGap >= 6);
         Assert.IsTrue(layout.ScrollHeight < layout.PanelHeight);
-        Assert.IsTrue(layout.ScrollHeight + layout.ActionRowHeight <= layout.PanelHeight);
+        Assert.IsTrue(layout.ScrollHeight + layout.ActionRowHeight > layout.PanelHeight);
+        Assert.IsTrue(layout.PanelHeight + layout.ActionRowHeight + layout.ToolbarGap < layout.PopupHeight);
         Assert.IsTrue(layout.PopupHeight > layout.PanelHeight);
     }
 

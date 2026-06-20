@@ -22,7 +22,8 @@ internal readonly record struct LogDialogLayout(
     int ScrollHeight,
     int BodyFontSize,
     int ButtonFontSize,
-    int ActionRowHeight);
+    int ActionRowHeight,
+    int ToolbarGap);
 
 internal static class ModdingScreenDialogRules
 {
@@ -32,11 +33,12 @@ internal static class ModdingScreenDialogRules
             PopupWidth: 1080,
             PopupHeight: 680,
             PanelWidth: 1020,
-            PanelHeight: 600,
-            ScrollHeight: 540,
+            PanelHeight: 520,
+            ScrollHeight: 508,
             BodyFontSize: 22,
             ButtonFontSize: 22,
-            ActionRowHeight: 44);
+            ActionRowHeight: 44,
+            ToolbarGap: 8);
     }
 
     public static TutorialDialogLayout GetPreferredTutorialDialogLayout()

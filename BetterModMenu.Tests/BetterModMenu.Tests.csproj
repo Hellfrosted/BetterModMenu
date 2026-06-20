@@ -19,6 +19,7 @@
     <Compile Include="..\Data\FileNameCollisionRules.cs" Link="Data\FileNameCollisionRules.cs" />
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
     <Compile Include="..\Data\LogFolderOpenRules.cs" Link="Data\LogFolderOpenRules.cs" />
+    <Compile Include="..\Data\LogLevelFilterService.cs" Link="Data\LogLevelFilterService.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
     <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />

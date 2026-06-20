@@ -10,7 +10,7 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 - Save a preferred mod order for the next launch.
 - Back up Better Mod Menu profile data and the current enabled-mod settings, with Steam Workshop links when available.
 - Export the installed mod list as an Excel-friendly CSV with versions, enabled state, group names, and Steam Workshop links when available.
-- View full BetterModMenu/TTSMM log output from the mod screen with warnings and errors highlighted, plus a shortcut to open the log folder.
+- View full BetterModMenu/TTSMM log output from the mod screen with warnings and errors highlighted, level filters, plus a shortcut to open the log folder.
 - Reopen the first-launch tutorial from the in-game `Help` button.
 
 ## Requirements
@@ -35,7 +35,7 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 - `Backup` saves copies of profiles, groups, and the game's current enabled-mod settings. Mods installed from Steam Workshop include their Workshop links in the settings backup.
 - `Load` shows available Better Mod Menu profile and group backups, newest first, and restores the one you choose. Installed mod files are not changed.
 - `CSV` creates a spreadsheet-friendly installed-mod list with names, versions, enabled state, group names, and Steam Workshop links when available.
-- `Logs` opens the full discovered BetterModMenu/TTSMM log with warnings and errors highlighted. The log viewer's `Open Folder` button opens the folder containing that log through the operating system file manager.
+- `Logs` opens the full discovered BetterModMenu/TTSMM log with warnings and errors highlighted. The log viewer can show or hide debug, info, warning, error, and unclassified lines. Its `Open Folder` button opens the folder containing that log through the operating system file manager.
 - `Help` reopens the tutorial popup.
 - `Group` plus `Add` creates a custom group label. Use each mod row's group picker to put mods in that group.
 - Group headers can collapse the section, move or rename the group, delete only the group label, or enable/disable every mod in the group.
