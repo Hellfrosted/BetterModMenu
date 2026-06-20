@@ -770,6 +770,15 @@ public class LogicTests
         StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' ! -name '*_cloud.zip'");
         StringAssert.Contains(workflow, "Cloud-capable *_cloud.zip assets are optional sidecars and are not uploaded as the main Nexus file.");
         StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*_cloud.zip'");
+        StringAssert.Contains(workflow, "Nexus-Mods/upload-action@f6e1e2ea683dfe8f88cccf642c6e0e69ab66825e");
+        StringAssert.Contains(workflow, "# v1.0.0-beta.8");
+        StringAssert.Contains(workflow, "file_id: ${{ vars.NEXUSMODS_FILE_ID }}");
+        StringAssert.Contains(workflow, "category: main");
+        StringAssert.Contains(workflow, "archive_existing_version: false");
+        StringAssert.Contains(workflow, "primary_mod_manager_download: false");
+        StringAssert.Contains(workflow, "allow_mod_manager_download: true");
+        StringAssert.Contains(workflow, "show_requirements_pop_up: false");
+        StringAssert.Contains(workflow, "steps.nexus.outputs.version_id");
     }
 
     [TestMethod]

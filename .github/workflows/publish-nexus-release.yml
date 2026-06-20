@@ -79,15 +79,20 @@ jobs:
 
       - name: Upload release asset to Nexus Mods
         id: nexus
-        uses: Nexus-Mods/upload-action@d0321c96e04e91da2caf74cad0c8824f4c748f99
+        # v1.0.0-beta.8
+        uses: Nexus-Mods/upload-action@f6e1e2ea683dfe8f88cccf642c6e0e69ab66825e
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
-          file_group_id: ${{ vars.NEXUSMODS_FILE_GROUP_ID }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID }}
           filename: ${{ steps.asset.outputs.path }}
           version: ${{ steps.release.outputs.version }}
           display_name: Better Mod Menu ${{ steps.release.outputs.version }}
           description: ${{ steps.release.outputs.file_description }}
-          file_category: main
+          category: main
+          archive_existing_version: false
+          primary_mod_manager_download: false
+          allow_mod_manager_download: true
+          show_requirements_pop_up: false
 
       - name: Summarize upload
         shell: bash
@@ -97,10 +102,10 @@ jobs:
             echo
             echo "- Tag: \`${{ steps.release.outputs.tag }}\`"
             echo "- Version: \`${{ steps.release.outputs.version }}\`"
-            echo "- File group ID: \`${{ vars.NEXUSMODS_FILE_GROUP_ID }}\`"
+            echo "- File ID: \`${{ vars.NEXUSMODS_FILE_ID }}\`"
             echo "- Uploaded asset: \`${{ steps.asset.outputs.path }}\`"
             echo "- Optional cloud assets found: \`${{ steps.asset.outputs.cloud_asset_count }}\`"
-            echo "- Uploaded file UID: \`${{ steps.nexus.outputs.file_uid }}\`"
+            echo "- Uploaded version ID: \`${{ steps.nexus.outputs.version_id }}\`"
             echo "- Release source: ${{ steps.release.outputs.release_url }}"
             echo "- Nexus file description: generated short upload note"
           } >> "$GITHUB_STEP_SUMMARY"
