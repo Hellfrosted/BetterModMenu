@@ -277,23 +277,26 @@ internal static class ModdingScreenChromeOps
 
     private static void MaintainModsScrollbar(NModdingScreen screen, NScrollableContainer scrollContainer)
     {
-        ClampModsScrollIfContentFits(screen, scrollContainer);
+        if (ClampModsScrollIfContentFits(screen, scrollContainer))
+            return;
+
         ForceModsScrollbarVisible(scrollContainer);
     }
 
-    private static void ClampModsScrollIfContentFits(NModdingScreen screen, NScrollableContainer scrollContainer)
+    private static bool ClampModsScrollIfContentFits(NModdingScreen screen, NScrollableContainer scrollContainer)
     {
         var content = ModdingScreenNodeOps.GetModRowContainer(screen);
         var viewport = content?.GetParentOrNull<Control>();
         if (content == null || viewport == null)
-            return;
+            return false;
 
         content.UpdateMinimumSize();
         if (content.GetCombinedMinimumSize().Y > viewport.Size.Y + ModdingScreenConstants.ScrollFitTolerance)
-            return;
+            return false;
 
         scrollContainer.DisableScrollingIfContentFits();
         scrollContainer.InstantlyScrollToTop();
+        return true;
     }
 
     private static void ForceModsScrollbarVisible(NScrollableContainer scrollContainer)

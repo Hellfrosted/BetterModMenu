@@ -14,8 +14,31 @@ internal readonly record struct TutorialDialogLayout(
     int ContentHorizontalPadding,
     int ContentVerticalPadding);
 
+internal readonly record struct LogDialogLayout(
+    int PopupWidth,
+    int PopupHeight,
+    int PanelWidth,
+    int PanelHeight,
+    int ScrollHeight,
+    int BodyFontSize,
+    int ButtonFontSize,
+    int ActionRowHeight);
+
 internal static class ModdingScreenDialogRules
 {
+    public static LogDialogLayout GetPreferredLogDialogLayout()
+    {
+        return new LogDialogLayout(
+            PopupWidth: 1080,
+            PopupHeight: 680,
+            PanelWidth: 1020,
+            PanelHeight: 600,
+            ScrollHeight: 540,
+            BodyFontSize: 22,
+            ButtonFontSize: 22,
+            ActionRowHeight: 44);
+    }
+
     public static TutorialDialogLayout GetPreferredTutorialDialogLayout()
     {
         return new TutorialDialogLayout(

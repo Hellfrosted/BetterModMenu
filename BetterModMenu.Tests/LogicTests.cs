@@ -1087,6 +1087,17 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void GetPreferredLogDialogLayout_ReservesVisibleActionRowOutsideScroll()
+    {
+        LogDialogLayout layout = ModdingScreenDialogRules.GetPreferredLogDialogLayout();
+
+        Assert.IsTrue(layout.ActionRowHeight >= 40);
+        Assert.IsTrue(layout.ScrollHeight < layout.PanelHeight);
+        Assert.IsTrue(layout.ScrollHeight + layout.ActionRowHeight <= layout.PanelHeight);
+        Assert.IsTrue(layout.PopupHeight > layout.PanelHeight);
+    }
+
+    [TestMethod]
     public void ShouldCreateAutomaticBackup_RunsAutomaticReasonsOnceAndNeverForManual()
     {
         var completedReasons = new HashSet<ProfileBackupReason>();

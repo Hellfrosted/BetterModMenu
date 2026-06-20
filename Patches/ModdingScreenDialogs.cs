@@ -8,12 +8,6 @@ namespace BetterModMenu.Patches;
 internal static class ModdingScreenDialogs
 {
     private const int MaxVisibleBackupChoices = 12;
-    private const int LogPopupWidth = 1080;
-    private const int LogPopupHeight = 680;
-    private const int LogContentWidth = 1020;
-    private const int LogContentHeight = 600;
-    private const int LogBodyFontSize = 22;
-    private const int LogButtonFontSize = 22;
 
     public static void ShowInfoDialog(NModdingScreen screen, string title, string message)
     {
@@ -100,30 +94,26 @@ internal static class ModdingScreenDialogs
 
     public static void ShowLogDialog(NModdingScreen screen, string title, string content, string logPath)
     {
+        LogDialogLayout layout = ModdingScreenDialogRules.GetPreferredLogDialogLayout();
         var popup = new AcceptDialog
         {
             Title = title,
             DialogText = string.Empty
         };
 
-        var scroll = new ScrollContainer
-        {
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill
-        };
         var panel = new PanelContainer
         {
-            CustomMinimumSize = new Vector2(LogContentWidth, LogContentHeight)
+            CustomMinimumSize = new Vector2(layout.PanelWidth, layout.PanelHeight)
         };
         ModdingScreenVanillaStyle.ApplyLogPanel(panel);
-        var contentBox = new VBoxContainer
+        var panelBox = new VBoxContainer
         {
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
         var actionRow = new HBoxContainer
         {
+            CustomMinimumSize = new Vector2(0, layout.ActionRowHeight),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         var copyButton = new Button
@@ -143,7 +133,20 @@ internal static class ModdingScreenDialogs
         ModdingScreenVanillaStyle.ApplyButton(openFolderButton);
         openFolderButton.Pressed += () => OpenLogFolder(screen, logPath);
         actionRow.AddChild(openFolderButton);
-        contentBox.AddChild(actionRow);
+        panelBox.AddChild(actionRow);
+
+        var scroll = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            CustomMinimumSize = new Vector2(0, layout.ScrollHeight),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
+        var contentBox = new VBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
 
         var label = new RichTextLabel
         {
@@ -158,15 +161,16 @@ internal static class ModdingScreenDialogs
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
         label.AddThemeColorOverride("default_color", new Color(0.92f, 0.86f, 0.74f, 1f));
-        label.AddThemeFontSizeOverride("font_size", LogBodyFontSize);
+        label.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
 
         contentBox.AddChild(label);
         scroll.AddChild(contentBox);
-        panel.AddChild(scroll);
+        panelBox.AddChild(scroll);
+        panel.AddChild(panelBox);
         popup.AddChild(panel);
-        ApplyReadableDialogButtons(popup, LogButtonFontSize);
+        ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(LogPopupWidth, LogPopupHeight));
+        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
     }
 
     private static void OpenLogFolder(NModdingScreen screen, string logPath)
