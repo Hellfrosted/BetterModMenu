@@ -17,6 +17,7 @@
     <ArtifactsDir Condition="'$(ArtifactsDir)' == ''">$(ProjectDir)artifacts\</ArtifactsDir>
     <PrepareWorkshopWorkspaceOnBuild Condition="'$(PrepareWorkshopWorkspaceOnBuild)' == ''">false</PrepareWorkshopWorkspaceOnBuild>
     <Sts2DllPath Condition="'$(Sts2DllPath)' == '' and '$(STS2_DLL_PATH)' != ''">$(STS2_DLL_PATH)</Sts2DllPath>
+    <ModUploaderWorkshopDir Condition="'$(ModUploaderWorkshopDir)' == '' and '$(MOD_UPLOADER_WORKSHOP_DIR)' != ''">$(MOD_UPLOADER_WORKSHOP_DIR)</ModUploaderWorkshopDir>
   </PropertyGroup>
 
   <Target Name="CheckSts2Dll" BeforeTargets="ResolveAssemblyReferences">
@@ -85,5 +86,24 @@
     <Copy SourceFiles="@(WorkshopScreenshots)" DestinationFolder="$(WorkshopScreenshotsDir)" Condition="'@(WorkshopScreenshots)' != ''" />
 
     <Message Text="Prepared Steam Workshop uploader workspace: $(WorkshopWorkspaceDir)" Importance="High" />
+  </Target>
+
+  <Target Name="StageModUploaderWorkshopContent" AfterTargets="Build" Condition="'$(ModUploaderWorkshopDir)' != ''">
+    <PropertyGroup>
+      <NormalizedModUploaderWorkshopDir>$([MSBuild]::EnsureTrailingSlash('$(ModUploaderWorkshopDir)'))</NormalizedModUploaderWorkshopDir>
+      <ModUploaderWorkshopContentDir>$(NormalizedModUploaderWorkshopDir)content\</ModUploaderWorkshopContentDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <ModUploaderWorkshopContentFiles Include="$(ModUploaderWorkshopContentDir)*" />
+      <UnexpectedModUploaderWorkshopContent Include="@(ModUploaderWorkshopContentFiles)" Exclude="$(ModUploaderWorkshopContentDir)$(TargetFileName);$(ModUploaderWorkshopContentDir)BetterModMenu.json" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('$(NormalizedModUploaderWorkshopDir)workshop.json')" Text="ModUploaderWorkshopDir must point to an existing ModUploader workshop root containing workshop.json. Do not pass the content folder." />
+    <Warning Condition="'@(UnexpectedModUploaderWorkshopContent)' != ''" Text="ModUploader content folder contains extra files that will be left in place: @(UnexpectedModUploaderWorkshopContent)" />
+    <MakeDir Directories="$(ModUploaderWorkshopContentDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModUploaderWorkshopContentDir)" />
+    <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModUploaderWorkshopContentDir)" />
+
+    <Message Text="Staged ModUploader workshop content: $(NormalizedModUploaderWorkshopDir)" Importance="High" />
   </Target>
 </Project>

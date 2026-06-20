@@ -79,6 +79,20 @@ dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:Packag
 ```
 
 Packaged archives are written to `artifacts/`.
+
+To refresh a Steam Workshop uploader workspace during build:
+
+```powershell
+dotnet build BetterModMenu.csproj -p:Sts2DllPath="C:\path\to\sts2.dll" -p:ModUploaderWorkshopDir="E:\dev\STS2 mod\ModUploader-win-x64\workshop\BetterModMenu"
+```
+
+This copies the built `BetterModMenu.dll` and `BetterModMenu.json` into the
+workspace `content` folder, leaving `workshop.json`, preview images, screenshots,
+and `mod_id.txt` in place. `ModUploaderWorkshopDir` must point to the workshop
+root that contains `workshop.json`, not the `content` folder itself. You can
+also set `MOD_UPLOADER_WORKSHOP_DIR` instead of passing the build property every
+time.
+
 Cloud-capable builds are opt-in and produce a separate `_cloud` archive:
 
 ```powershell
