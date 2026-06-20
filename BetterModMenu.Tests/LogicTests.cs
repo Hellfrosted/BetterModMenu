@@ -528,8 +528,8 @@ public class LogicTests
         });
 
         string expected = string.Join(Environment.NewLine,
-            "Mod Id,Name,Version,Enabled,Group",
-            "Example.Mod,\"Example, Mod\",1.2.3,TRUE,\"QoL \"\"Core\"\"\"",
+            "Mod Id,Name,Version,Enabled,Group,Workshop Link",
+            "Example.Mod,\"Example, Mod\",1.2.3,TRUE,\"QoL \"\"Core\"\"\",",
             string.Empty);
 
         Assert.AreEqual(expected, csv);
@@ -587,7 +587,8 @@ public class LogicTests
                     {
                         ModId = "Example.Mod",
                         Enabled = false,
-                        ManifestPath = manifestPath
+                        ManifestPath = manifestPath,
+                        WorkshopUrl = "https://steamcommunity.com/sharedfiles/filedetails/?id=3456789012"
                     }
                 },
                 new Dictionary<string, string> { ["Example.Mod"] = "Core" },
@@ -599,6 +600,7 @@ public class LogicTests
             Assert.AreEqual("1.2.3", rows[0].Version);
             Assert.IsFalse(rows[0].Enabled);
             Assert.AreEqual("Core", rows[0].Group);
+            Assert.AreEqual("https://steamcommunity.com/sharedfiles/filedetails/?id=3456789012", rows[0].WorkshopUrl);
         }
         finally
         {
@@ -624,7 +626,7 @@ public class LogicTests
 
             Assert.IsTrue(wrote, error);
             Assert.AreEqual(Path.Combine(tempDirectory, "mod_list.20260605-220000-2.csv"), exportPath);
-            Assert.IsTrue(File.ReadAllText(exportPath).StartsWith("Mod Id,Name,Version,Enabled,Group", StringComparison.Ordinal));
+            Assert.IsTrue(File.ReadAllText(exportPath).StartsWith("Mod Id,Name,Version,Enabled,Group,Workshop Link", StringComparison.Ordinal));
         }
         finally
         {
@@ -646,7 +648,12 @@ public class LogicTests
                 new[]
                 {
                     new InstalledModExportInput { ModId = "Example.B", Enabled = false },
-                    new InstalledModExportInput { ModId = "Example.A", Enabled = true }
+                    new InstalledModExportInput
+                    {
+                        ModId = "Example.A",
+                        Enabled = true,
+                        WorkshopUrl = "https://steamcommunity.com/sharedfiles/filedetails/?id=123456789"
+                    }
                 },
                 ProfileBackupReason.Manual,
                 timestamp,
@@ -659,6 +666,7 @@ public class LogicTests
             Assert.IsTrue(content.IndexOf("Example.A", StringComparison.Ordinal) < content.IndexOf("Example.B", StringComparison.Ordinal));
             Assert.IsTrue(content.Contains("\"Enabled\": true", StringComparison.Ordinal));
             Assert.IsTrue(content.Contains("\"Enabled\": false", StringComparison.Ordinal));
+            StringAssert.Contains(content, "https://steamcommunity.com/sharedfiles/filedetails/?id=123456789");
         }
         finally
         {
@@ -817,6 +825,19 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void BuildHighlightedBbCode_HighlightsGenericWarningsAndErrors()
+    {
+        string content = string.Join('\n',
+            "WARNING: base game reported a stale manifest",
+            "System.Exception: load failed");
+
+        string highlighted = LogHighlightService.BuildHighlightedBbCode(content);
+
+        StringAssert.Contains(highlighted, "[color=f0b14a][b]WARNING: base game reported a stale manifest[/b][/color]");
+        StringAssert.Contains(highlighted, "[color=ff4040][b]System.Exception: load failed[/b][/color]");
+    }
+
+    [TestMethod]
     public void TryReadTail_CanReadLogOpenForSharedWriting()
     {
         string tempDirectory = CreateTempDirectory();
@@ -873,16 +894,132 @@ public class LogicTests
             string second = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllText(second, "hello");
 
-            bool read = LogViewerService.TryReadLatestLog(new[] { first, second }, 10, 100, out string title, out string content, out string? error);
+            bool read = LogViewerService.TryReadLatestLog(new[] { first, second }, 10, 100, out string title, out string content, out string logPath, out string? error);
 
             Assert.IsTrue(read, error);
             Assert.AreEqual("BetterModMenu.log", title);
             Assert.AreEqual("hello", content);
+            Assert.AreEqual(second, logPath);
         }
         finally
         {
             Directory.Delete(tempDirectory, true);
         }
+    }
+
+    [TestMethod]
+    public void TryReadLatestLog_DefaultLimitsReadRepresentativeFullLog()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            File.WriteAllLines(logPath, Enumerable.Range(1, 250).Select(number => "line " + number));
+
+            bool read = LogViewerService.TryReadLatestLog(
+                new[] { logPath },
+                LogViewerService.DefaultMaxLines,
+                LogViewerService.DefaultMaxChars,
+                out _,
+                out string content,
+                out string? error);
+
+            Assert.IsTrue(read, error);
+            StringAssert.Contains(content, "line 1");
+            StringAssert.Contains(content, "line 250");
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryGetContainingDirectory_ReturnsLogParentDirectory()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string logPath = Path.Combine(tempDirectory, "logs", "TTSMM.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.WriteAllText(logPath, "hello");
+
+            bool found = LogFolderOpenRules.TryGetContainingDirectory(logPath, out string directory, out string? error);
+
+            Assert.IsTrue(found, error);
+            Assert.AreEqual(Path.GetDirectoryName(logPath), directory);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryGetContainingDirectory_ReturnsFalseWhenLogFileIsMissing()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string missingLogPath = Path.Combine(tempDirectory, "missing.log");
+
+            bool found = LogFolderOpenRules.TryGetContainingDirectory(
+                missingLogPath,
+                out string directory,
+                out string? error);
+
+            Assert.IsFalse(found);
+            Assert.AreEqual(string.Empty, directory);
+            Assert.AreEqual("Log file no longer exists.", error);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void BuildOpenFolderCommands_UsesExplorerForWindows()
+    {
+        var commands = LogFolderOpenRules.BuildOpenFolderCommands(@"C:\Users\you\AppData\LocalLow\STS2\logs", FolderOpenPlatform.Windows);
+
+        Assert.AreEqual(1, commands.Count);
+        Assert.AreEqual("explorer.exe", commands[0].Executable);
+        CollectionAssert.AreEqual(new[] { @"C:\Users\you\AppData\LocalLow\STS2\logs" }, commands[0].Arguments.ToArray());
+    }
+
+    [TestMethod]
+    public void BuildOpenFolderCommands_UsesNonBlockingLinuxOpenersWithFileUri()
+    {
+        var commands = LogFolderOpenRules.BuildOpenFolderCommands("/home/deck/My Games/STS2/logs", FolderOpenPlatform.Linux);
+
+        Assert.IsTrue(commands.Count >= 3);
+        Assert.AreEqual("xdg-open", commands[0].Executable);
+        Assert.AreEqual("file:///home/deck/My%20Games/STS2/logs/", commands[0].Arguments[0]);
+        Assert.AreEqual("gio", commands[1].Executable);
+        CollectionAssert.AreEqual(new[] { "open", "file:///home/deck/My%20Games/STS2/logs/" }, commands[1].Arguments.ToArray());
+    }
+
+    [TestMethod]
+    public void TryGetWorkshopUrl_ReturnsSteamSharedFileLinkForSts2WorkshopPath()
+    {
+        bool resolved = SteamWorkshopLinkResolver.TryGetWorkshopUrl(
+            @"D:\SteamLibrary\steamapps\workshop\content\2868840\3456789012\Example.Mod\Example.Mod.json",
+            out string workshopUrl);
+
+        Assert.IsTrue(resolved);
+        Assert.AreEqual("https://steamcommunity.com/sharedfiles/filedetails/?id=3456789012", workshopUrl);
+    }
+
+    [TestMethod]
+    public void TryGetWorkshopUrl_ReturnsFalseForLocalModPath()
+    {
+        bool resolved = SteamWorkshopLinkResolver.TryGetWorkshopUrl(
+            @"D:\SteamLibrary\steamapps\common\Slay the Spire 2\mods\Example.Mod\Example.Mod.json",
+            out string workshopUrl);
+
+        Assert.IsFalse(resolved);
+        Assert.AreEqual(string.Empty, workshopUrl);
     }
 
     [TestMethod]

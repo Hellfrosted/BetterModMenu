@@ -8,9 +8,9 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 - Create, rename, delete, and switch between mod profiles.
 - Organize mods into custom groups and toggle them together.
 - Save a preferred mod order for the next launch.
-- Back up Better Mod Menu profile data and the current enabled-mod settings.
-- Export the installed mod list as an Excel-friendly CSV with versions, enabled state, and group names.
-- View recent BetterModMenu/TTSMM log output from the mod screen.
+- Back up Better Mod Menu profile data and the current enabled-mod settings, with Steam Workshop links when available.
+- Export the installed mod list as an Excel-friendly CSV with versions, enabled state, group names, and Steam Workshop links when available.
+- View full BetterModMenu/TTSMM log output from the mod screen with warnings and errors highlighted, plus a shortcut to open the log folder.
 - Reopen the first-launch tutorial from the in-game `Help` button.
 
 ## Requirements
@@ -21,17 +21,21 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 
 1. Download the latest `BetterModMenu_v*.zip` from [releases](../../releases).
 2. Extract `BetterModMenu.dll` and `BetterModMenu.json` into your Slay the Spire 2 `mods` folder.
-3. Launch the game and open the `Modding` screen.
+3. Launch the game and open Slay the Spire 2's built-in `Modding` screen. Better Mod Menu's `Profile`, `Group`, `Backup`, `CSV`, `Logs`, and `Help` controls appear there.
+
+## Where To Find It
+
+Better Mod Menu does not add a separate title-screen button. Open the base game's `Modding` screen, then use the Better Mod Menu controls added to that screen.
 
 ## In-Game Controls
 
 - `Profile` chooses a saved mod setup. Switching profiles turns mods on or off to match that setup.
 - `New` copies the mods that are enabled right now into a new profile. `Rename`/`Edit` changes the selected profile name. `Del` deletes the selected profile, but it does not uninstall mods.
 - `Portable Mode` saves Better Mod Menu data beside the mod files. Leave it off for the normal game save folder; turn it on when you want the same setup to travel with a copied game or mod folder.
-- `Backup` saves copies of profiles, groups, and the game's current enabled-mod settings.
+- `Backup` saves copies of profiles, groups, and the game's current enabled-mod settings. Mods installed from Steam Workshop include their Workshop links in the settings backup.
 - `Load` shows available Better Mod Menu profile and group backups, newest first, and restores the one you choose. Installed mod files are not changed.
-- `CSV` creates a spreadsheet-friendly installed-mod list with names, versions, enabled state, and group names.
-- `Logs` opens recent BetterModMenu/TTSMM log output.
+- `CSV` creates a spreadsheet-friendly installed-mod list with names, versions, enabled state, group names, and Steam Workshop links when available.
+- `Logs` opens the full discovered BetterModMenu/TTSMM log with warnings and errors highlighted. The log viewer's `Open Folder` button opens the folder containing that log through the operating system file manager.
 - `Help` reopens the tutorial popup.
 - `Group` plus `Add` creates a custom group label. Use each mod row's group picker to put mods in that group.
 - Group headers can collapse the section, move or rename the group, delete only the group label, or enable/disable every mod in the group.
@@ -40,6 +44,7 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 
 - Load order changes are saved for the next launch.
 - STS2 may still reorder dependency chains during startup.
+- On SteamOS, Bazzite, CachyOS, and similar Linux setups, `Open Folder` uses common desktop file openers such as `xdg-open`, `gio`, and KDE openers. It is most reliable in Desktop Mode; Gaming Mode or minimal window-manager sessions may not show a file manager.
 
 ## Save Data
 

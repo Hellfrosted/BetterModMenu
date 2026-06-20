@@ -38,8 +38,8 @@ public class ModListExportSecurityTests
             string csv = ModListExportBuilder.BuildCsv(rows);
 
             string expected = string.Join(Environment.NewLine,
-                "Mod Id,Name,Version,Enabled,Group",
-                "Formula.Mod,\"'=HYPERLINK(\"\"https://example.invalid\"\")\",'+1.2.3,TRUE,'-Injected Group",
+                "Mod Id,Name,Version,Enabled,Group,Workshop Link",
+                "Formula.Mod,\"'=HYPERLINK(\"\"https://example.invalid\"\")\",'+1.2.3,TRUE,'-Injected Group,",
                 string.Empty);
             Assert.AreEqual(expected, csv);
         }
@@ -60,13 +60,14 @@ public class ModListExportSecurityTests
                 Name = "\rCarriage Mod",
                 Version = "1.0.0",
                 Enabled = false,
-                Group = "Safe Group"
+                Group = "Safe Group",
+                WorkshopUrl = "=HYPERLINK(\"https://example.invalid\")"
             }
         });
 
         string expected = string.Join(Environment.NewLine,
-            "Mod Id,Name,Version,Enabled,Group",
-            "'\tTabbed.Mod,\"'\rCarriage Mod\",1.0.0,FALSE,Safe Group",
+            "Mod Id,Name,Version,Enabled,Group,Workshop Link",
+            "'\tTabbed.Mod,\"'\rCarriage Mod\",1.0.0,FALSE,Safe Group,\"'=HYPERLINK(\"\"https://example.invalid\"\")\"",
             string.Empty);
         Assert.AreEqual(expected, csv);
     }

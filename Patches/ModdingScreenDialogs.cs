@@ -98,7 +98,7 @@ internal static class ModdingScreenDialogs
         popup.PopupCentered(new Vector2I(640, 220));
     }
 
-    public static void ShowLogDialog(NModdingScreen screen, string title, string content)
+    public static void ShowLogDialog(NModdingScreen screen, string title, string content, string logPath)
     {
         var popup = new AcceptDialog
         {
@@ -122,14 +122,28 @@ internal static class ModdingScreenDialogs
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
+        var actionRow = new HBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
         var copyButton = new Button
         {
             Text = "Copy All",
-            TooltipText = "Copy the displayed log text to the clipboard"
+            TooltipText = "Copy the full displayed log text to the clipboard"
         };
         ModdingScreenVanillaStyle.ApplyButton(copyButton);
         copyButton.Pressed += () => DisplayServer.ClipboardSet(content);
-        contentBox.AddChild(copyButton);
+        actionRow.AddChild(copyButton);
+
+        var openFolderButton = new Button
+        {
+            Text = "Open Folder",
+            TooltipText = "Open the folder that contains this log file."
+        };
+        ModdingScreenVanillaStyle.ApplyButton(openFolderButton);
+        openFolderButton.Pressed += () => OpenLogFolder(screen, logPath);
+        actionRow.AddChild(openFolderButton);
+        contentBox.AddChild(actionRow);
 
         var label = new RichTextLabel
         {
@@ -153,6 +167,18 @@ internal static class ModdingScreenDialogs
         ApplyReadableDialogButtons(popup, LogButtonFontSize);
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(LogPopupWidth, LogPopupHeight));
+    }
+
+    private static void OpenLogFolder(NModdingScreen screen, string logPath)
+    {
+        if (!LogFolderOpenRules.TryGetContainingDirectory(logPath, out string directory, out string? error))
+        {
+            ShowInfoDialog(screen, "Log Folder Not Opened", error ?? "The log folder could not be opened.");
+            return;
+        }
+
+        if (!LogFolderOpenRules.TryOpenDirectory(directory, out string? openError))
+            ShowInfoDialog(screen, "Log Folder Not Opened", "The operating system could not open this folder:\n" + directory + "\n\nError:\n" + openError);
     }
 
 

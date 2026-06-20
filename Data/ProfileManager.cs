@@ -236,7 +236,7 @@ public static class ProfileManager
         return TryExportModList(inputs, out exportPath);
     }
 
-    internal static bool TryReadLogViewerContent(out string title, out string content, out string? error)
+    internal static bool TryReadLogViewerContent(out string title, out string content, out string logPath, out string? error)
     {
         return LogViewerService.TryReadLatestLog(
             EnumerateLogCandidatePaths(),
@@ -244,6 +244,7 @@ public static class ProfileManager
             LogViewerService.DefaultMaxChars,
             out title,
             out content,
+            out logPath,
             out error);
     }
 

@@ -198,13 +198,13 @@ internal static class ModdingScreenBars
         var exportButton = new Button
         {
             Text = "CSV",
-            TooltipText = "CSV: export a spreadsheet-friendly installed-mod list with versions, enabled state, and group names."
+            TooltipText = "CSV: export installed mods with versions, enabled state, group names, and Steam Workshop links when available."
         };
         ModdingScreenVanillaStyle.ApplyButton(exportButton);
         exportButton.Pressed += onExportModListPressed;
         primaryRow.AddChild(exportButton);
 
-        var logsButton = new Button { Text = "Logs", TooltipText = "Open recent BetterModMenu/TTSMM log output" };
+        var logsButton = new Button { Text = "Logs", TooltipText = "Open full BetterModMenu/TTSMM log output with warnings and errors highlighted." };
         ModdingScreenVanillaStyle.ApplyButton(logsButton);
         logsButton.Pressed += onViewLogsPressed;
         primaryRow.AddChild(logsButton);

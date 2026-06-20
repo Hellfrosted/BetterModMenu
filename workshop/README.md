@@ -47,15 +47,19 @@ private item has passed the smoke checklist below.
 
 - Subscribe to the private Workshop item.
 - Start Slay the Spire 2 v0.107.1 or newer.
-- Open the `Modding` screen and confirm Better Mod Menu loads.
+- Open the base game's `Modding` screen and confirm Better Mod Menu controls
+  appear there without a separate title-screen entry point.
 - Toggle a mod on and off and restart to confirm enabled state persists.
 - Reorder mods and restart to confirm order persists, allowing dependency
   re-sorts by the base game.
 - Create, switch, rename, and delete a profile.
 - Create a custom group, assign mods to it, collapse it, and toggle the group.
-- Run `Backup`, then `Load` from the newest backup.
-- Run `CSV` and confirm the export appears in the expected user-data folder.
-- Open `Logs`.
+- Run `Backup`, then confirm the mod-settings backup includes Workshop links
+  for Workshop-installed mods before using `Load` on the newest profile backup.
+- Run `CSV` and confirm the export appears in the expected user-data folder
+  with Workshop links for Workshop-installed mods.
+- Open `Logs`, confirm warning/error lines are highlighted, then use
+  `Open Folder` and confirm the OS file manager opens the log directory.
 - Toggle `Portable Mode` only after confirming the Workshop directory is
   writable; if it is not writable, confirm the failure is visible and does not
   corrupt the normal profile save.

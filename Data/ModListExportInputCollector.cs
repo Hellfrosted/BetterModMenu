@@ -33,12 +33,14 @@ internal static class ModListExportInputCollector
             string manifestPath = ModInstallPathResolver.TryGetDirectoryFromPath(mod.path, out string directory)
                 ? ManifestScanner.FindManifestPath(directory, modId, manifestExtensions) ?? string.Empty
                 : string.Empty;
+            SteamWorkshopLinkResolver.TryGetWorkshopUrl(mod.path, out string workshopUrl);
 
             inputs.Add(new InstalledModExportInput
             {
                 ModId = modId,
                 Enabled = !enabledById.TryGetValue(modId, out bool isEnabled) || isEnabled,
-                ManifestPath = manifestPath
+                ManifestPath = manifestPath,
+                WorkshopUrl = workshopUrl
             });
         }
 

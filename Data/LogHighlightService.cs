@@ -40,7 +40,7 @@ internal static partial class LogHighlightService
             return;
         }
 
-        if (line.Contains("WITH ERRORS", StringComparison.OrdinalIgnoreCase))
+        if (IsErrorLine(line))
         {
             builder.Append("[color=ff4040][b]");
             builder.Append(EscapeBbCode(line));
@@ -48,7 +48,30 @@ internal static partial class LogHighlightService
             return;
         }
 
+        if (IsWarningLine(line))
+        {
+            builder.Append("[color=f0b14a][b]");
+            builder.Append(EscapeBbCode(line));
+            builder.Append("[/b][/color]");
+            return;
+        }
+
         builder.Append(EscapeBbCode(line));
+    }
+
+    private static bool IsErrorLine(string line)
+    {
+        return line.Contains("WITH ERRORS", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("ERROR", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("EXCEPTION", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("[ERR", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWarningLine(string line)
+    {
+        return line.Contains("WARNING", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("[WARN", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AppendWithHighlightedGroup(StringBuilder builder, string line, Match match, string groupName, string color)

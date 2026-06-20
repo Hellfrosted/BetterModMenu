@@ -6,6 +6,7 @@ internal sealed class ModSettingsBackupRow
 {
     public string ModId { get; init; } = string.Empty;
     public bool Enabled { get; init; }
+    public string WorkshopUrl { get; init; } = string.Empty;
 }
 
 internal static class ModSettingsBackupService
@@ -36,7 +37,8 @@ internal static class ModSettingsBackupService
                 .Select(mod => new ModSettingsBackupRow
                 {
                     ModId = mod.ModId,
-                    Enabled = mod.Enabled
+                    Enabled = mod.Enabled,
+                    WorkshopUrl = mod.WorkshopUrl
                 })
                 .OrderBy(row => row.ModId, StringComparer.OrdinalIgnoreCase)
                 .ToList();

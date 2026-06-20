@@ -4,8 +4,8 @@ namespace BetterModMenu.Data;
 
 internal static class LogViewerService
 {
-    public const int DefaultMaxLines = 200;
-    public const int DefaultMaxChars = 20000;
+    public const int DefaultMaxLines = 5000;
+    public const int DefaultMaxChars = 500000;
     private static readonly string[] KnownLogFileNames =
     [
         "TTSMM.log",
@@ -79,10 +79,12 @@ internal static class LogViewerService
         int maxChars,
         out string title,
         out string content,
+        out string logPath,
         out string? error)
     {
         title = "Logs";
         content = string.Empty;
+        logPath = string.Empty;
         error = null;
 
         string? path = candidatePaths.FirstOrDefault(File.Exists);
@@ -93,7 +95,19 @@ internal static class LogViewerService
         }
 
         title = Path.GetFileName(path);
+        logPath = path;
         return TryReadTail(path, maxLines, maxChars, out content, out error);
+    }
+
+    public static bool TryReadLatestLog(
+        IEnumerable<string> candidatePaths,
+        int maxLines,
+        int maxChars,
+        out string title,
+        out string content,
+        out string? error)
+    {
+        return TryReadLatestLog(candidatePaths, maxLines, maxChars, out title, out content, out _, out error);
     }
 
     public static bool TryReadTail(string path, int maxLines, int maxChars, out string content, out string? error)

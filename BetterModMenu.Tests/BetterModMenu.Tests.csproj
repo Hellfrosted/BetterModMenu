@@ -18,6 +18,7 @@
     <Compile Include="..\Data\CloudBackupService.cs" Link="Data\CloudBackupService.cs" />
     <Compile Include="..\Data\FileNameCollisionRules.cs" Link="Data\FileNameCollisionRules.cs" />
     <Compile Include="..\Data\ManifestScanner.cs" Link="Data\ManifestScanner.cs" />
+    <Compile Include="..\Data\LogFolderOpenRules.cs" Link="Data\LogFolderOpenRules.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
     <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />
@@ -27,6 +28,7 @@
     <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />
     <Compile Include="..\Data\ProfileSaveStorage.cs" Link="Data\ProfileSaveStorage.cs" />
     <Compile Include="..\Data\ProfileStateRules.cs" Link="Data\ProfileStateRules.cs" />
+    <Compile Include="..\Data\SteamWorkshopLinkResolver.cs" Link="Data\SteamWorkshopLinkResolver.cs" />
     <Compile Include="..\Data\TutorialContentBuilder.cs" Link="Data\TutorialContentBuilder.cs" />
     <Compile Include="..\Data\TutorialStateRules.cs" Link="Data\TutorialStateRules.cs" />
     <Compile Include="..\Patches\ModdingGroupRules.cs" Link="Patches\ModdingGroupRules.cs" />

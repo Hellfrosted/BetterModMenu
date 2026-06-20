@@ -7,6 +7,7 @@ internal sealed class InstalledModExportInput
     public string ModId { get; init; } = string.Empty;
     public bool Enabled { get; init; }
     public string ManifestPath { get; init; } = string.Empty;
+    public string WorkshopUrl { get; init; } = string.Empty;
 }
 
 internal sealed class ModListExportRow
@@ -16,11 +17,12 @@ internal sealed class ModListExportRow
     public string Version { get; init; } = string.Empty;
     public bool Enabled { get; init; }
     public string Group { get; init; } = string.Empty;
+    public string WorkshopUrl { get; init; } = string.Empty;
 }
 
 internal static class ModListExportBuilder
 {
-    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group"];
+    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group", "Workshop Link"];
 
     public static List<ModListExportRow> BuildRows(
         IEnumerable<InstalledModExportInput> mods,
@@ -46,7 +48,8 @@ internal static class ModListExportBuilder
                 row.Name,
                 row.Version,
                 row.Enabled ? "TRUE" : "FALSE",
-                row.Group);
+                row.Group,
+                row.WorkshopUrl);
         }
 
         return builder.ToString();
@@ -98,7 +101,8 @@ internal static class ModListExportBuilder
             Enabled = mod.Enabled,
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
                 ? group
-                : unassignedGroup
+                : unassignedGroup,
+            WorkshopUrl = mod.WorkshopUrl
         };
     }
 

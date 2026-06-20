@@ -165,7 +165,7 @@ public static class NModdingScreenPatch
         ModdingScreenDialogs.ShowInfoDialog(
             screen,
             "CSV Export Created",
-            "Created a spreadsheet-friendly mod list with mod names, versions, enabled state, and group names.\n\nCSV file:\n" + exportPath);
+            "Created a spreadsheet-friendly mod list with mod names, versions, enabled state, group names, and Steam Workshop links when available.\n\nCSV file:\n" + exportPath);
         ProfileManager.ModLogger.Info($"Exported BetterModMenu mod list to '{exportPath}'.");
     }
 
@@ -174,9 +174,9 @@ public static class NModdingScreenPatch
         if (!TryGetCurrentScreen(out var screen) || screen == null)
             return;
 
-        if (ProfileManager.TryReadLogViewerContent(out string title, out string content, out string? error))
+        if (ProfileManager.TryReadLogViewerContent(out string title, out string content, out string logPath, out string? error))
         {
-            ModdingScreenDialogs.ShowLogDialog(screen, title, content);
+            ModdingScreenDialogs.ShowLogDialog(screen, title, content, logPath);
             return;
         }
 
