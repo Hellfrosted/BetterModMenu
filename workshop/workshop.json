@@ -1,12 +1,13 @@
 {
   "title": "Better Mod Menu",
-  "description": "Better Mod Menu is a UI mod for Slay the Spire 2's built-in mod screen. It keeps the normal menu, but adds the tools I wanted once my mod list stopped being small: profiles, groups, saved order, backups, CSV export, and a log viewer.\n\nFeatures\n\n- Profiles: save different enabled-mod setups and switch between them.\n- Custom groups: put mods under your own labels, collapse sections, and toggle a whole group at once.\n- Saved order: keep your preferred mod order between launches. STS2 may still move dependency chains when it needs to.\n- Backups: back up Better Mod Menu profiles, groups, and the game's enabled-mod settings.\n- CSV export: export installed mods with names, versions, enabled state, and group names.\n- Logs: view recent BetterModMenu/TTSMM log output from the mod screen.\n- Help: reopen the first-launch tutorial any time.\n\nLinks\n\n- GitHub: https://github.com/Hellfrosted/BetterModMenu\n- Nexus Mods: https://www.nexusmods.com/slaythespire2/mods/178\n\nNotes\n\n- This does not change cards, relics, enemies, balance, or run gameplay.\n- Portable Mode is optional. Leave it off unless you specifically want Better Mod Menu data saved next to the mod files.\n- If something looks wrong after an update, open the Modding screen once, then restart the game.",
-  "visibility": "private",
+  "description": "Better Mod Menu is a UI mod for Slay the Spire 2's built-in mod screen. It keeps the normal menu, but adds the tools I wanted once my mod list stopped being small: profiles, groups, saved order, backups, CSV export, and a log viewer.\n\nAfter subscribing, open the in-game Modding screen. The Profile, Group, Backup, CSV, Logs, and Help controls appear there.\n\nFeatures\n\n- Profiles: save different enabled-mod setups and switch between them.\n- Custom groups: put mods under your own labels, collapse sections, and toggle a whole group at once.\n- Saved order: keep your preferred mod order between launches. STS2 may still move dependency chains when it needs to.\n- Backups: back up Better Mod Menu profiles, groups, and the game's enabled-mod settings.\n- CSV export: export installed mods with names, versions, enabled state, and group names.\n- Logs: view recent BetterModMenu/TTSMM log output from the mod screen.\n- Help: reopen the first-launch tutorial any time.\n\nLinks\n\n- GitHub: https://github.com/Hellfrosted/BetterModMenu\n- Nexus Mods: https://www.nexusmods.com/slaythespire2/mods/178\n\nNotes\n\n- This does not change cards, relics, enemies, balance, or run gameplay.\n- Portable Mode is optional. Leave it off unless you specifically want Better Mod Menu data saved next to the mod files.\n- If something looks wrong after an update, open the Modding screen once, then restart the game.",
+  "visibility": "public",
   "changeNote": "Initial Steam Workshop preparation.",
   "tags": [
-    "tool",
+    "QoL",
+    "Tool",
     "ui",
-    "quality of life"
+    "English"
   ],
   "dependencies": [],
   "minBranch": null,
