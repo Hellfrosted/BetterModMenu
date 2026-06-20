@@ -9,7 +9,10 @@ manual release step because it requires an authenticated Steam session.
 1. Download `ModUploader` from the latest
    `megacrit/sts2-mod-uploader` release.
 2. Add a 1:1 preview image at `workshop/image.png`.
-3. Keep the Workshop item visibility set to `private` until it has been
+3. Add optional Workshop page screenshots under `workshop/screenshots/`.
+   These are copied beside the uploader workspace for manual Steam page/gallery
+   use; the uploader preview image remains `image.png`.
+4. Keep the Workshop item visibility set to `private` until it has been
    smoke-tested on the current Slay the Spire 2 main branch.
 
 ## Prepare the workspace
@@ -30,6 +33,9 @@ Its `content/` directory contains the runtime files uploaded to Workshop:
 BetterModMenu.dll
 BetterModMenu.json
 ```
+
+Its `screenshots/` directory contains the prepared extra images for the Steam
+Workshop page/gallery. Confirm them during the manual upload/update step.
 
 ## Upload manually
 
@@ -60,6 +66,8 @@ private item has passed the smoke checklist below.
   with Workshop links for Workshop-installed mods.
 - Open `Logs`, confirm warning/error lines are highlighted, then use
   `Open Folder` and confirm the OS file manager opens the log directory.
+- Confirm the prepared `screenshots/` images are available for the Steam
+  Workshop page/gallery.
 - Toggle `Portable Mode` only after confirming the Workshop directory is
   writable; if it is not writable, confirm the failure is visible and does not
   corrupt the normal profile save.

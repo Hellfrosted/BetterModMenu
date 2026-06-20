@@ -67,16 +67,22 @@
     <PropertyGroup>
       <WorkshopWorkspaceDir>$(ArtifactsDir)workshop\BetterModMenu\</WorkshopWorkspaceDir>
       <WorkshopContentDir>$(WorkshopWorkspaceDir)content\</WorkshopContentDir>
+      <WorkshopScreenshotsDir>$(WorkshopWorkspaceDir)screenshots\</WorkshopScreenshotsDir>
       <WorkshopPreviewImage>$(ProjectDir)workshop\image.png</WorkshopPreviewImage>
     </PropertyGroup>
+    <ItemGroup>
+      <WorkshopScreenshots Include="$(ProjectDir)workshop\screenshots\*.*" />
+    </ItemGroup>
 
     <Error Condition="!Exists('$(WorkshopPreviewImage)')" Text="Steam Workshop preview image not found. Add workshop\image.png before preparing the uploader workspace." />
 
     <MakeDir Directories="$(WorkshopContentDir)" />
+    <MakeDir Directories="$(WorkshopScreenshotsDir)" Condition="'@(WorkshopScreenshots)' != ''" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(WorkshopContentDir)" />
     <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(WorkshopContentDir)" />
     <Copy SourceFiles="$(ProjectDir)workshop\workshop.json" DestinationFolder="$(WorkshopWorkspaceDir)" />
     <Copy SourceFiles="$(WorkshopPreviewImage)" DestinationFolder="$(WorkshopWorkspaceDir)" />
+    <Copy SourceFiles="@(WorkshopScreenshots)" DestinationFolder="$(WorkshopScreenshotsDir)" Condition="'@(WorkshopScreenshots)' != ''" />
 
     <Message Text="Prepared Steam Workshop uploader workspace: $(WorkshopWorkspaceDir)" Importance="High" />
   </Target>
