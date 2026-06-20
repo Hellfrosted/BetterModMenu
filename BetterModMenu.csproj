@@ -17,6 +17,7 @@
     <ArtifactsDir Condition="'$(ArtifactsDir)' == ''">$(ProjectDir)artifacts\</ArtifactsDir>
     <PrepareWorkshopWorkspaceOnBuild Condition="'$(PrepareWorkshopWorkspaceOnBuild)' == ''">false</PrepareWorkshopWorkspaceOnBuild>
     <Sts2DllPath Condition="'$(Sts2DllPath)' == '' and '$(STS2_DLL_PATH)' != ''">$(STS2_DLL_PATH)</Sts2DllPath>
+    <ModUploaderRoot Condition="'$(ModUploaderRoot)' == '' and '$(MOD_UPLOADER_ROOT)' != ''">$(MOD_UPLOADER_ROOT)</ModUploaderRoot>
     <ModUploaderWorkshopDir Condition="'$(ModUploaderWorkshopDir)' == '' and '$(MOD_UPLOADER_WORKSHOP_DIR)' != ''">$(MOD_UPLOADER_WORKSHOP_DIR)</ModUploaderWorkshopDir>
   </PropertyGroup>
 
@@ -105,5 +106,36 @@
     <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModUploaderWorkshopContentDir)" />
 
     <Message Text="Staged ModUploader workshop content: $(NormalizedModUploaderWorkshopDir)" Importance="High" />
+  </Target>
+
+  <Target Name="ResolveSteamWorkshopUploadPaths">
+    <PropertyGroup>
+      <ResolvedModUploaderRoot Condition="'$(ModUploaderRoot)' != ''">$([MSBuild]::EnsureTrailingSlash('$(ModUploaderRoot)'))</ResolvedModUploaderRoot>
+      <ResolvedModUploaderRoot Condition="'$(ResolvedModUploaderRoot)' == ''">$([MSBuild]::NormalizeDirectory('$(ProjectDir)', '..', 'ModUploader-win-x64'))</ResolvedModUploaderRoot>
+      <ResolvedModUploaderExe>$(ResolvedModUploaderRoot)ModUploader.exe</ResolvedModUploaderExe>
+      <ResolvedModUploaderWorkshopDir Condition="'$(ModUploaderWorkshopDir)' != ''">$([MSBuild]::EnsureTrailingSlash('$(ModUploaderWorkshopDir)'))</ResolvedModUploaderWorkshopDir>
+      <ResolvedModUploaderWorkshopDir Condition="'$(ResolvedModUploaderWorkshopDir)' == ''">$([MSBuild]::NormalizeDirectory('$(ResolvedModUploaderRoot)', 'workshop', 'BetterModMenu'))</ResolvedModUploaderWorkshopDir>
+      <ResolvedModUploaderWorkshopUploadDir>$(ResolvedModUploaderWorkshopDir).</ResolvedModUploaderWorkshopUploadDir>
+      <ResolvedModUploaderWorkshopContentDir>$(ResolvedModUploaderWorkshopDir)content\</ResolvedModUploaderWorkshopContentDir>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="UploadSteamWorkshop" DependsOnTargets="Build;RunSteamWorkshopUpload" />
+
+  <Target Name="RunSteamWorkshopUpload" DependsOnTargets="ResolveSteamWorkshopUploadPaths">
+    <ItemGroup>
+      <ResolvedModUploaderWorkshopContentFiles Include="$(ResolvedModUploaderWorkshopContentDir)**\*" />
+      <ResolvedUnexpectedModUploaderWorkshopContent Include="@(ResolvedModUploaderWorkshopContentFiles)" Exclude="$(ResolvedModUploaderWorkshopContentDir)$(TargetFileName);$(ResolvedModUploaderWorkshopContentDir)BetterModMenu.json" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('$(ResolvedModUploaderExe)')" Text="ModUploader.exe not found. Set ModUploaderRoot or MOD_UPLOADER_ROOT to the directory containing ModUploader.exe." />
+    <Error Condition="!Exists('$(ResolvedModUploaderWorkshopDir)workshop.json')" Text="Steam Workshop workspace not found. Set ModUploaderWorkshopDir or MOD_UPLOADER_WORKSHOP_DIR to the workshop root containing workshop.json." />
+    <Error Condition="'@(ResolvedUnexpectedModUploaderWorkshopContent)' != ''" Text="ModUploader content folder contains extra files. Remove them before uploading: @(ResolvedUnexpectedModUploaderWorkshopContent)" />
+    <MakeDir Directories="$(ResolvedModUploaderWorkshopContentDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ResolvedModUploaderWorkshopContentDir)" />
+    <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ResolvedModUploaderWorkshopContentDir)" />
+
+    <Message Text="Uploading Steam Workshop item from $(ResolvedModUploaderWorkshopDir)" Importance="High" />
+    <Exec WorkingDirectory="$(ResolvedModUploaderRoot)" Command="&quot;$(ResolvedModUploaderExe)&quot; upload -w &quot;$(ResolvedModUploaderWorkshopUploadDir)&quot;" />
   </Target>
 </Project>

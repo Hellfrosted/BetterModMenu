@@ -93,6 +93,28 @@ root that contains `workshop.json`, not the `content` folder itself. You can
 also set `MOD_UPLOADER_WORKSHOP_DIR` instead of passing the build property every
 time.
 
+To build, refresh the ModUploader workspace content, and upload to Steam Workshop
+from this repo without changing into the ModUploader directory:
+
+```powershell
+dotnet build BetterModMenu.csproj -t:UploadSteamWorkshop -p:Sts2DllPath="C:\path\to\sts2.dll"
+```
+
+By default, `UploadSteamWorkshop` looks for the uploader beside this repo at
+`..\ModUploader-win-x64\ModUploader.exe` and uses
+`..\ModUploader-win-x64\workshop\BetterModMenu`. Override those paths with:
+
+```powershell
+dotnet build BetterModMenu.csproj -t:UploadSteamWorkshop -p:Sts2DllPath="C:\path\to\sts2.dll" -p:ModUploaderRoot="E:\dev\STS2 mod\ModUploader-win-x64" -p:ModUploaderWorkshopDir="E:\dev\STS2 mod\ModUploader-win-x64\workshop\BetterModMenu"
+```
+
+`UploadSteamWorkshop` is explicit-only; ordinary `dotnet build` commands do not
+upload to Steam. Use the Windows `dotnet` command from PowerShell or Windows
+Terminal for real uploads; WSL path handoff to `ModUploader.exe` is not verified.
+The upload target fails if the workspace `content` folder contains files other
+than `BetterModMenu.dll` and `BetterModMenu.json`, so stale files are not
+published by accident.
+
 Cloud-capable builds are opt-in and produce a separate `_cloud` archive:
 
 ```powershell
