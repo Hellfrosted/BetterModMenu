@@ -139,16 +139,23 @@ public static class NModMenuRowPatch
             return;
 
         if (ModNameStyleRules.TryBuildSimpleColor(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string simpleColor) &&
-            nameNode is Label nameLabel &&
             TryParseColor(simpleColor, out Color labelColor))
         {
-            nameLabel.AddThemeColorOverride("font_color", labelColor);
+            ApplySimpleNameColor(nameNode, displayName, labelColor);
+            return;
+        }
+
+        if (nameNode is RichTextLabel richNameLabel)
+        {
+            richNameLabel.BbcodeEnabled = true;
+            richNameLabel.ParseBbcode(bbCode);
             return;
         }
 
         if (FindColoredNameLabel(row) is { } existing)
         {
-            existing.Text = bbCode;
+            existing.BbcodeEnabled = true;
+            existing.ParseBbcode(bbCode);
             return;
         }
 
@@ -159,7 +166,6 @@ public static class NModMenuRowPatch
         {
             Name = "BetterModMenuColoredName",
             BbcodeEnabled = true,
-            Text = bbCode,
             FitContent = true,
             ScrollActive = false,
             AutowrapMode = TextServer.AutowrapMode.Off,
@@ -169,10 +175,51 @@ public static class NModMenuRowPatch
             SizeFlagsVertical = nameNode.SizeFlagsVertical,
             TooltipText = nameNode.TooltipText
         };
+        ApplyRichNameTheme(nameNode, richLabel);
+        richLabel.ParseBbcode(bbCode);
 
         parent.AddChild(richLabel);
         parent.MoveChild(richLabel, nameNode.GetIndex());
         nameNode.Visible = false;
+    }
+
+    private static void ApplySimpleNameColor(Control nameNode, string displayName, Color color)
+    {
+        if (nameNode is Label label)
+        {
+            label.Text = displayName;
+            label.AddThemeColorOverride("font_color", color);
+        }
+        else if (nameNode is RichTextLabel richTextLabel)
+        {
+            richTextLabel.BbcodeEnabled = false;
+            richTextLabel.Text = displayName;
+            richTextLabel.AddThemeColorOverride("default_color", color);
+        }
+    }
+
+    private static void ApplyRichNameTheme(Control source, RichTextLabel target)
+    {
+        if (source is Label label)
+        {
+            target.AddThemeFontOverride("normal_font", label.GetThemeFont("font"));
+            target.AddThemeFontSizeOverride("normal_font_size", label.GetThemeFontSize("font_size"));
+            target.AddThemeColorOverride("default_color", label.GetThemeColor("font_color"));
+            target.AddThemeColorOverride("font_shadow_color", label.GetThemeColor("font_shadow_color"));
+            target.AddThemeConstantOverride("shadow_offset_x", label.GetThemeConstant("shadow_offset_x"));
+            target.AddThemeConstantOverride("shadow_offset_y", label.GetThemeConstant("shadow_offset_y"));
+            target.AddThemeConstantOverride("shadow_outline_size", label.GetThemeConstant("shadow_outline_size"));
+        }
+        else if (source is RichTextLabel richTextLabel)
+        {
+            target.AddThemeFontOverride("normal_font", richTextLabel.GetThemeFont("normal_font"));
+            target.AddThemeFontSizeOverride("normal_font_size", richTextLabel.GetThemeFontSize("normal_font_size"));
+            target.AddThemeColorOverride("default_color", richTextLabel.GetThemeColor("default_color"));
+            target.AddThemeColorOverride("font_shadow_color", richTextLabel.GetThemeColor("font_shadow_color"));
+            target.AddThemeConstantOverride("shadow_offset_x", richTextLabel.GetThemeConstant("shadow_offset_x"));
+            target.AddThemeConstantOverride("shadow_offset_y", richTextLabel.GetThemeConstant("shadow_offset_y"));
+            target.AddThemeConstantOverride("shadow_outline_size", richTextLabel.GetThemeConstant("shadow_outline_size"));
+        }
     }
 
     private static IEnumerable<string> BuildStyleTags(string modId)

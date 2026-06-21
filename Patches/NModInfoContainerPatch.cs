@@ -27,7 +27,7 @@ public static class NModInfoContainerPatch
         if (ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
         {
             title.BbcodeEnabled = true;
-            title.Text = bbCode;
+            title.ParseBbcode(bbCode);
             return;
         }
 
