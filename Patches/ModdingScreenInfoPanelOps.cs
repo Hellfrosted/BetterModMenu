@@ -39,6 +39,21 @@ internal static class ModdingScreenInfoPanelOps
             : "Open this mod's " + providerName + " config.";
     }
 
+    public static void ReserveDescriptionActionArea(Control? description)
+    {
+        if (description == null)
+            return;
+
+        description.ClipContents = true;
+        if (description is Label label)
+            label.ClipText = true;
+
+        description.AnchorBottom = 1f;
+        description.OffsetBottom = Mathf.Min(
+            description.OffsetBottom,
+            -ModdingScreenConstants.DetailDescriptionBottomInset);
+    }
+
     private static VBoxContainer EnsureActionRoot(Control infoContainer)
     {
         if (infoContainer.GetNodeOrNull<VBoxContainer>(ActionRootName) is { } existing)

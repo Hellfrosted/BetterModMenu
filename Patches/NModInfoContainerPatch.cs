@@ -10,11 +10,14 @@ namespace BetterModMenu.Patches;
 public static class NModInfoContainerPatch
 {
     private static readonly System.Reflection.FieldInfo? TitleField = AccessTools.Field(typeof(NModInfoContainer), "_title");
+    private static readonly System.Reflection.FieldInfo? DescriptionField = AccessTools.Field(typeof(NModInfoContainer), "_description");
 
     [HarmonyPatch(nameof(NModInfoContainer.Fill))]
     [HarmonyPostfix]
     public static void Postfix_Fill(NModInfoContainer __instance, Mod mod)
     {
+        ModdingScreenInfoPanelOps.ReserveDescriptionActionArea(DescriptionField?.GetValue(__instance) as Control);
+
         string modId = mod.manifest?.id ?? string.Empty;
         string displayName = mod.manifest?.name ?? modId;
         if (string.IsNullOrWhiteSpace(modId) || string.IsNullOrWhiteSpace(displayName))

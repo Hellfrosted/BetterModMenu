@@ -42,10 +42,16 @@ internal static class ModdingScreenConstants
 
     public const float DetailActionHorizontalInset = 28f;
     public const float DetailActionBottomInset = 18f;
-    public const float DetailActionPanelHeight = 220f;
     public const int DetailActionGap = 10;
     public const float DetailStatusLineHeight = 32f;
     public const int DetailStatusFontSize = 22;
     public const float DetailConfigButtonHeight = 84f;
+    public const float DetailDescriptionActionGap = 12f;
+    public const float DetailActionContentHeight =
+        DetailStatusLineHeight * 2f + DetailConfigButtonHeight + DetailActionGap * 2f;
+    public const float DetailActionPanelHeight =
+        DetailActionContentHeight + DetailActionBottomInset;
+    public const float DetailDescriptionBottomInset =
+        DetailActionPanelHeight + DetailDescriptionActionGap;
     public const int DetailConfigButtonFontSize = 34;
 }

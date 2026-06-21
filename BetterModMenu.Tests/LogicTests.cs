@@ -492,6 +492,23 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void DetailActionPanelGeometry_ReservesOnlyTheVisibleActionArea()
+    {
+        float expectedContentHeight =
+            ModdingScreenConstants.DetailStatusLineHeight * 2f +
+            ModdingScreenConstants.DetailConfigButtonHeight +
+            ModdingScreenConstants.DetailActionGap * 2f;
+        float expectedPanelDistanceFromBottom =
+            expectedContentHeight + ModdingScreenConstants.DetailActionBottomInset;
+        float expectedDescriptionInset =
+            expectedPanelDistanceFromBottom + ModdingScreenConstants.DetailDescriptionActionGap;
+
+        Assert.AreEqual(expectedContentHeight, ModdingScreenConstants.DetailActionContentHeight);
+        Assert.AreEqual(expectedPanelDistanceFromBottom, ModdingScreenConstants.DetailActionPanelHeight);
+        Assert.AreEqual(expectedDescriptionInset, ModdingScreenConstants.DetailDescriptionBottomInset);
+    }
+
+    [TestMethod]
     public void TryBackupExistingSave_CopiesSaveIntoTimestampedBackupFolder()
     {
         string tempDirectory = CreateTempDirectory();
