@@ -26,6 +26,8 @@
     <Compile Include="..\Data\ModNameStyleRules.cs" Link="Data\ModNameStyleRules.cs" />
     <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />
     <Compile Include="..\Data\ModListExportBuilder.cs" Link="Data\ModListExportBuilder.cs" />
+    <Compile Include="..\Data\ModSearchRules.cs" Link="Data\ModSearchRules.cs" />
+    <Compile Include="..\Data\ModConfigProviderRules.cs" Link="Data\ModConfigProviderRules.cs" />
     <Compile Include="..\Data\ModSettingsBackupService.cs" Link="Data\ModSettingsBackupService.cs" />
     <Compile Include="..\Data\ProfileModels.cs" Link="Data\ProfileModels.cs" />
     <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />

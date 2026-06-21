@@ -17,11 +17,27 @@ internal static class ModdingScreenVanillaStyle
 
     public static void ApplyButton(Button button)
     {
-        button.CustomMinimumSize = new Vector2(Mathf.Max(button.CustomMinimumSize.X, 64), 30);
+        button.CustomMinimumSize = new Vector2(
+            Mathf.Max(button.CustomMinimumSize.X, 64),
+            Mathf.Max(button.CustomMinimumSize.Y, 30));
         button.AddThemeColorOverride("font_color", TextColor);
         button.AddThemeColorOverride("font_hover_color", TextColor);
         button.AddThemeColorOverride("font_pressed_color", TextColor);
         button.AddThemeColorOverride("font_focus_color", TextColor);
+    }
+
+    public static void ApplyDetailActionButton(Button button)
+    {
+        ApplyButton(button);
+        button.AddThemeFontSizeOverride("font_size", ModdingScreenConstants.DetailConfigButtonFontSize);
+    }
+
+    public static void ApplyDetailActionAvailability(Button button, bool available)
+    {
+        button.Disabled = !available;
+        button.Modulate = available
+            ? new Color(1f, 1f, 1f, 1f)
+            : new Color(0.48f, 0.48f, 0.48f, 0.72f);
     }
 
     public static void ApplySmallButton(Button button)

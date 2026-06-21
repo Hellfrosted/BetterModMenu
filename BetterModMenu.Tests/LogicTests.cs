@@ -198,6 +198,126 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void TryReadManifestInfo_ReadsSearchMetadata()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), "BetterModMenuTests_" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllText(tempPath, """
+            {
+              "id": "Example.Mod",
+              "name": "Example Mod",
+              "author": "Tester",
+              "description": "Adds config helpers.",
+              "version": "1.2.3",
+              "dependencies": [
+                "BaseLib",
+                { "id": "STS2-RitsuLib", "min_version": "0.4.0" }
+              ],
+              "affects_gameplay": true
+            }
+            """);
+
+            bool found = ManifestScanner.TryReadManifestInfo(tempPath, "Example.Mod", out var info);
+
+            Assert.IsTrue(found);
+            Assert.AreEqual("Tester", info.Author);
+            Assert.AreEqual("Adds config helpers.", info.Description);
+            CollectionAssert.AreEqual(new[] { "BaseLib", "STS2-RitsuLib" }, info.Dependencies.ToList());
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    [TestMethod]
+    public void Search_RanksExactDependencyModBeforeDependents()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("BaseLib", "BaseLib") { Description = "Modding utility" },
+            new ModSearchDocument("Example.Mod", "Example Mod") { Dependencies = new[] { "BaseLib" } }
+        };
+
+        var results = ModSearchRules.Search(documents, "BaseLib");
+
+        Assert.AreEqual("BaseLib", results[0].ModId);
+        Assert.AreEqual("Example.Mod", results[1].ModId);
+        StringAssert.Contains(results[1].MatchReason, "dependency");
+    }
+
+    [TestMethod]
+    public void Search_ToleratesTyposAndLookalikesForLongQueries()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("BaseLib", "BaseLib"),
+            new ModSearchDocument("Other.Mod", "Other Mod")
+        };
+
+        var results = ModSearchRules.Search(documents, "ba5e lib");
+
+        Assert.AreEqual(1, results.Count);
+        Assert.AreEqual("BaseLib", results[0].ModId);
+    }
+
+    [TestMethod]
+    public void Search_KeepsShortQueriesPrecise()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("BaseLib", "BaseLib"),
+            new ModSearchDocument("CombatTweaks", "Combat Tweaks") { Description = "Better balance" }
+        };
+
+        var results = ModSearchRules.Search(documents, "b");
+
+        CollectionAssert.AreEqual(new[] { "BaseLib" }, results.Select(result => result.ModId).ToList());
+    }
+
+    [TestMethod]
+    public void Search_MatchesWorkshopId()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("Example.Mod", "Example Mod")
+            {
+                WorkshopId = "3456789012",
+                WorkshopUrl = "https://steamcommunity.com/sharedfiles/filedetails/?id=3456789012"
+            }
+        };
+
+        var results = ModSearchRules.Search(documents, "3456789012");
+
+        Assert.AreEqual("Example.Mod", results[0].ModId);
+        StringAssert.Contains(results[0].MatchReason, "Workshop");
+    }
+
+    [TestMethod]
+    public void PickSelectedMod_PreservesCurrentMatchOtherwiseUsesTopResult()
+    {
+        var results = new[]
+        {
+            new ModSearchResult { ModId = "Top.Mod", Score = 100 },
+            new ModSearchResult { ModId = "Current.Mod", Score = 80 }
+        };
+
+        Assert.AreEqual("Current.Mod", ModSearchRules.PickSelectedModId("Current.Mod", results));
+        Assert.AreEqual("Top.Mod", ModSearchRules.PickSelectedModId("Hidden.Mod", results));
+        Assert.AreEqual(string.Empty, ModSearchRules.PickSelectedModId("Hidden.Mod", Array.Empty<ModSearchResult>()));
+    }
+
+    [TestMethod]
+    public void SelectProvider_PrefersRitsuLibThenBaseLib()
+    {
+        Assert.AreEqual(ModConfigProviderKind.RitsuLib, ModConfigProviderRules.SelectProvider(ritsuLibAvailable: true, baseLibAvailable: true));
+        Assert.AreEqual(ModConfigProviderKind.BaseLib, ModConfigProviderRules.SelectProvider(ritsuLibAvailable: false, baseLibAvailable: true));
+        Assert.AreEqual(ModConfigProviderKind.None, ModConfigProviderRules.SelectProvider(ritsuLibAvailable: false, baseLibAvailable: false));
+    }
+
+    [TestMethod]
     public void NormalizeGroups_RemovesStaleEntries()
     {
         var customGroups = new List<string> { "Bosses", "Elites" };

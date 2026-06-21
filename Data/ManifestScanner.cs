@@ -9,7 +9,10 @@ internal sealed class ModManifestInfo
 {
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public string Author { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
+    public IReadOnlyList<string> Dependencies { get; init; } = Array.Empty<string>();
     public bool AffectsGameplay { get; init; }
 }
 
@@ -122,7 +125,10 @@ internal static class ManifestScanner
         {
             Id = manifestId,
             Name = ReadString(doc.RootElement, "name"),
+            Author = ReadString(doc.RootElement, "author"),
+            Description = ReadString(doc.RootElement, "description"),
             Version = ReadString(doc.RootElement, "version"),
+            Dependencies = ReadDependencies(doc.RootElement),
             AffectsGameplay = ReadBoolean(doc.RootElement, "affects_gameplay")
         };
         return true;
@@ -138,5 +144,30 @@ internal static class ManifestScanner
     private static bool ReadBoolean(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True;
+    }
+
+    private static IReadOnlyList<string> ReadDependencies(JsonElement element)
+    {
+        if (!element.TryGetProperty("dependencies", out var dependencies) ||
+            dependencies.ValueKind != JsonValueKind.Array)
+        {
+            return Array.Empty<string>();
+        }
+
+        var result = new List<string>();
+        foreach (var dependency in dependencies.EnumerateArray())
+        {
+            string id = dependency.ValueKind switch
+            {
+                JsonValueKind.String => dependency.GetString() ?? string.Empty,
+                JsonValueKind.Object => ReadString(dependency, "id"),
+                _ => string.Empty
+            };
+
+            if (!string.IsNullOrWhiteSpace(id))
+                result.Add(id);
+        }
+
+        return result;
     }
 }

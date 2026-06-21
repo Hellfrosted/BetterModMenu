@@ -42,6 +42,11 @@ internal static class ModdingScreenActionFlow
             onViewLogsPressed,
             onTutorialPressed,
             onCloudBackupPressed,
+            query =>
+            {
+                session.SearchQuery = query;
+                refreshGroupsUI();
+            },
             onAddGroupRequested);
 
         RefreshProfileDropdown(screen);

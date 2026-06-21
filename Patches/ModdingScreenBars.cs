@@ -44,6 +44,8 @@ internal sealed class GroupBarControls(
     Button logsButton,
     Button tutorialButton,
     Button? cloudButton,
+    LineEdit searchInput,
+    Label searchResultLabel,
     Label groupLabel,
     LineEdit newGroupInput,
     Button newGroupButton,
@@ -59,6 +61,8 @@ internal sealed class GroupBarControls(
     public Button LogsButton { get; } = logsButton;
     public Button TutorialButton { get; } = tutorialButton;
     public Button? CloudButton { get; } = cloudButton;
+    public LineEdit SearchInput { get; } = searchInput;
+    public Label SearchResultLabel { get; } = searchResultLabel;
     public Label GroupLabel { get; } = groupLabel;
     public LineEdit NewGroupInput { get; } = newGroupInput;
     public Button NewGroupButton { get; } = newGroupButton;
@@ -74,6 +78,8 @@ internal sealed class GroupBarControls(
         MoveChild(TutorialButton, PrimaryRow);
         if (CloudButton != null)
             MoveChild(CloudButton, PrimaryRow);
+        MoveChild(SearchInput, PrimaryRow);
+        MoveChild(SearchResultLabel, PrimaryRow);
         MoveChild(FlexibleSpacer, PrimaryRow);
         FlexibleSpacer.Visible = !isCompact;
 
@@ -159,6 +165,7 @@ internal static class ModdingScreenBars
         Action onViewLogsPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
+        Action<string> onSearchChanged,
         Func<string, bool> onAddGroupRequested)
     {
         var groupBar = new VBoxContainer { Name = "BetterModMenuGroupBar" };
@@ -227,6 +234,24 @@ internal static class ModdingScreenBars
 #endif
 
         var flexibleSpacer = new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var searchInput = new LineEdit
+        {
+            PlaceholderText = "Search mods...",
+            TooltipText = "Search by mod name, id, author, description, version, dependency, group, enabled state, or Steam Workshop id.",
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.SearchInputWidth, 0)
+        };
+        ModdingScreenVanillaStyle.ApplyLineEdit(searchInput);
+        searchInput.TextChanged += text => onSearchChanged(text);
+        primaryRow.AddChild(searchInput);
+
+        var searchResultLabel = new Label
+        {
+            Text = "",
+            TooltipText = "Search result count."
+        };
+        ModdingScreenVanillaStyle.ApplyLabel(searchResultLabel, muted: true);
+        primaryRow.AddChild(searchResultLabel);
+
         primaryRow.AddChild(flexibleSpacer);
 
         var groupLabel = new Label
@@ -259,6 +284,6 @@ internal static class ModdingScreenBars
         };
         primaryRow.AddChild(newGroupBtn);
 
-        return new GroupBarControls(groupBar, primaryRow, secondaryRow, portableToggle, backupButton, loadBackupButton, exportButton, logsButton, tutorialButton, cloudButton, groupLabel, newGroupInput, newGroupBtn, flexibleSpacer);
+        return new GroupBarControls(groupBar, primaryRow, secondaryRow, portableToggle, backupButton, loadBackupButton, exportButton, logsButton, tutorialButton, cloudButton, searchInput, searchResultLabel, groupLabel, newGroupInput, newGroupBtn, flexibleSpacer);
     }
 }

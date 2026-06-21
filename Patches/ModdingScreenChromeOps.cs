@@ -29,6 +29,7 @@ internal static class ModdingScreenChromeOps
         Action onViewLogsPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
+        Action<string> onSearchChanged,
         Func<string, bool> onAddGroupRequested)
     {
         ApplyScrollMaskClip(screen);
@@ -36,7 +37,7 @@ internal static class ModdingScreenChromeOps
         EnsureLayoutSignals(screen, session);
         EnsureScrollbarPersistenceSignals(screen, session);
         EnsureTopBar(session, onProfileSelected, onNewProfilePressed, onRenameProfilePressed, onDeleteProfilePressed);
-        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onLoadBackupPressed, onExportModListPressed, onViewLogsPressed, onTutorialPressed, onCloudBackupPressed, onAddGroupRequested);
+        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onLoadBackupPressed, onExportModListPressed, onViewLogsPressed, onTutorialPressed, onCloudBackupPressed, onSearchChanged, onAddGroupRequested);
     }
 
     public static void RefreshGroupsUI(
@@ -54,11 +55,15 @@ internal static class ModdingScreenChromeOps
         ModdingScreenGroupUi.RefreshGroupsUI(
             modRowContainer,
             session.GeneratedGroupNodes,
+            session.SearchQuery,
+            session.SearchResults,
             refreshGroupsUI,
             renameGroup,
             moveGroup,
             toggleAllInGroup);
 
+        ApplySearchSelectionRule(screen, session, modRowContainer);
+        UpdateSearchStatus(session);
         SyncModsScrollbar(screen, modRowContainer);
         UpdateLayout(screen, session);
         Callable.From(() =>
@@ -163,6 +168,7 @@ internal static class ModdingScreenChromeOps
         Action onViewLogsPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
+        Action<string> onSearchChanged,
         Func<string, bool> onAddGroupRequested)
     {
         if (session.ChromeRoot == null)
@@ -186,10 +192,58 @@ internal static class ModdingScreenChromeOps
             onViewLogsPressed,
             onTutorialPressed,
             onCloudBackupPressed,
+            onSearchChanged,
             onAddGroupRequested);
 
         session.GroupBarControls = builtGroupBar;
         session.ChromeRoot.AddChild(builtGroupBar.Bar);
+    }
+
+    private static void ApplySearchSelectionRule(NModdingScreen screen, ModdingScreenSession session, Control modRowContainer)
+    {
+        if (string.IsNullOrWhiteSpace(session.SearchQuery))
+        {
+            ModdingScreenInfoPanelOps.Refresh(screen, session);
+            return;
+        }
+
+        string selectedModId = ModSearchRules.PickSelectedModId(session.SelectedModId, session.SearchResults.Values.ToList());
+        if (string.IsNullOrWhiteSpace(selectedModId))
+        {
+            session.SelectedModId = string.Empty;
+            ModdingScreenInfoPanelOps.Refresh(screen, session);
+            return;
+        }
+
+        if (string.Equals(session.SelectedModId, selectedModId, StringComparison.OrdinalIgnoreCase))
+        {
+            ModdingScreenInfoPanelOps.Refresh(screen, session);
+            return;
+        }
+
+        var row = modRowContainer.GetChildren()
+            .OfType<NModMenuRow>()
+            .FirstOrDefault(candidate => string.Equals(candidate.Mod?.manifest?.id, selectedModId, StringComparison.OrdinalIgnoreCase));
+        if (row == null)
+        {
+            ModdingScreenInfoPanelOps.Refresh(screen, session);
+            return;
+        }
+
+        session.SelectedModId = selectedModId;
+        screen.OnRowSelected(row);
+        ModdingScreenInfoPanelOps.Refresh(screen, session);
+    }
+
+    private static void UpdateSearchStatus(ModdingScreenSession session)
+    {
+        var controls = session.GroupBarControls;
+        if (controls == null || !GodotObject.IsInstanceValid(controls.SearchResultLabel))
+            return;
+
+        controls.SearchResultLabel.Text = string.IsNullOrWhiteSpace(session.SearchQuery)
+            ? string.Empty
+            : session.SearchResults.Count + " found";
     }
 
     private static void EnsureLayoutSignals(NModdingScreen screen, ModdingScreenSession session)

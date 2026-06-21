@@ -13,6 +13,9 @@ internal sealed class ModdingScreenSession
     public bool ModsScrollbarPersistenceSignalsConnected { get; set; }
     public Vector2? OriginalModsScrollPosition { get; set; }
     public Vector2? OriginalModsScrollSize { get; set; }
+    public string SearchQuery { get; set; } = string.Empty;
+    public Dictionary<string, Data.ModSearchResult> SearchResults { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public string SelectedModId { get; set; } = string.Empty;
     public TopBarControls? TopBarControls { get; set; }
     public int TickboxSuppressionDepth { get; set; }
 
@@ -26,6 +29,9 @@ internal sealed class ModdingScreenSession
         ModsScrollbarPersistenceSignalsConnected = false;
         OriginalModsScrollPosition = null;
         OriginalModsScrollSize = null;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        SelectedModId = string.Empty;
         TopBarControls = null;
         TickboxSuppressionDepth = 0;
     }

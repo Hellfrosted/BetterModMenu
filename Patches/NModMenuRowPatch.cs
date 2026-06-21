@@ -37,21 +37,8 @@ public static class NModMenuRowPatch
         var container = new HBoxContainer { Name = "RowCustomControls" };
         __instance.AddChild(container);
 
-        Label? warningLabel = null;
-        if (Data.ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
-        {
-            warningLabel = new Label 
-            { 
-                Text = "Gameplay",
-                TooltipText = "This mod affects gameplay.",
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            warningLabel.AddThemeColorOverride("font_color", new Color(1f, 0.67f, 0.36f));
-            container.AddChild(warningLabel);
-            
-            var spacer = new Control { CustomMinimumSize = new Vector2(10, 0) };
-            container.AddChild(spacer);
-        }
+        if (ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
+            AddGameplayImpactIndicator(container);
 
         const string orderTooltip = "Move this mod in the saved load order for the next launch. Dependency rules may still move it during startup.";
 
@@ -110,8 +97,31 @@ public static class NModMenuRowPatch
 
         container.AddChild(groupDropdown);
 
-        __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown);
-        Callable.From(() => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown)).CallDeferred();
+        __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, groupDropdown);
+        Callable.From(() => UpdateCustomControlsLayout(__instance, container, groupDropdown)).CallDeferred();
+    }
+
+    private static void AddGameplayImpactIndicator(HBoxContainer container)
+    {
+        var slot = new CenterContainer
+        {
+            Name = "GameplayImpactIndicator",
+            TooltipText = "This mod affects gameplay.",
+            CustomMinimumSize = new Vector2(
+                ModdingScreenConstants.RowGameplayIndicatorSlotWidth,
+                ModdingScreenConstants.RowButtonSize)
+        };
+
+        var marker = new ColorRect
+        {
+            Color = new Color(1f, 0.67f, 0.36f, 0.95f),
+            CustomMinimumSize = new Vector2(
+                ModdingScreenConstants.RowGameplayIndicatorSize,
+                ModdingScreenConstants.RowGameplayIndicatorSize),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        slot.AddChild(marker);
+        container.AddChild(slot);
     }
 
     private static void ApplyColoredModName(NModMenuRow row, string modId)
@@ -222,14 +232,12 @@ public static class NModMenuRowPatch
         return null;
     }
 
-    private static void UpdateCustomControlsLayout(NModMenuRow row, HBoxContainer container, Label? warningLabel, OptionButton groupDropdown)
+    private static void UpdateCustomControlsLayout(NModMenuRow row, HBoxContainer container, OptionButton groupDropdown)
     {
         if (!GodotObject.IsInstanceValid(row) || !GodotObject.IsInstanceValid(container))
             return;
 
         groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, ModdingScreenConstants.ToolbarControlHeight);
-        if (warningLabel != null)
-            warningLabel.Text = "Gameplay";
 
         float preferredWidth = container.GetCombinedMinimumSize().X;
         bool isCompact = row.Size.X > 0 && row.Size.X - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;

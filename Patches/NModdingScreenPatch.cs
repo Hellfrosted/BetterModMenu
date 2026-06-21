@@ -17,6 +17,15 @@ public static class NModdingScreenPatch
             ProfileManager.SnapshotCurrentStateAndSave();
     }
 
+    [HarmonyPatch(nameof(NModdingScreen.OnRowSelected))]
+    [HarmonyPostfix]
+    public static void Postfix_OnRowSelected(NModdingScreen __instance, NModMenuRow row)
+    {
+        var session = ModdingScreenContext.GetSession(__instance);
+        session.SelectedModId = row.Mod?.manifest?.id ?? string.Empty;
+        ModdingScreenInfoPanelOps.Refresh(__instance, session);
+    }
+
     [HarmonyPatch(nameof(NModdingScreen._Ready))]
     [HarmonyPostfix]
     public static void Postfix_Ready(NModdingScreen __instance)

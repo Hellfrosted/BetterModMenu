@@ -25,6 +25,7 @@ internal static class ModdingScreenConstants
     public const float GroupBarWideHeight = 28f;
     public const float GroupBarCompactHeight = 58f;
     public const float GroupBarListGap = 4f;
+    public const float SearchInputWidth = 220f;
     public const float GroupInputWideWidth = 140f;
     public const float GroupInputCompactWidth = 120f;
 
@@ -34,6 +35,17 @@ internal static class ModdingScreenConstants
     public const float RowControlsRightPadding = 12f;
     public const float RowNativeTickboxReserveWidth = 84f;
     public const float RowMinimumLeftContentWidth = 480f;
+    public const float RowGameplayIndicatorSlotWidth = 22f;
+    public const float RowGameplayIndicatorSize = 14f;
     public const float GroupHeaderScrollbarReserveWidth = 52f;
     public const float ScrollFitTolerance = 1f;
+
+    public const float DetailActionHorizontalInset = 28f;
+    public const float DetailActionBottomInset = 18f;
+    public const float DetailActionPanelHeight = 220f;
+    public const int DetailActionGap = 10;
+    public const float DetailStatusLineHeight = 32f;
+    public const int DetailStatusFontSize = 22;
+    public const float DetailConfigButtonHeight = 84f;
+    public const int DetailConfigButtonFontSize = 34;
 }

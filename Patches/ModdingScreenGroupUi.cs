@@ -13,6 +13,8 @@ internal static class ModdingScreenGroupUi
     public static void RefreshGroupsUI(
         Control modRowContainer,
         List<Node> generatedGroupNodes,
+        string searchQuery,
+        Dictionary<string, ModSearchResult> searchResults,
         Action refreshGroupsUI,
         Action<string> renameGroup,
         Action<string, int> moveGroup,
@@ -21,6 +23,13 @@ internal static class ModdingScreenGroupUi
         var rows = CollectRowsAndClearGeneratedNodes(modRowContainer, generatedGroupNodes);
         var modOrder = BuildModOrderLookup();
         var assignedGroups = ModdingGroupStateOps.BuildAssignedGroupLookup(rows.Select(row => row.Mod?.manifest?.id ?? ""));
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            ApplySearchLayout(modRowContainer, rows, assignedGroups, searchQuery, searchResults);
+            return;
+        }
+
+        searchResults.Clear();
         var layout = ModdingScreenGroupLayoutBuilder.Build(
             rows.Select(row => new ModdingScreenGroupLayoutRow<NModMenuRow>(row, row.Mod?.manifest?.id ?? "")),
             assignedGroups,
@@ -30,6 +39,80 @@ internal static class ModdingScreenGroupUi
             ModdingScreenConstants.UnassignedGroup);
         SyncGroupDropdowns(layout);
         BuildGroupHeaders(modRowContainer, generatedGroupNodes, layout.Groups, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
+    }
+
+    private static void ApplySearchLayout(
+        Control container,
+        IReadOnlyList<NModMenuRow> rows,
+        IReadOnlyDictionary<string, string> assignedGroups,
+        string searchQuery,
+        Dictionary<string, ModSearchResult> searchResults)
+    {
+        searchResults.Clear();
+        var rowsByModId = new Dictionary<string, NModMenuRow>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            string modId = row.Mod?.manifest?.id ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(modId) && !rowsByModId.ContainsKey(modId))
+                rowsByModId[modId] = row;
+        }
+        var documents = rowsByModId.Values.Select(row => BuildSearchDocument(row, assignedGroups));
+        var results = ModSearchRules.Search(documents, searchQuery);
+
+        int index = 0;
+        foreach (var result in results)
+        {
+            if (!rowsByModId.TryGetValue(result.ModId, out var row))
+                continue;
+
+            searchResults[result.ModId] = result;
+            row.Visible = true;
+            container.MoveChild(row, index++);
+            SyncSearchModeGroupDropdown(row, assignedGroups);
+        }
+
+        foreach (var row in rows)
+        {
+            string modId = row.Mod?.manifest?.id ?? string.Empty;
+            row.Visible = !string.IsNullOrWhiteSpace(modId) && searchResults.ContainsKey(modId);
+        }
+    }
+
+    private static ModSearchDocument BuildSearchDocument(
+        NModMenuRow row,
+        IReadOnlyDictionary<string, string> assignedGroups)
+    {
+        var manifest = row.Mod?.manifest;
+        string modId = manifest?.id ?? string.Empty;
+        SteamWorkshopLinkResolver.TryGetPublishedFileId(row.Mod?.path, out string workshopId);
+        SteamWorkshopLinkResolver.TryGetWorkshopUrl(row.Mod?.path, out string workshopUrl);
+        return new ModSearchDocument(modId, manifest?.name ?? modId)
+        {
+            Author = manifest?.author ?? string.Empty,
+            Description = manifest?.description ?? string.Empty,
+            Version = manifest?.version ?? string.Empty,
+            Dependencies = manifest?.dependencies?.Select(dependency => dependency.id).Where(id => !string.IsNullOrWhiteSpace(id)).ToArray() ?? Array.Empty<string>(),
+            Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
+                ? group
+                : ModdingScreenConstants.UnassignedGroup,
+            Enabled = IsRowEnabled(row),
+            WorkshopId = workshopId,
+            WorkshopUrl = workshopUrl
+        };
+    }
+
+    private static bool IsRowEnabled(NModMenuRow row)
+    {
+        var tick = row.GetNodeOrNull<NTickbox>(ModdingScreenConstants.TickboxPath);
+        return tick == null || (bool)tick.Get("IsTicked");
+    }
+
+    private static void SyncSearchModeGroupDropdown(NModMenuRow row, IReadOnlyDictionary<string, string> assignedGroups)
+    {
+        var dropdown = row.GetNodeOrNull<OptionButton>(ModdingScreenConstants.GroupDropdownPath);
+        string modId = row.Mod?.manifest?.id ?? string.Empty;
+        if (dropdown != null && assignedGroups.TryGetValue(modId, out string? group))
+            ModdingGroupStateOps.SyncGroupDropdown(dropdown, group ?? ModdingScreenConstants.UnassignedGroup);
     }
 
     private static List<NModMenuRow> CollectRowsAndClearGeneratedNodes(Control container, List<Node> generatedGroupNodes)
