@@ -35,7 +35,10 @@ public static class ProfileManager
     public static HashSet<string> CollapsedGroups { get; set; } = new();
     public static TutorialState Tutorial { get; set; } = new();
     public static CloudBackupSettings CloudBackups { get; set; } = new();
+    public static ModNameStyleSettings ModNameStyles { get; set; } = new();
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
+    public static Dictionary<string, List<string>> ModWorkshopTagsCache { get; set; } = new();
+    private static bool WorkshopTagCacheAttempted { get; set; }
 
     public static void ResetState()
     {
@@ -46,7 +49,10 @@ public static class ProfileManager
         CollapsedGroups = new();
         Tutorial = new();
         CloudBackups = new();
+        ModNameStyles = new();
         ModGameplayImpactCache = new();
+        ModWorkshopTagsCache = new();
+        WorkshopTagCacheAttempted = false;
         LastPersistenceError = null;
         LastBackupError = null;
     }
@@ -279,7 +285,8 @@ public static class ProfileManager
             ModGroups,
             CollapsedGroups,
             Tutorial,
-            CloudBackups);
+            CloudBackups,
+            ModNameStyles);
     }
 
     private static void ApplySaveData(ProfileSaveData saveData)
@@ -292,6 +299,7 @@ public static class ProfileManager
         CollapsedGroups = normalized.CollapsedGroups;
         Tutorial = normalized.Tutorial;
         CloudBackups = normalized.CloudBackups;
+        ModNameStyles = normalized.ModNameStyles;
         NormalizeProfileIndex();
     }
 
@@ -386,5 +394,18 @@ public static class ProfileManager
     public static void BuildManifestCache()
     {
         ProfileManifestCacheBuilder.Rebuild(ModGameplayImpactCache, ModLogger, ConfigPaths.ConfigExtensions);
+    }
+
+    public static void BuildWorkshopTagCache()
+    {
+        WorkshopTagCacheAttempted = ProfileWorkshopTagCacheBuilder.Rebuild(ModWorkshopTagsCache, ModLogger);
+    }
+
+    public static void BuildWorkshopTagCacheIfNeeded()
+    {
+        if (WorkshopTagCacheAttempted || !ModNameStyleRules.RequiresWorkshopTags(ModNameStyles))
+            return;
+
+        BuildWorkshopTagCache();
     }
 }

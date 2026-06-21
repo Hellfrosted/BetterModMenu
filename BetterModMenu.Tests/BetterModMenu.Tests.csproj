@@ -22,6 +22,8 @@
     <Compile Include="..\Data\LogLevelFilterService.cs" Link="Data\LogLevelFilterService.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
+    <Compile Include="..\Data\ModNameStyleCatalog.cs" Link="Data\ModNameStyleCatalog.cs" />
+    <Compile Include="..\Data\ModNameStyleRules.cs" Link="Data\ModNameStyleRules.cs" />
     <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />
     <Compile Include="..\Data\ModListExportBuilder.cs" Link="Data\ModListExportBuilder.cs" />
     <Compile Include="..\Data\ModSettingsBackupService.cs" Link="Data\ModSettingsBackupService.cs" />
@@ -29,6 +31,7 @@
     <Compile Include="..\Data\ProfileBackupService.cs" Link="Data\ProfileBackupService.cs" />
     <Compile Include="..\Data\ProfileSaveStorage.cs" Link="Data\ProfileSaveStorage.cs" />
     <Compile Include="..\Data\ProfileStateRules.cs" Link="Data\ProfileStateRules.cs" />
+    <Compile Include="..\Data\SteamWorkshopTagService.cs" Link="Data\SteamWorkshopTagService.cs" />
     <Compile Include="..\Data\SteamWorkshopLinkResolver.cs" Link="Data\SteamWorkshopLinkResolver.cs" />
     <Compile Include="..\Data\TutorialContentBuilder.cs" Link="Data\TutorialContentBuilder.cs" />
     <Compile Include="..\Data\TutorialStateRules.cs" Link="Data\TutorialStateRules.cs" />

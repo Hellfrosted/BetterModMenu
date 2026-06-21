@@ -16,4 +16,15 @@ public class ProfileSaveData
     public HashSet<string> CollapsedGroups { get; set; } = new();
     public TutorialState Tutorial { get; set; } = new();
     public CloudBackupSettings CloudBackups { get; set; } = new();
+    public ModNameStyleSettings ModNameStyles { get; set; } = new();
+}
+
+public class ModNameStyleSettings
+{
+    public bool Enabled { get; set; } = true;
+    public bool UseDefaultTagFormats { get; set; } = true;
+    public Dictionary<string, string> TagFormats { get; set; } = new();
+    public List<string> TagPriority { get; set; } = new();
+    public HashSet<string> DisabledTags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> ModFormats { get; set; } = new();
 }

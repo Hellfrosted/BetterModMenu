@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Godot;
+using BetterModMenu.Data;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 
 namespace BetterModMenu.Patches;
@@ -27,6 +28,9 @@ public static class NModMenuRowPatch
         var platformIcon = __instance.GetNodeOrNull<TextureRect>("PlatformIcon");
         if (platformIcon != null)
             platformIcon.Visible = false;
+
+        ApplyColoredModName(__instance, modId);
+        Callable.From(() => ApplyColoredModName(__instance, modId)).CallDeferred();
 
         if (__instance.GetNodeOrNull<HBoxContainer>("RowCustomControls") != null) return;
 
@@ -108,6 +112,114 @@ public static class NModMenuRowPatch
 
         __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown);
         Callable.From(() => UpdateCustomControlsLayout(__instance, container, warningLabel, groupDropdown)).CallDeferred();
+    }
+
+    private static void ApplyColoredModName(NModMenuRow row, string modId)
+    {
+        string displayName = row.Mod?.manifest?.name ?? modId;
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = modId;
+
+        var styleTags = BuildStyleTags(modId);
+        if (!ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
+            return;
+
+        var nameNode = FindNameTextNode(row, displayName);
+        if (nameNode == null)
+            return;
+
+        if (ModNameStyleRules.TryBuildSimpleColor(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string simpleColor) &&
+            nameNode is Label nameLabel &&
+            TryParseColor(simpleColor, out Color labelColor))
+        {
+            nameLabel.AddThemeColorOverride("font_color", labelColor);
+            return;
+        }
+
+        if (FindColoredNameLabel(row) is { } existing)
+        {
+            existing.Text = bbCode;
+            return;
+        }
+
+        if (nameNode.GetParent() is not Control parent)
+            return;
+
+        var richLabel = new RichTextLabel
+        {
+            Name = "BetterModMenuColoredName",
+            BbcodeEnabled = true,
+            Text = bbCode,
+            FitContent = true,
+            ScrollActive = false,
+            AutowrapMode = TextServer.AutowrapMode.Off,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            CustomMinimumSize = nameNode.GetCombinedMinimumSize(),
+            SizeFlagsHorizontal = nameNode.SizeFlagsHorizontal,
+            SizeFlagsVertical = nameNode.SizeFlagsVertical,
+            TooltipText = nameNode.TooltipText
+        };
+
+        parent.AddChild(richLabel);
+        parent.MoveChild(richLabel, nameNode.GetIndex());
+        nameNode.Visible = false;
+    }
+
+    private static IEnumerable<string> BuildStyleTags(string modId)
+    {
+        ProfileManager.BuildWorkshopTagCacheIfNeeded();
+        if (!ProfileManager.ModWorkshopTagsCache.TryGetValue(modId, out var tags))
+            yield break;
+
+        foreach (string tag in tags)
+            yield return tag;
+    }
+
+    private static bool TryParseColor(string value, out Color color)
+    {
+        string normalized = value.StartsWith("#", StringComparison.Ordinal) ? value : "#" + value;
+        if (Color.HtmlIsValid(normalized))
+        {
+            color = Color.FromHtml(normalized);
+            return true;
+        }
+
+        color = default;
+        return false;
+    }
+
+    private static RichTextLabel? FindColoredNameLabel(Node root)
+    {
+        foreach (Node child in root.GetChildren())
+        {
+            if (child is RichTextLabel richTextLabel &&
+                string.Equals(richTextLabel.Name.ToString(), "BetterModMenuColoredName", StringComparison.Ordinal))
+                return richTextLabel;
+
+            var nested = FindColoredNameLabel(child);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    private static Control? FindNameTextNode(Node root, string displayName)
+    {
+        foreach (Node child in root.GetChildren())
+        {
+            if (child is Label label && string.Equals(label.Text, displayName, StringComparison.Ordinal))
+                return label;
+
+            if (child is RichTextLabel richTextLabel && string.Equals(richTextLabel.Text, displayName, StringComparison.Ordinal))
+                return richTextLabel;
+
+            var nested = FindNameTextNode(child, displayName);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
     }
 
     private static void UpdateCustomControlsLayout(NModMenuRow row, HBoxContainer container, Label? warningLabel, OptionButton groupDropdown)

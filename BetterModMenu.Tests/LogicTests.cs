@@ -1056,6 +1056,17 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void TryGetPublishedFileId_ReturnsSts2WorkshopId()
+    {
+        bool resolved = SteamWorkshopLinkResolver.TryGetPublishedFileId(
+            @"D:\SteamLibrary\steamapps\workshop\content\2868840\3456789012\Example.Mod\Example.Mod.json",
+            out string publishedFileId);
+
+        Assert.IsTrue(resolved);
+        Assert.AreEqual("3456789012", publishedFileId);
+    }
+
+    [TestMethod]
     public void TryGetWorkshopUrl_ReturnsFalseForLocalModPath()
     {
         bool resolved = SteamWorkshopLinkResolver.TryGetWorkshopUrl(
@@ -1064,6 +1075,463 @@ public class LogicTests
 
         Assert.IsFalse(resolved);
         Assert.AreEqual(string.Empty, workshopUrl);
+    }
+
+    [TestMethod]
+    public void GetDefaultTagFormats_ReturnsOnlySupportedSteamWorkshopTags()
+    {
+        string[] supportedTags =
+        {
+            "<none selected>",
+            "Acts",
+            "Ancients",
+            "Audio",
+            "Cards",
+            "Characters",
+            "Cosmetics",
+            "Events",
+            "Expansion",
+            "Extensions",
+            "Humor",
+            "Modifiers",
+            "Monsters",
+            "Potions",
+            "QoL",
+            "Relics",
+            "Rooms",
+            "Tools & APIs",
+            "Utility",
+            "Misc"
+        };
+
+        CollectionAssert.AreEqual(supportedTags, ModNameStyleRules.GetDefaultTagFormats().Keys.ToArray());
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesDefaultPriorityForWorkshopTags()
+    {
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "QoL", "Tools & APIs", "Utility" },
+            new ModNameStyleSettings());
+
+        Assert.AreEqual("[color=#74a6ff]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_DoesNotUseVisibleGroupsAsDefaultTags()
+    {
+        bool resolved = ModNameStyleRules.TryBuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Libraries" },
+            new ModNameStyleSettings(),
+            out _);
+
+        Assert.IsFalse(resolved);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_IgnoresCustomFormatsForUnsupportedWorkshopTags()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            UseDefaultTagFormats = false,
+            TagFormats = new Dictionary<string, string>
+            {
+                ["Multiplayer"] = "#ff8fb3"
+            }
+        };
+
+        bool resolved = ModNameStyleRules.TryBuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Multiplayer" },
+            settings,
+            out _);
+
+        Assert.IsFalse(resolved);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesCustomFormatForSupportedWorkshopTag()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "[color=#80f0b0][b]{name}[/b][/color]"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "QoL" },
+            settings);
+
+        Assert.AreEqual("[color=#80f0b0][b]Better Mod Menu[/b][/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesDefaultPriorityForCustomOnlyTagFormats()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            UseDefaultTagFormats = false,
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "#80f0b0",
+                ["Tools & APIs"] = "#74a6ff"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "QoL", "Tools & APIs" },
+            settings);
+
+        Assert.AreEqual("[color=#74a6ff]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_TreatsQualityOfLifeTagAsQoLAlias()
+    {
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Quality of Life" },
+            new ModNameStyleSettings());
+
+        Assert.AreEqual("[color=#b3ed5e]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_TrimsTagsAndConfigKeysBeforeAliasLookup()
+    {
+        Assert.AreEqual(
+            "[color=#b3ed5e]Better Mod Menu[/color]",
+            ModNameStyleRules.BuildBbCode(
+                "BetterModMenu",
+                "Better Mod Menu",
+                new[] { " Quality of Life " },
+                new ModNameStyleSettings()));
+
+        Assert.AreEqual(
+            "[color=#80f0b0]Better Mod Menu[/color]",
+            ModNameStyleRules.BuildBbCode(
+                "BetterModMenu",
+                "Better Mod Menu",
+                new[] { "QoL" },
+                new ModNameStyleSettings
+                {
+                    TagFormats = new Dictionary<string, string>
+                    {
+                        [" Quality of Life "] = "#80f0b0"
+                    }
+                }));
+
+        Assert.AreEqual(
+            "[color=#eec46d]Better Mod Menu[/color]",
+            ModNameStyleRules.BuildBbCode(
+                "BetterModMenu",
+                "Better Mod Menu",
+                new[] { "Tools & APIs", "Utility" },
+                new ModNameStyleSettings
+                {
+                    TagPriority = new List<string> { " Utilities " }
+                }));
+
+        Assert.AreEqual(
+            "[color=#b8bec6]Better Mod Menu[/color]",
+            ModNameStyleRules.BuildBbCode(
+                "BetterModMenu",
+                "Better Mod Menu",
+                new[] { "QoL", "Misc" },
+                new ModNameStyleSettings
+                {
+                    DisabledTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        " Quality of Life "
+                    }
+                }));
+    }
+
+    [TestMethod]
+    public void BuildBbCode_TreatsMechanicalTagVariantsAsAliases()
+    {
+        var cases = new[]
+        {
+            ("Card", "[color=#32d4ff]Alias Mod[/color]"),
+            ("Character", "[color=#ff5ec7]Alias Mod[/color]"),
+            ("Event", "[color=#ff7a35]Alias Mod[/color]"),
+            ("Potion", "[color=#32e1ca]Alias Mod[/color]"),
+            ("Relic", "[color=#c99638]Alias Mod[/color]"),
+            ("Room", "[color=#82bd5c]Alias Mod[/color]"),
+            ("Humour", "[color=#ffe066]Alias Mod[/color]"),
+            ("Miscellaneous", "[color=#b8bec6]Alias Mod[/color]"),
+            ("none selected", "[color=#8e99a6]Alias Mod[/color]")
+        };
+
+        foreach ((string tag, string expectedBbCode) in cases)
+        {
+            string bbCode = ModNameStyleRules.BuildBbCode(
+                "Alias.Mod",
+                "Alias Mod",
+                new[] { tag },
+                new ModNameStyleSettings());
+
+            Assert.AreEqual(expectedBbCode, bbCode, tag);
+        }
+    }
+
+    [TestMethod]
+    public void BuildBbCode_AcceptsEveryWorkshopTagAlias()
+    {
+        var cases = new[]
+        {
+            ("none selected", "[color=#8e99a6]Alias Mod[/color]"),
+            ("<none>", "[color=#8e99a6]Alias Mod[/color]"),
+            ("none", "[color=#8e99a6]Alias Mod[/color]"),
+            ("no tag", "[color=#8e99a6]Alias Mod[/color]"),
+            ("no tags", "[color=#8e99a6]Alias Mod[/color]"),
+            ("Act", "[color=#ffb257]Alias Mod[/color]"),
+            ("Ancient", "[color=#dfd0a8]Alias Mod[/color]"),
+            ("Card", "[color=#32d4ff]Alias Mod[/color]"),
+            ("Character", "[color=#ff5ec7]Alias Mod[/color]"),
+            ("Cosmetic", "[color=#f1a6ff]Alias Mod[/color]"),
+            ("Event", "[color=#ff7a35]Alias Mod[/color]"),
+            ("Expansions", "[color=#ff7894]Alias Mod[/color]"),
+            ("Extension", "[color=#5fd6a1]Alias Mod[/color]"),
+            ("Humour", "[color=#ffe066]Alias Mod[/color]"),
+            ("Modifier", "[color=#a47cff]Alias Mod[/color]"),
+            ("Monster", "[color=#ff4d3d]Alias Mod[/color]"),
+            ("Potion", "[color=#32e1ca]Alias Mod[/color]"),
+            ("Quality of Life", "[color=#b3ed5e]Alias Mod[/color]"),
+            ("Quality-of-Life", "[color=#b3ed5e]Alias Mod[/color]"),
+            ("Quality Of Life", "[color=#b3ed5e]Alias Mod[/color]"),
+            ("Q.O.L.", "[color=#b3ed5e]Alias Mod[/color]"),
+            ("Relic", "[color=#c99638]Alias Mod[/color]"),
+            ("Room", "[color=#82bd5c]Alias Mod[/color]"),
+            ("Tool", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tools", "[color=#74a6ff]Alias Mod[/color]"),
+            ("API", "[color=#74a6ff]Alias Mod[/color]"),
+            ("APIs", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tools & API", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tool & API", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tool & APIs", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tools and APIs", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tools and API", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tool and API", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Tool and APIs", "[color=#74a6ff]Alias Mod[/color]"),
+            ("Utilities", "[color=#eec46d]Alias Mod[/color]"),
+            ("Miscellaneous", "[color=#b8bec6]Alias Mod[/color]")
+        };
+
+        foreach ((string alias, string expectedBbCode) in cases)
+        {
+            string bbCode = ModNameStyleRules.BuildBbCode(
+                "Alias.Mod",
+                "Alias Mod",
+                new[] { alias },
+                new ModNameStyleSettings());
+
+            Assert.AreEqual(expectedBbCode, bbCode, alias);
+        }
+    }
+
+    [TestMethod]
+    public void BuildBbCode_TreatsToolsAndApiVariantsAsToolsAndApisAliases()
+    {
+        var aliases = new[]
+        {
+            "Tool",
+            "Tools",
+            "API",
+            "APIs",
+            "Tools & API",
+            "Tools and APIs"
+        };
+
+        foreach (string tag in aliases)
+        {
+            string bbCode = ModNameStyleRules.BuildBbCode(
+                "Alias.Mod",
+                "Alias Mod",
+                new[] { tag },
+                new ModNameStyleSettings());
+
+            Assert.AreEqual("[color=#74a6ff]Alias Mod[/color]", bbCode, tag);
+        }
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesQoLCustomFormatForQualityOfLifeAlias()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "#80f0b0"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Quality of Life" },
+            settings);
+
+        Assert.AreEqual("[color=#80f0b0]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesQualityOfLifeCustomFormatForQoLTag()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagFormats = new Dictionary<string, string>
+            {
+                ["Quality of Life"] = "#80f0b0"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "QoL" },
+            settings);
+
+        Assert.AreEqual("[color=#80f0b0]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesCustomTagPriorityBeforeDefaultPriority()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagPriority = new List<string> { "QoL", "Tools & APIs" }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs", "QoL" },
+            settings);
+
+        Assert.AreEqual("[color=#b3ed5e]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_IgnoresUnsupportedCustomPriorityTags()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagPriority = new List<string> { "Multiplayer", "QoL" }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs", "QoL" },
+            settings);
+
+        Assert.AreEqual("[color=#b3ed5e]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_SkipsDisabledSupportedWorkshopTags()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            DisabledTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Tools & APIs"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs", "QoL" },
+            settings);
+
+        Assert.AreEqual("[color=#b3ed5e]Better Mod Menu[/color]", bbCode);
+    }
+
+    [TestMethod]
+    public void TryBuildSimpleColor_ReturnsColorForPlainColorFormatting()
+    {
+        bool resolved = ModNameStyleRules.TryBuildSimpleColor(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs" },
+            new ModNameStyleSettings(),
+            out string color);
+
+        Assert.IsTrue(resolved);
+        Assert.AreEqual("#74a6ff", color);
+    }
+
+    [TestMethod]
+    public void BuildBbCode_UsesCustomModFormatBeforeTags()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            ModFormats = new Dictionary<string, string>
+            {
+                ["Favorite.Mod"] = "[rainbow freq=0.8 sat=0.9 val=1.0]{name}[/rainbow]"
+            }
+        };
+
+        string bbCode = ModNameStyleRules.BuildBbCode(
+            "Favorite.Mod",
+            "Favorite [Mod]",
+            new[] { "QoL" },
+            settings);
+
+        Assert.AreEqual("[rainbow freq=0.8 sat=0.9 val=1.0]Favorite [lb]Mod[rb][/rainbow]", bbCode);
+    }
+
+    [TestMethod]
+    public void RequiresWorkshopTags_ReturnsFalseWhenOnlyModFormatsAreEnabled()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            UseDefaultTagFormats = false,
+            ModFormats = new Dictionary<string, string>
+            {
+                ["Favorite.Mod"] = "#ff77cc"
+            }
+        };
+
+        Assert.IsFalse(ModNameStyleRules.RequiresWorkshopTags(settings));
+    }
+
+    [TestMethod]
+    public void ParseTagsByPublishedFileId_ReadsSteamTags()
+    {
+        string json = """
+        {
+          "response": {
+            "publishedfiledetails": [
+              {
+                "publishedfileid": "3748029698",
+                "tags": [
+                  { "tag": "QoL" },
+                  { "tag": "Tools & APIs" }
+                ]
+              }
+            ]
+          }
+        }
+        """;
+
+        var tagsByFileId = SteamWorkshopTagService.ParseTagsByPublishedFileId(json);
+
+        CollectionAssert.AreEqual(new[] { "QoL", "Tools & APIs" }, tagsByFileId["3748029698"]);
     }
 
     [TestMethod]

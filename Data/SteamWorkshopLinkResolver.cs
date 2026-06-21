@@ -8,6 +8,16 @@ internal static class SteamWorkshopLinkResolver
     public static bool TryGetWorkshopUrl(string? path, out string workshopUrl)
     {
         workshopUrl = string.Empty;
+        if (!TryGetPublishedFileId(path, out string publishedFileId))
+            return false;
+
+        workshopUrl = WorkshopUrlPrefix + publishedFileId;
+        return true;
+    }
+
+    public static bool TryGetPublishedFileId(string? path, out string publishedFileId)
+    {
+        publishedFileId = string.Empty;
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
@@ -24,11 +34,13 @@ internal static class SteamWorkshopLinkResolver
                 continue;
             }
 
-            string publishedFileId = parts[i + 3];
+            publishedFileId = parts[i + 3];
             if (!IsPublishedFileId(publishedFileId))
+            {
+                publishedFileId = string.Empty;
                 return false;
+            }
 
-            workshopUrl = WorkshopUrlPrefix + publishedFileId;
             return true;
         }
 

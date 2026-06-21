@@ -18,7 +18,8 @@ internal static class ProfileSaveStorage
         Dictionary<string, string> modGroups,
         HashSet<string> collapsedGroups,
         TutorialState tutorial,
-        CloudBackupSettings cloudBackups)
+        CloudBackupSettings cloudBackups,
+        ModNameStyleSettings modNameStyles)
     {
         return new ProfileSaveData
         {
@@ -28,7 +29,8 @@ internal static class ProfileSaveStorage
             ModGroups = modGroups,
             CollapsedGroups = collapsedGroups,
             Tutorial = tutorial,
-            CloudBackups = cloudBackups
+            CloudBackups = cloudBackups,
+            ModNameStyles = modNameStyles
         };
     }
 
@@ -42,8 +44,21 @@ internal static class ProfileSaveStorage
             ModGroups = saveData.ModGroups ?? new(),
             CollapsedGroups = saveData.CollapsedGroups ?? new(),
             Tutorial = saveData.Tutorial ?? new(),
-            CloudBackups = saveData.CloudBackups ?? new()
+            CloudBackups = saveData.CloudBackups ?? new(),
+            ModNameStyles = NormalizeModNameStyleSettings(saveData.ModNameStyles)
         };
+    }
+
+    private static ModNameStyleSettings NormalizeModNameStyleSettings(ModNameStyleSettings? settings)
+    {
+        if (settings == null)
+            return new ModNameStyleSettings();
+
+        settings.TagFormats ??= new();
+        settings.TagPriority ??= new();
+        settings.DisabledTags ??= new(StringComparer.OrdinalIgnoreCase);
+        settings.ModFormats ??= new();
+        return settings;
     }
 
     public static bool TryWrite(string path, ProfileSaveData saveData, Action<string> setActiveConfigExtensionFromPath, out string? error)
