@@ -9,6 +9,7 @@ internal static class ModdingScreenInfoPanelOps
     private const string ActionRootName = "BetterModMenuSelectedModActions";
     private const string MatchReasonName = "BetterModMenuSearchMatchReason";
     private const string ConfigButtonName = "BetterModMenuConfigButton";
+    private const string GameplayBadgeName = "BetterModMenuGameplayBadge";
 
     public static void Refresh(NModdingScreen screen, ModdingScreenSession session)
     {
@@ -19,6 +20,7 @@ internal static class ModdingScreenInfoPanelOps
         var root = EnsureActionRoot(infoContainer);
         var reasonLabel = root.GetNode<Label>(MatchReasonName);
         var configButton = root.GetNode<Button>(ConfigButtonName);
+        var gameplayBadge = configButton.GetNode<Label>(GameplayBadgeName);
 
         string selectedModId = session.SelectedModId;
         var provider = string.IsNullOrWhiteSpace(selectedModId)
@@ -27,7 +29,8 @@ internal static class ModdingScreenInfoPanelOps
         string providerName = GetProviderName(provider);
 
         bool affectsGameplay = ProfileManager.ModGameplayImpactCache.TryGetValue(selectedModId, out bool cachedImpact) && cachedImpact;
-        configButton.Text = affectsGameplay ? "Config\nAffects gameplay" : "Config";
+        configButton.Text = "Config";
+        gameplayBadge.Visible = affectsGameplay;
         reasonLabel.Text = BuildMatchReason(session, selectedModId);
         reasonLabel.Visible = !string.IsNullOrWhiteSpace(reasonLabel.Text);
         UpdateActionRootLayout(root, reasonLabel.Visible);
@@ -87,11 +90,29 @@ internal static class ModdingScreenInfoPanelOps
             Name = ConfigButtonName,
             Text = "Config",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            ClipContents = true,
             CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailConfigButtonHeight),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         ModdingScreenVanillaStyle.ApplyDetailActionButton(config);
         MatchDetailPanelFont(infoContainer, config);
+
+        var gameplayBadge = new Label
+        {
+            Name = GameplayBadgeName,
+            Text = "Affects gameplay",
+            Visible = false,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ClipText = true
+        };
+        gameplayBadge.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+        gameplayBadge.OffsetLeft = 10;
+        gameplayBadge.OffsetTop = 6;
+        gameplayBadge.OffsetRight = 230;
+        gameplayBadge.OffsetBottom = 28;
+        ModdingScreenVanillaStyle.ApplyDetailActionBadge(gameplayBadge);
+        config.AddChild(gameplayBadge);
+
         config.Pressed += () =>
         {
             var screen = ModdingScreenNodeOps.FindOwningScreen(config);

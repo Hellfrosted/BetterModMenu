@@ -55,4 +55,5 @@ internal static class ModdingScreenConstants
     public const float DetailDescriptionBottomInset =
         DetailActionPanelHeight + DetailDescriptionActionGap;
     public const int DetailConfigButtonFontSize = 34;
+    public const int DetailConfigBadgeFontSize = 16;
 }

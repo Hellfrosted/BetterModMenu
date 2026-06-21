@@ -20,7 +20,8 @@ internal static class ModNameStyleEditorDialog
         var popup = new ConfirmationDialog
         {
             Title = "Mod Name Style",
-            DialogText = string.Empty
+            DialogText = string.Empty,
+            Unresizable = true
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
@@ -55,7 +56,6 @@ internal static class ModNameStyleEditorDialog
         void SetStatus(string text, bool error = false)
         {
             statusLabel.Text = text;
-            statusLabel.Visible = !string.IsNullOrWhiteSpace(text);
             statusLabel.AddThemeColorOverride("font_color", error
                 ? new Color(1f, 0.45f, 0.38f, 1f)
                 : new Color(0.39f, 0.83f, 0.92f, 1f));
@@ -302,7 +302,11 @@ internal static class ModNameStyleEditorDialog
         popup.GetCancelButton().Visible = false;
         screen.AddChild(popup);
         RefreshAll();
-        popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
+        var popupSize = new Vector2I(layout.PopupWidth, layout.PopupHeight);
+        popup.MinSize = popupSize;
+        popup.MaxSize = popupSize;
+        popup.PopupCentered(popupSize);
+        popup.Size = popupSize;
     }
 
     private static bool SaveWorkingSettings(
@@ -344,6 +348,7 @@ internal static class ModNameStyleEditorDialog
         var shell = new PanelContainer
         {
             CustomMinimumSize = new Vector2(layout.PanelWidth, layout.ScrollHeight + 42),
+            ClipContents = true,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
@@ -482,8 +487,8 @@ internal static class ModNameStyleEditorDialog
         var label = new Label
         {
             Text = string.Empty,
-            Visible = false,
             CustomMinimumSize = new Vector2(0, 28),
+            ClipText = true,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };

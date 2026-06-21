@@ -4,6 +4,8 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenVanillaStyle
 {
+    private const int DialogTitleHeight = 38;
+
     private static readonly Color GoldBorderColor = new(0.86f, 0.62f, 0.27f, 0.95f);
     private static readonly Color TextColor = new(0.92f, 0.86f, 0.74f, 1f);
     private static readonly Color MutedTextColor = new(0.72f, 0.66f, 0.58f, 1f);
@@ -33,6 +35,12 @@ internal static class ModdingScreenVanillaStyle
     {
         ApplyButton(button);
         button.AddThemeFontSizeOverride("font_size", ModdingScreenConstants.DetailConfigButtonFontSize);
+    }
+
+    public static void ApplyDetailActionBadge(Label label)
+    {
+        ApplyLabel(label, muted: true);
+        label.AddThemeFontSizeOverride("font_size", ModdingScreenConstants.DetailConfigBadgeFontSize);
     }
 
     public static void ApplyDetailActionAvailability(Button button, bool available)
@@ -83,8 +91,12 @@ internal static class ModdingScreenVanillaStyle
     public static void ApplyDialogWindow(AcceptDialog popup)
     {
         popup.AddThemeColorOverride("title_color", TextColor);
-        popup.AddThemeStyleboxOverride("embedded_border", BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8));
-        popup.AddThemeStyleboxOverride("embedded_unfocused_border", BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8));
+        popup.AddThemeColorOverride("title_outline_modulate", new Color(0f, 0f, 0f, 0.82f));
+        popup.AddThemeConstantOverride("title_height", DialogTitleHeight);
+        popup.AddThemeConstantOverride("title_outline_size", 2);
+        popup.AddThemeConstantOverride("close_v_offset", 25);
+        popup.AddThemeStyleboxOverride("embedded_border", BuildDialogWindowBox());
+        popup.AddThemeStyleboxOverride("embedded_unfocused_border", BuildDialogWindowBox());
     }
 
     public static void ApplyDialogPanel(Control control)
@@ -130,6 +142,13 @@ internal static class ModdingScreenVanillaStyle
         style.SetBorderWidthAll(borderWidth);
         style.SetCornerRadiusAll(5);
         style.SetContentMarginAll(6);
+        return style;
+    }
+
+    private static StyleBoxFlat BuildDialogWindowBox()
+    {
+        var style = BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8);
+        style.SetExpandMargin(Side.Top, DialogTitleHeight);
         return style;
     }
 }
