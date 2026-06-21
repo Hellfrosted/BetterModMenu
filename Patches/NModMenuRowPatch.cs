@@ -29,8 +29,8 @@ public static class NModMenuRowPatch
         if (platformIcon != null)
             platformIcon.Visible = false;
 
-        ApplyColoredModName(__instance, modId);
-        Callable.From(() => ApplyColoredModName(__instance, modId)).CallDeferred();
+        ApplyCurrentModNameStyle(__instance);
+        Callable.From(() => ApplyCurrentModNameStyle(__instance)).CallDeferred();
 
         if (__instance.GetNodeOrNull<HBoxContainer>("RowCustomControls") != null) return;
 
@@ -101,6 +101,16 @@ public static class NModMenuRowPatch
         Callable.From(() => UpdateCustomControlsLayout(__instance, container, groupDropdown)).CallDeferred();
     }
 
+    internal static void RefreshVisibleModNames(NModdingScreen screen)
+    {
+        var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+        if (modRowContainer == null)
+            return;
+
+        foreach (var row in modRowContainer.GetChildren().OfType<NModMenuRow>())
+            ApplyCurrentModNameStyle(row);
+    }
+
     private static void AddGameplayImpactIndicator(HBoxContainer container)
     {
         var slot = new CenterContainer
@@ -124,29 +134,41 @@ public static class NModMenuRowPatch
         container.AddChild(slot);
     }
 
-    private static void ApplyColoredModName(NModMenuRow row, string modId)
+    private static void ApplyCurrentModNameStyle(NModMenuRow row)
     {
+        string modId = row.Mod?.manifest?.id ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(modId))
+            return;
+
         string displayName = row.Mod?.manifest?.name ?? modId;
         if (string.IsNullOrWhiteSpace(displayName))
             displayName = modId;
 
-        var styleTags = BuildStyleTags(modId);
-        if (!ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
-            return;
-
-        var nameNode = FindNameTextNode(row, displayName);
+        var nameNode = FindVanillaNameTextNode(row, displayName);
         if (nameNode == null)
             return;
+
+        var styleTags = BuildStyleTags(modId).ToArray();
+        if (!ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
+        {
+            RestorePlainModName(row, nameNode, displayName);
+            return;
+        }
 
         if (ModNameStyleRules.TryBuildSimpleColor(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string simpleColor) &&
             TryParseColor(simpleColor, out Color labelColor))
         {
+            RemoveColoredNameLabel(row);
+            nameNode.Visible = true;
             ApplySimpleNameColor(nameNode, displayName, labelColor);
             return;
         }
 
         if (nameNode is RichTextLabel richNameLabel)
         {
+            RemoveColoredNameLabel(row);
+            nameNode.Visible = true;
+            ClearSimpleNameOverride(nameNode);
             richNameLabel.BbcodeEnabled = true;
             richNameLabel.ParseBbcode(bbCode);
             return;
@@ -175,12 +197,39 @@ public static class NModMenuRowPatch
             SizeFlagsVertical = nameNode.SizeFlagsVertical,
             TooltipText = nameNode.TooltipText
         };
+        ClearSimpleNameOverride(nameNode);
         ApplyRichNameTheme(nameNode, richLabel);
         richLabel.ParseBbcode(bbCode);
 
         parent.AddChild(richLabel);
         parent.MoveChild(richLabel, nameNode.GetIndex());
         nameNode.Visible = false;
+    }
+
+    private static void RestorePlainModName(NModMenuRow row, Control nameNode, string displayName)
+    {
+        RemoveColoredNameLabel(row);
+        nameNode.Visible = true;
+
+        if (nameNode is Label label)
+        {
+            label.Text = displayName;
+            label.RemoveThemeColorOverride("font_color");
+        }
+        else if (nameNode is RichTextLabel richTextLabel)
+        {
+            richTextLabel.BbcodeEnabled = false;
+            richTextLabel.Text = displayName;
+            richTextLabel.RemoveThemeColorOverride("default_color");
+        }
+    }
+
+    private static void ClearSimpleNameOverride(Control nameNode)
+    {
+        if (nameNode is Label label)
+            label.RemoveThemeColorOverride("font_color");
+        else if (nameNode is RichTextLabel richTextLabel)
+            richTextLabel.RemoveThemeColorOverride("default_color");
     }
 
     private static void ApplySimpleNameColor(Control nameNode, string displayName, Color color)
@@ -261,17 +310,29 @@ public static class NModMenuRowPatch
         return null;
     }
 
-    private static Control? FindNameTextNode(Node root, string displayName)
+    private static void RemoveColoredNameLabel(Node root)
+    {
+        if (FindColoredNameLabel(root) is { } existing)
+        {
+            existing.GetParent()?.RemoveChild(existing);
+            existing.QueueFree();
+        }
+    }
+
+    private static Control? FindVanillaNameTextNode(Node root, string displayName)
     {
         foreach (Node child in root.GetChildren())
         {
+            if (string.Equals(child.Name.ToString(), "BetterModMenuColoredName", StringComparison.Ordinal))
+                continue;
+
             if (child is Label label && string.Equals(label.Text, displayName, StringComparison.Ordinal))
                 return label;
 
             if (child is RichTextLabel richTextLabel && string.Equals(richTextLabel.Text, displayName, StringComparison.Ordinal))
                 return richTextLabel;
 
-            var nested = FindNameTextNode(child, displayName);
+            var nested = FindVanillaNameTextNode(child, displayName);
             if (nested != null)
                 return nested;
         }

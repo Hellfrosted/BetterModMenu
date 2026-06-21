@@ -7,7 +7,6 @@ namespace BetterModMenu.Patches;
 internal static class ModdingScreenInfoPanelOps
 {
     private const string ActionRootName = "BetterModMenuSelectedModActions";
-    private const string GameplayImpactName = "BetterModMenuGameplayImpact";
     private const string MatchReasonName = "BetterModMenuSearchMatchReason";
     private const string ConfigButtonName = "BetterModMenuConfigButton";
 
@@ -18,7 +17,6 @@ internal static class ModdingScreenInfoPanelOps
             return;
 
         var root = EnsureActionRoot(infoContainer);
-        var gameplayImpactLabel = root.GetNode<Label>(GameplayImpactName);
         var reasonLabel = root.GetNode<Label>(MatchReasonName);
         var configButton = root.GetNode<Button>(ConfigButtonName);
 
@@ -29,14 +27,15 @@ internal static class ModdingScreenInfoPanelOps
         string providerName = GetProviderName(provider);
 
         bool affectsGameplay = ProfileManager.ModGameplayImpactCache.TryGetValue(selectedModId, out bool cachedImpact) && cachedImpact;
-        gameplayImpactLabel.Visible = affectsGameplay;
+        configButton.Text = affectsGameplay ? "Config\nAffects gameplay" : "Config";
         reasonLabel.Text = BuildMatchReason(session, selectedModId);
         reasonLabel.Visible = !string.IsNullOrWhiteSpace(reasonLabel.Text);
+        UpdateActionRootLayout(root, reasonLabel.Visible);
         bool hasConfigProvider = provider != ModConfigProviderKind.None;
         ModdingScreenVanillaStyle.ApplyDetailActionAvailability(configButton, hasConfigProvider);
         configButton.TooltipText = provider == ModConfigProviderKind.None
-            ? "No RitsuLib or BaseLib config is available for the selected mod."
-            : "Open this mod's " + providerName + " config.";
+            ? BuildConfigTooltip("No RitsuLib or BaseLib config is available for the selected mod.", affectsGameplay)
+            : BuildConfigTooltip("Open this mod's " + providerName + " config.", affectsGameplay);
     }
 
     public static void ReserveDescriptionActionArea(Control? description)
@@ -71,20 +70,6 @@ internal static class ModdingScreenInfoPanelOps
         root.OffsetTop = -ModdingScreenConstants.DetailActionPanelHeight;
         root.OffsetBottom = -ModdingScreenConstants.DetailActionBottomInset;
 
-        var gameplayImpact = new Label
-        {
-            Name = GameplayImpactName,
-            Text = "Affects gameplay",
-            Visible = false,
-            TooltipText = "This mod affects gameplay.",
-            CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailStatusLineHeight),
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
-        };
-        ModdingScreenVanillaStyle.ApplyLabel(gameplayImpact, muted: false);
-        gameplayImpact.AddThemeColorOverride("font_color", new Color(1f, 0.67f, 0.36f));
-        gameplayImpact.AddThemeFontSizeOverride("font_size", ModdingScreenConstants.DetailStatusFontSize);
-        root.AddChild(gameplayImpact);
-
         var reason = new Label
         {
             Name = MatchReasonName,
@@ -101,9 +86,9 @@ internal static class ModdingScreenInfoPanelOps
         {
             Name = ConfigButtonName,
             Text = "Config",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
             CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailConfigButtonHeight),
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         ModdingScreenVanillaStyle.ApplyDetailActionButton(config);
         MatchDetailPanelFont(infoContainer, config);
@@ -121,6 +106,22 @@ internal static class ModdingScreenInfoPanelOps
 
         infoContainer.AddChild(root);
         return root;
+    }
+
+    private static void UpdateActionRootLayout(VBoxContainer root, bool reasonVisible)
+    {
+        float contentHeight = ModdingScreenConstants.DetailConfigButtonHeight;
+        if (reasonVisible)
+            contentHeight += ModdingScreenConstants.DetailStatusLineHeight + ModdingScreenConstants.DetailActionGap;
+
+        root.OffsetTop = -(contentHeight + ModdingScreenConstants.DetailActionBottomInset);
+    }
+
+    private static string BuildConfigTooltip(string baseText, bool affectsGameplay)
+    {
+        return affectsGameplay
+            ? baseText + "\nThis mod affects gameplay."
+            : baseText;
     }
 
     private static void MatchDetailPanelFont(Control infoContainer, Button button)

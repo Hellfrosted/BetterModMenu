@@ -11,7 +11,7 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 - Back up Better Mod Menu profile data and the current enabled-mod settings, with Steam Workshop links when available.
 - Export the installed mod list as an Excel-friendly CSV with versions, enabled state, group names, and Steam Workshop links when available.
 - View full BetterModMenu/TTSMM log output from the mod screen with warnings and errors highlighted, level filters, plus a shortcut to open the log folder.
-- Color mod names from the supported Steam Workshop tags with polished defaults for content, utility, QoL, tools, and misc mods.
+- Color mod names from the supported Steam Workshop tags, and adjust tag or per-mod colors from the in-game `Style` editor.
 - Reopen the first-launch tutorial from the in-game `Help` button.
 
 ## Requirements
@@ -22,7 +22,7 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 
 1. Download the latest `BetterModMenu_v*.zip` from [releases](../../releases).
 2. Extract `BetterModMenu.dll` and `BetterModMenu.json` into your Slay the Spire 2 `mods` folder.
-3. Launch the game and open Slay the Spire 2's built-in `Modding` screen. Better Mod Menu's `Profile`, `Group`, `Backup`, `CSV`, `Logs`, and `Help` controls appear there.
+3. Launch the game and open Slay the Spire 2's built-in `Modding` screen. Better Mod Menu's `Profile`, `Group`, `Backup`, `CSV`, `Logs`, `Style`, and `Help` controls appear there.
 
 ## Where To Find It
 
@@ -37,10 +37,11 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 - `Load` shows available Better Mod Menu profile and group backups, newest first, and restores the one you choose. Installed mod files are not changed.
 - `CSV` creates a spreadsheet-friendly installed-mod list with names, versions, enabled state, group names, and Steam Workshop links when available.
 - `Logs` opens the full discovered BetterModMenu/TTSMM log with warnings and errors highlighted. The log viewer can show or hide debug, info, warning, error, and unclassified lines. Its `Open Folder` button opens the folder containing that log through the operating system file manager.
+- `Style` opens the compact mod-name color editor. Use it to turn name styling on or off, keep or disable default tag colors, set a supported Steam Workshop tag color, or set a one-mod color override by mod id or displayed name.
 - `Help` reopens the tutorial popup.
 - `Group` plus `Add` creates a custom group label. Use each mod row's group picker to put mods in that group.
 - Group headers can collapse the section, move or rename the group, delete only the group label, or enable/disable every mod in the group.
-- Steam Workshop mods with recognized tags get colored names automatically. Local mods and untagged Workshop mods keep the normal name unless configured in save data.
+- Steam Workshop mods with recognized tags get colored names automatically. Local mods and untagged Workshop mods keep the normal name unless configured with `Style` or in save data.
 
 ## Notes
 
@@ -66,7 +67,7 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 
 In cloud-capable builds, the in-game `Cloud` action sets or clears the synced mirror folder.
 
-Mod name styles are configured in the same save file. The canonical Steam Workshop tags are exactly: `<none selected>`, `Acts`, `Ancients`, `Audio`, `Cards`, `Characters`, `Cosmetics`, `Events`, `Expansion`, `Extensions`, `Humor`, `Modifiers`, `Monsters`, `Potions`, `QoL`, `Relics`, `Rooms`, `Tools & APIs`, `Utility`, and `Misc`. `ModFormats` targets a specific mod id or displayed mod name and wins before tag formatting, which is useful for favorite-mod easter eggs. Then `DisabledTags` removes supported tags, `TagFormats` overrides the remaining supported tag formats, and the effective `TagPriority` picks which matching tag wins. Custom normalized priority entries are tried first, then the default priority order is used as fallback, including when `UseDefaultTagFormats` is `false`. Common mechanical aliases normalize to canonical tags, such as `Quality of Life` to `QoL`, `Tools and APIs` to `Tools & APIs`, singular forms like `Card` to `Cards`, and `Miscellaneous` to `Misc`. Unsupported tag names are ignored. Values can be any Godot RichTextLabel BBCode template that includes `{name}`, or a bare hex color.
+Mod name styles are saved in the same profile file. The in-game `Style` editor covers common color editing for supported Steam Workshop tags and per-mod overrides. The canonical Steam Workshop tags are exactly: `<none selected>`, `Acts`, `Ancients`, `Audio`, `Cards`, `Characters`, `Cosmetics`, `Events`, `Expansion`, `Extensions`, `Humor`, `Modifiers`, `Monsters`, `Potions`, `QoL`, `Relics`, `Rooms`, `Tools & APIs`, `Utility`, and `Misc`. `ModFormats` targets a specific mod id or displayed mod name and wins before tag formatting, which is useful for favorite-mod easter eggs. Then `DisabledTags` removes supported tags, `TagFormats` overrides the remaining supported tag formats, and the effective `TagPriority` picks which matching tag wins. Custom normalized priority entries are tried first, then the default priority order is used as fallback, including when `UseDefaultTagFormats` is `false`. Common mechanical aliases normalize to canonical tags, such as `Quality of Life` to `QoL`, `Tools and APIs` to `Tools & APIs`, singular forms like `Card` to `Cards`, and `Miscellaneous` to `Misc`. Unsupported tag names are ignored. Values can be any Godot RichTextLabel BBCode template that includes `{name}`, or a bare hex color.
 Set `Enabled` to `false` to keep the vanilla text and skip Workshop tag lookups.
 
 ```json

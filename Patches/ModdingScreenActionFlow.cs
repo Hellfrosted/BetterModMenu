@@ -18,6 +18,7 @@ internal static class ModdingScreenActionFlow
         Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
+        Action onStyleEditorPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
         Func<string, bool> onAddGroupRequested,
@@ -40,6 +41,7 @@ internal static class ModdingScreenActionFlow
             onLoadBackupPressed,
             onExportModListPressed,
             onViewLogsPressed,
+            onStyleEditorPressed,
             onTutorialPressed,
             onCloudBackupPressed,
             query =>

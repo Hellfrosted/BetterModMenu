@@ -495,9 +495,9 @@ public class LogicTests
     public void DetailActionPanelGeometry_ReservesOnlyTheVisibleActionArea()
     {
         float expectedContentHeight =
-            ModdingScreenConstants.DetailStatusLineHeight * 2f +
+            ModdingScreenConstants.DetailStatusLineHeight +
             ModdingScreenConstants.DetailConfigButtonHeight +
-            ModdingScreenConstants.DetailActionGap * 2f;
+            ModdingScreenConstants.DetailActionGap;
         float expectedPanelDistanceFromBottom =
             expectedContentHeight + ModdingScreenConstants.DetailActionBottomInset;
         float expectedDescriptionInset =
@@ -948,6 +948,49 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void TryReadTail_ReturnsTailWithoutScanningEarlierContent()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            File.WriteAllLines(logPath, Enumerable.Range(1, 6000).Select(number => "line " + number));
+
+            bool read = LogViewerService.TryReadTail(logPath, maxLines: 5000, maxChars: 500000, out string content, out string? error);
+
+            Assert.IsTrue(read, error);
+            Assert.IsFalse(content.Contains("line 1" + Environment.NewLine, StringComparison.Ordinal));
+            StringAssert.Contains(content, "line 1001");
+            StringAssert.Contains(content, "line 6000");
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryReadTail_LongSingleLineReturnsBoundedTail()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            File.WriteAllText(logPath, new string('a', 100_000) + new string('b', 12_000));
+
+            bool read = LogViewerService.TryReadTail(logPath, maxLines: 1, maxChars: 10000, out string content, out string? error);
+
+            Assert.IsTrue(read, error);
+            Assert.AreEqual(10000, content.Length);
+            Assert.AreEqual(new string('b', 10000), content);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
     public void BuildHighlightedBbCode_HighlightsStartupWarningModNames()
     {
         string content = string.Join('\n',
@@ -1242,6 +1285,180 @@ public class LogicTests
         };
 
         CollectionAssert.AreEqual(supportedTags, ModNameStyleRules.GetDefaultTagFormats().Keys.ToArray());
+    }
+
+    [TestMethod]
+    public void TrySetTagColor_CanonicalizesTagAndNormalizesHexColor()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            DisabledTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "QoL"
+            }
+        };
+
+        bool set = ModNameStyleEditorRules.TrySetTagColor(
+            settings,
+            " Quality of Life ",
+            " ABCDEF ",
+            out string supportedTag,
+            out string normalizedColor);
+
+        Assert.IsTrue(set);
+        Assert.AreEqual("QoL", supportedTag);
+        Assert.AreEqual("#abcdef", normalizedColor);
+        Assert.AreEqual("#abcdef", settings.TagFormats["QoL"]);
+        Assert.IsFalse(settings.DisabledTags.Contains("QoL"));
+    }
+
+    [TestMethod]
+    public void TryDisableAndResetTagColor_UseCanonicalWorkshopTags()
+    {
+        var settings = new ModNameStyleSettings();
+
+        bool disabled = ModNameStyleEditorRules.TryDisableTagColor(settings, "Tools and APIs", out string disabledTag);
+        string disabledPreview = ModNameStyleEditorRules.BuildPreviewBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs" },
+            settings);
+        bool wasDisabled = settings.DisabledTags.Contains("Tools & APIs");
+
+        bool reset = ModNameStyleEditorRules.TryResetTagColor(settings, "Tool", out string resetTag);
+        string resetPreview = ModNameStyleEditorRules.BuildPreviewBbCode(
+            "BetterModMenu",
+            "Better Mod Menu",
+            new[] { "Tools & APIs" },
+            settings);
+
+        Assert.IsTrue(disabled);
+        Assert.AreEqual("Tools & APIs", disabledTag);
+        Assert.IsTrue(wasDisabled);
+        Assert.AreEqual("Better Mod Menu", disabledPreview);
+        Assert.IsTrue(reset);
+        Assert.AreEqual("Tools & APIs", resetTag);
+        Assert.IsFalse(settings.DisabledTags.Contains("Tools & APIs"));
+        Assert.AreEqual("[color=#74a6ff]Better Mod Menu[/color]", resetPreview);
+    }
+
+    [TestMethod]
+    public void TrySetModColor_BuildPreviewUsesModOverrideBeforeTags()
+    {
+        var settings = new ModNameStyleSettings();
+
+        Assert.IsTrue(ModNameStyleEditorRules.TrySetTagColor(settings, "QoL", "#00FF00", out _, out _));
+        bool setModColor = ModNameStyleEditorRules.TrySetModColor(
+            settings,
+            " Favorite.Mod ",
+            "FF77CC",
+            out string normalizedColor);
+
+        string overridePreview = ModNameStyleEditorRules.BuildPreviewBbCode(
+            "Favorite.Mod",
+            "Favorite Mod",
+            new[] { "QoL" },
+            settings);
+        bool removed = ModNameStyleEditorRules.RemoveModColor(settings, "favorite.mod");
+        string tagPreview = ModNameStyleEditorRules.BuildPreviewBbCode(
+            "Favorite.Mod",
+            "Favorite Mod",
+            new[] { "QoL" },
+            settings);
+
+        Assert.IsTrue(setModColor);
+        Assert.AreEqual("#ff77cc", normalizedColor);
+        Assert.AreEqual("[color=#ff77cc]Favorite Mod[/color]", overridePreview);
+        Assert.IsTrue(removed);
+        Assert.AreEqual("[color=#00ff00]Favorite Mod[/color]", tagPreview);
+    }
+
+    [TestMethod]
+    public void TrySetColor_InvalidColorDoesNotMutateSettings()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            Enabled = false,
+            UseDefaultTagFormats = false,
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "#123456"
+            },
+            TagPriority = new List<string> { "QoL" },
+            DisabledTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Misc"
+            },
+            ModFormats = new Dictionary<string, string>
+            {
+                ["Favorite.Mod"] = "#abcdef"
+            }
+        };
+        var before = ModNameStyleEditorRules.Clone(settings);
+
+        bool tagSet = ModNameStyleEditorRules.TrySetTagColor(settings, "QoL", "#12345g", out _, out _);
+        bool modSet = ModNameStyleEditorRules.TrySetModColor(settings, "Favorite.Mod", "blue", out _);
+
+        Assert.IsFalse(tagSet);
+        Assert.IsFalse(modSet);
+        AssertModNameStyleSettingsEqual(before, settings);
+    }
+
+    [TestMethod]
+    public void TrySetTagColor_RejectsUnsupportedTagWithoutMutatingSettings()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "#123456"
+            }
+        };
+        var before = ModNameStyleEditorRules.Clone(settings);
+
+        bool set = ModNameStyleEditorRules.TrySetTagColor(settings, "Multiplayer", "#abcdef", out _, out _);
+
+        Assert.IsFalse(set);
+        AssertModNameStyleSettingsEqual(before, settings);
+    }
+
+    [TestMethod]
+    public void ResetToDefaults_RestoresDefaultModNameStyleSettings()
+    {
+        var settings = new ModNameStyleSettings
+        {
+            Enabled = false,
+            UseDefaultTagFormats = false,
+            TagFormats = new Dictionary<string, string>
+            {
+                ["QoL"] = "#123456"
+            },
+            TagPriority = new List<string> { "QoL" },
+            DisabledTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Misc"
+            },
+            ModFormats = new Dictionary<string, string>
+            {
+                ["Favorite.Mod"] = "#abcdef"
+            }
+        };
+
+        ModNameStyleEditorRules.ResetToDefaults(settings);
+
+        Assert.IsTrue(settings.Enabled);
+        Assert.IsTrue(settings.UseDefaultTagFormats);
+        Assert.AreEqual(0, settings.TagFormats.Count);
+        Assert.AreEqual(0, settings.TagPriority.Count);
+        Assert.AreEqual(0, settings.DisabledTags.Count);
+        Assert.AreEqual(0, settings.ModFormats.Count);
+        Assert.AreEqual(
+            "[color=#b3ed5e]Better Mod Menu[/color]",
+            ModNameStyleEditorRules.BuildPreviewBbCode(
+                "BetterModMenu",
+                "Better Mod Menu",
+                new[] { "QoL" },
+                settings));
     }
 
     [TestMethod]
@@ -1749,6 +1966,33 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void GetPreferredStyleEditorDialogLayout_UsesDenseRowsAndFixedControls()
+    {
+        StyleEditorDialogLayout layout = ModdingScreenDialogRules.GetPreferredStyleEditorDialogLayout();
+
+        Assert.AreEqual(64, layout.RowHeight);
+        Assert.AreEqual(44, layout.SwatchSize);
+        Assert.IsTrue(layout.SettingWidth >= 324);
+        Assert.IsTrue(layout.LabelWidth + layout.SettingWidth < layout.PanelWidth);
+        Assert.IsTrue(layout.ScrollHeight < layout.PopupHeight);
+    }
+
+    [TestMethod]
+    public void FitStyleEditorDialogToViewport_KeepsEditorInsideInitial1080pWindow()
+    {
+        StyleEditorDialogLayout layout = ModdingScreenDialogRules.FitStyleEditorDialogToViewport(
+            ModdingScreenDialogRules.GetPreferredStyleEditorDialogLayout(),
+            viewportWidth: 1080,
+            viewportHeight: 720);
+
+        Assert.IsTrue(layout.PopupWidth <= 960);
+        Assert.IsTrue(layout.PopupHeight <= 650);
+        Assert.IsTrue(layout.PanelWidth < layout.PopupWidth);
+        Assert.IsTrue(layout.ScrollHeight < layout.PopupHeight);
+        Assert.IsTrue(layout.SettingWidth >= 420);
+    }
+
+    [TestMethod]
     public void ShouldCreateAutomaticBackup_RunsAutomaticReasonsOnceAndNeverForManual()
     {
         var completedReasons = new HashSet<ProfileBackupReason>();
@@ -1869,6 +2113,16 @@ public class LogicTests
             directory = directory.Parent;
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find BetterModMenu.csproj.");
+    }
+
+    private static void AssertModNameStyleSettingsEqual(ModNameStyleSettings expected, ModNameStyleSettings actual)
+    {
+        Assert.AreEqual(expected.Enabled, actual.Enabled);
+        Assert.AreEqual(expected.UseDefaultTagFormats, actual.UseDefaultTagFormats);
+        CollectionAssert.AreEqual(expected.TagFormats.ToList(), actual.TagFormats.ToList());
+        CollectionAssert.AreEqual(expected.TagPriority, actual.TagPriority);
+        CollectionAssert.AreEqual(expected.DisabledTags.ToList(), actual.DisabledTags.ToList());
+        CollectionAssert.AreEqual(expected.ModFormats.ToList(), actual.ModFormats.ToList());
     }
 
 }

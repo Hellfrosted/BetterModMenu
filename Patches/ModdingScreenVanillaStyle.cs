@@ -7,8 +7,11 @@ internal static class ModdingScreenVanillaStyle
     private static readonly Color GoldBorderColor = new(0.86f, 0.62f, 0.27f, 0.95f);
     private static readonly Color TextColor = new(0.92f, 0.86f, 0.74f, 1f);
     private static readonly Color MutedTextColor = new(0.72f, 0.66f, 0.58f, 1f);
+    private static readonly Color CyanAccentColor = new(0.39f, 0.83f, 0.92f, 0.92f);
     private static readonly Color LogPanelColor = new(0.035f, 0.032f, 0.03f, 0.98f);
     private static readonly Color ToolbarPanelColor = new(0.17f, 0.16f, 0.15f, 0.96f);
+    private static readonly Color DialogPanelColor = new(0.07f, 0.06f, 0.052f, 0.99f);
+    private static readonly Color DialogInsetColor = new(0.025f, 0.024f, 0.023f, 0.97f);
 
     public static void ApplyGroupHeader(HBoxContainer header)
     {
@@ -55,6 +58,11 @@ internal static class ModdingScreenVanillaStyle
     public static void ApplyLineEdit(LineEdit input)
     {
         input.CustomMinimumSize = new Vector2(input.CustomMinimumSize.X, 30);
+        input.AddThemeColorOverride("font_color", TextColor);
+        input.AddThemeColorOverride("font_placeholder_color", MutedTextColor);
+        input.AddThemeStyleboxOverride("normal", BuildPanelBox(new Color(0.04f, 0.038f, 0.034f, 0.98f), new Color(1f, 0.95f, 0.86f, 0.2f), 1, 0));
+        input.AddThemeStyleboxOverride("focus", BuildPanelBox(new Color(0.045f, 0.043f, 0.039f, 0.98f), CyanAccentColor, 1, 2));
+        input.AddThemeStyleboxOverride("read_only", BuildPanelBox(new Color(0.035f, 0.033f, 0.03f, 0.9f), new Color(1f, 0.95f, 0.86f, 0.12f), 1, 0));
     }
 
     public static void ApplyOptionButton(OptionButton button)
@@ -70,6 +78,42 @@ internal static class ModdingScreenVanillaStyle
     public static void ApplyLogToolbarPanel(Control control)
     {
         control.AddThemeStyleboxOverride("panel", BuildPanelBox(ToolbarPanelColor, new Color(1f, 0.95f, 0.86f, 0.18f), 1, 4));
+    }
+
+    public static void ApplyDialogWindow(AcceptDialog popup)
+    {
+        popup.AddThemeColorOverride("title_color", TextColor);
+        popup.AddThemeStyleboxOverride("embedded_border", BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8));
+        popup.AddThemeStyleboxOverride("embedded_unfocused_border", BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8));
+    }
+
+    public static void ApplyDialogPanel(Control control)
+    {
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(DialogPanelColor, GoldBorderColor, 2, 8));
+    }
+
+    public static void ApplyDialogInsetPanel(Control control)
+    {
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(DialogInsetColor, new Color(1f, 0.95f, 0.86f, 0.22f), 1, 0));
+    }
+
+    public static void ApplyDialogToolbarPanel(Control control)
+    {
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(ToolbarPanelColor, new Color(0.88f, 0.71f, 0.42f, 0.52f), 1, 4));
+    }
+
+    public static void ApplySwatchPanel(Control control)
+    {
+        control.AddThemeStyleboxOverride("panel", BuildPanelBox(new Color(0.02f, 0.02f, 0.02f, 1f), CyanAccentColor, 1, 0));
+    }
+
+    public static void ApplyPreviewText(RichTextLabel label, int fontSize)
+    {
+        label.AddThemeColorOverride("default_color", TextColor);
+        label.AddThemeFontSizeOverride("normal_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_font_size", fontSize);
+        label.AddThemeFontSizeOverride("italics_font_size", fontSize);
+        label.AddThemeFontSizeOverride("bold_italics_font_size", fontSize);
     }
 
     private static StyleBoxFlat BuildPanelBox(Color background, Color border, int borderWidth, int shadowSize)

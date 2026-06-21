@@ -123,12 +123,9 @@ internal static class LogViewerService
                 return false;
             }
 
-            string[] lines = ReadAllLinesShared(path);
             int lineCount = Math.Max(1, maxLines);
-            var selectedLines = lines.Skip(Math.Max(0, lines.Length - lineCount));
-            string text = string.Join(Environment.NewLine, selectedLines);
-
             int charCount = Math.Max(1, maxChars);
+            string text = ReadTailShared(path, lineCount, charCount);
             if (text.Length > charCount)
                 text = text[^charCount..];
 
@@ -142,14 +139,54 @@ internal static class LogViewerService
         }
     }
 
-    private static string[] ReadAllLinesShared(string path)
+    private static string ReadTailShared(string path, int maxLines, int maxChars)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        var lines = new List<string>();
-        while (reader.ReadLine() is { } line)
-            lines.Add(line);
+        if (stream.Length == 0)
+            return string.Empty;
 
-        return lines.ToArray();
+        int readLimit = Math.Max(4096, maxChars * 4);
+        int targetNewlines = Math.Max(0, maxLines - 1);
+        var chunks = new List<byte[]>();
+        var buffer = new byte[4096];
+        long position = stream.Length;
+        int bytesRead = 0;
+        int newlineCount = 0;
+
+        while (position > 0 && bytesRead < readLimit && (targetNewlines == 0 || newlineCount < targetNewlines))
+        {
+            int readSize = (int)Math.Min(Math.Min(buffer.Length, position), readLimit - bytesRead);
+            position -= readSize;
+            stream.Position = position;
+            int count = stream.Read(buffer, 0, readSize);
+            var chunk = new byte[count];
+            Array.Copy(buffer, chunk, count);
+            chunks.Insert(0, chunk);
+            bytesRead += count;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (chunk[i] == (byte)'\n')
+                    newlineCount++;
+            }
+        }
+
+        var selectedBytes = new byte[bytesRead];
+        int offset = 0;
+        foreach (byte[] chunk in chunks)
+        {
+            Buffer.BlockCopy(chunk, 0, selectedBytes, offset, chunk.Length);
+            offset += chunk.Length;
+        }
+
+        string decoded = Encoding.UTF8.GetString(selectedBytes);
+        string normalized = decoded.Replace("\r\n", "\n").Replace('\r', '\n');
+        if (normalized.EndsWith('\n'))
+            normalized = normalized[..^1];
+
+        string[] lines = normalized.Split('\n');
+        var selectedLines = lines.Skip(Math.Max(0, lines.Length - maxLines));
+
+        return string.Join(Environment.NewLine, selectedLines);
     }
 }

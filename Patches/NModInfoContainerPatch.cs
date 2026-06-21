@@ -18,12 +18,36 @@ public static class NModInfoContainerPatch
     {
         ModdingScreenInfoPanelOps.ReserveDescriptionActionArea(DescriptionField?.GetValue(__instance) as Control);
 
+        ApplyTitleStyle(__instance, mod);
+    }
+
+    internal static void RefreshSelectedTitle(NModdingScreen screen, ModdingScreenSession session)
+    {
+        if (string.IsNullOrWhiteSpace(session.SelectedModId))
+            return;
+
+        var infoContainer = screen.GetNodeOrNull<NModInfoContainer>("%ModInfoContainer");
+        if (infoContainer == null)
+            return;
+
+        var modRowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+        var row = modRowContainer?.GetChildren()
+            .OfType<NModMenuRow>()
+            .FirstOrDefault(candidate => string.Equals(candidate.Mod?.manifest?.id, session.SelectedModId, StringComparison.OrdinalIgnoreCase));
+        if (row?.Mod == null)
+            return;
+
+        ApplyTitleStyle(infoContainer, row.Mod);
+    }
+
+    private static void ApplyTitleStyle(NModInfoContainer container, Mod mod)
+    {
         string modId = mod.manifest?.id ?? string.Empty;
         string displayName = mod.manifest?.name ?? modId;
         if (string.IsNullOrWhiteSpace(modId) || string.IsNullOrWhiteSpace(displayName))
             return;
 
-        if (TitleField?.GetValue(__instance) is not RichTextLabel title)
+        if (TitleField?.GetValue(container) is not RichTextLabel title)
             return;
 
         var styleTags = BuildStyleTags(modId);

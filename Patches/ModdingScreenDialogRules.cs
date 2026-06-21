@@ -25,6 +25,21 @@ internal readonly record struct LogDialogLayout(
     int ActionRowHeight,
     int ToolbarGap);
 
+internal readonly record struct StyleEditorDialogLayout(
+    int PopupWidth,
+    int PopupHeight,
+    int PanelWidth,
+    int ScrollHeight,
+    int RowHeight,
+    int LabelWidth,
+    int SettingWidth,
+    int SwatchSize,
+    int PreviewHeight,
+    int BodyFontSize,
+    int ButtonFontSize,
+    int HorizontalMargin,
+    int VerticalMargin);
+
 internal static class ModdingScreenDialogRules
 {
     public static LogDialogLayout GetPreferredLogDialogLayout()
@@ -35,7 +50,7 @@ internal static class ModdingScreenDialogRules
             PanelWidth: 1020,
             PanelHeight: 520,
             ScrollHeight: 508,
-            BodyFontSize: 22,
+            BodyFontSize: 24,
             ButtonFontSize: 22,
             ActionRowHeight: 44,
             ToolbarGap: 8);
@@ -56,6 +71,24 @@ internal static class ModdingScreenDialogRules
             ContentVerticalPadding: 190);
     }
 
+    public static StyleEditorDialogLayout GetPreferredStyleEditorDialogLayout()
+    {
+        return new StyleEditorDialogLayout(
+            PopupWidth: 900,
+            PopupHeight: 690,
+            PanelWidth: 820,
+            ScrollHeight: 540,
+            RowHeight: 64,
+            LabelWidth: 250,
+            SettingWidth: 500,
+            SwatchSize: 44,
+            PreviewHeight: 52,
+            BodyFontSize: 20,
+            ButtonFontSize: 22,
+            HorizontalMargin: 120,
+            VerticalMargin: 70);
+    }
+
     public static TutorialDialogLayout FitTutorialDialogToViewport(TutorialDialogLayout preferred, int viewportWidth, int viewportHeight)
     {
         int popupWidth = Math.Max(720, Math.Min(preferred.PopupWidth, viewportWidth - preferred.HorizontalMargin));
@@ -66,6 +99,20 @@ internal static class ModdingScreenDialogRules
             PopupHeight = popupHeight,
             ContentWidth = Math.Max(640, popupWidth - preferred.ContentHorizontalPadding),
             ContentHeight = Math.Max(390, popupHeight - preferred.ContentVerticalPadding)
+        };
+    }
+
+    public static StyleEditorDialogLayout FitStyleEditorDialogToViewport(StyleEditorDialogLayout preferred, int viewportWidth, int viewportHeight)
+    {
+        int popupWidth = Math.Max(760, Math.Min(preferred.PopupWidth, viewportWidth - preferred.HorizontalMargin));
+        int popupHeight = Math.Max(560, Math.Min(preferred.PopupHeight, viewportHeight - preferred.VerticalMargin));
+        return preferred with
+        {
+            PopupWidth = popupWidth,
+            PopupHeight = popupHeight,
+            PanelWidth = Math.Max(700, popupWidth - 80),
+            ScrollHeight = Math.Max(420, popupHeight - 150),
+            SettingWidth = Math.Max(420, popupWidth - 400)
         };
     }
 }

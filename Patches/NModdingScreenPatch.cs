@@ -41,6 +41,7 @@ public static class NModdingScreenPatch
             OnLoadBackupPressed,
             OnExportModListPressed,
             OnViewLogsPressed,
+            OnStyleEditorPressed,
             OnTutorialPressed,
             OnCloudBackupPressed,
             OnAddGroupRequested,
@@ -190,6 +191,24 @@ public static class NModdingScreenPatch
         }
 
         ModdingScreenDialogs.ShowInfoDialog(screen, "Logs Not Found", error ?? "No known log file could be opened.");
+    }
+
+    private static void OnStyleEditorPressed()
+    {
+        if (!TryGetCurrentScreen(out var screen) || screen == null)
+            return;
+
+        ModNameStyleEditorDialog.Show(screen, () => RefreshModNameStyles(screen));
+    }
+
+    private static void RefreshModNameStyles(NModdingScreen screen)
+    {
+        if (!ModdingScreenContext.IsCurrentScreen(screen))
+            return;
+
+        var session = ModdingScreenContext.GetSession(screen);
+        NModMenuRowPatch.RefreshVisibleModNames(screen);
+        NModInfoContainerPatch.RefreshSelectedTitle(screen, session);
     }
 
     private static void OnTutorialPressed()

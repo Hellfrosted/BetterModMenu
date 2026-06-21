@@ -27,6 +27,7 @@ internal static class ModdingScreenChromeOps
         Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
+        Action onStyleEditorPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
         Action<string> onSearchChanged,
@@ -37,7 +38,7 @@ internal static class ModdingScreenChromeOps
         EnsureLayoutSignals(screen, session);
         EnsureScrollbarPersistenceSignals(screen, session);
         EnsureTopBar(session, onProfileSelected, onNewProfilePressed, onRenameProfilePressed, onDeleteProfilePressed);
-        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onLoadBackupPressed, onExportModListPressed, onViewLogsPressed, onTutorialPressed, onCloudBackupPressed, onSearchChanged, onAddGroupRequested);
+        EnsureGroupBar(session, onPortableModeToggled, onManualBackupPressed, onLoadBackupPressed, onExportModListPressed, onViewLogsPressed, onStyleEditorPressed, onTutorialPressed, onCloudBackupPressed, onSearchChanged, onAddGroupRequested);
     }
 
     public static void RefreshGroupsUI(
@@ -89,15 +90,19 @@ internal static class ModdingScreenChromeOps
         Vector2 screenOffset = screen.GlobalPosition;
 
         float groupBarHeight = GetGroupBarHeight(scrollContainer);
+        float searchBarHeight = GetSearchBarHeight(scrollContainer);
 
         if (scrollContainer != null)
-            ReserveModListHeaderSpace(session, scrollContainer, groupBarHeight);
+            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
 
         if (session.TopBarControls != null && GodotObject.IsInstanceValid(session.TopBarControls.Bar))
             LayoutTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset);
 
         if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
+        {
             LayoutGroupBar(session.GroupBarControls, scrollContainer, screenOffset, groupBarHeight);
+            LayoutSearchBar(session.GroupBarControls, scrollContainer, screenOffset, searchBarHeight);
+        }
 
         EnsureScrollbarPersistenceSignals(screen, session);
         KeepModsScrollbarVisible(screen);
@@ -166,6 +171,7 @@ internal static class ModdingScreenChromeOps
         Action onLoadBackupPressed,
         Action onExportModListPressed,
         Action onViewLogsPressed,
+        Action onStyleEditorPressed,
         Action onTutorialPressed,
         Action onCloudBackupPressed,
         Action<string> onSearchChanged,
@@ -176,7 +182,9 @@ internal static class ModdingScreenChromeOps
 
         if (session.GroupBarControls != null &&
             GodotObject.IsInstanceValid(session.GroupBarControls.Bar) &&
-            session.GroupBarControls.Bar.GetParent() == session.ChromeRoot)
+            GodotObject.IsInstanceValid(session.GroupBarControls.SearchBar) &&
+            session.GroupBarControls.Bar.GetParent() == session.ChromeRoot &&
+            session.GroupBarControls.SearchBar.GetParent() == session.ChromeRoot)
         {
             return;
         }
@@ -190,6 +198,7 @@ internal static class ModdingScreenChromeOps
             onLoadBackupPressed,
             onExportModListPressed,
             onViewLogsPressed,
+            onStyleEditorPressed,
             onTutorialPressed,
             onCloudBackupPressed,
             onSearchChanged,
@@ -197,6 +206,7 @@ internal static class ModdingScreenChromeOps
 
         session.GroupBarControls = builtGroupBar;
         session.ChromeRoot.AddChild(builtGroupBar.Bar);
+        session.ChromeRoot.AddChild(builtGroupBar.SearchBar);
     }
 
     private static void ApplySearchSelectionRule(NModdingScreen screen, ModdingScreenSession session, Control modRowContainer)
@@ -399,7 +409,16 @@ internal static class ModdingScreenChromeOps
             : ModdingScreenConstants.GroupBarWideHeight;
     }
 
-    private static void ReserveModListHeaderSpace(ModdingScreenSession session, Control scrollContainer, float groupBarHeight)
+    private static float GetSearchBarHeight(Control? scrollContainer)
+    {
+        return scrollContainer == null ? 0f : ModdingScreenConstants.SearchBarHeight;
+    }
+
+    private static void ReserveModListChromeSpace(
+        ModdingScreenSession session,
+        Control scrollContainer,
+        float groupBarHeight,
+        float searchBarHeight)
     {
         if (!session.OriginalModsScrollPosition.HasValue)
             session.OriginalModsScrollPosition = scrollContainer.Position;
@@ -409,9 +428,10 @@ internal static class ModdingScreenChromeOps
 
         Vector2 originalPosition = session.OriginalModsScrollPosition.Value;
         Vector2 originalSize = session.OriginalModsScrollSize.Value;
-        float reservedHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap;
-        scrollContainer.Position = new Vector2(originalPosition.X, originalPosition.Y + reservedHeight);
-        scrollContainer.Size = new Vector2(originalSize.X, Math.Max(120f, originalSize.Y - reservedHeight));
+        float reservedTopHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap;
+        float reservedBottomHeight = searchBarHeight + ModdingScreenConstants.SearchBarListGap;
+        scrollContainer.Position = new Vector2(originalPosition.X, originalPosition.Y + reservedTopHeight);
+        scrollContainer.Size = new Vector2(originalSize.X, Math.Max(120f, originalSize.Y - reservedTopHeight - reservedBottomHeight));
     }
 
     private static void LayoutGroupBar(GroupBarControls groupBarControls, Control? scrollContainer, Vector2 screenOffset, float groupBarHeight)
@@ -434,6 +454,30 @@ internal static class ModdingScreenChromeOps
         groupBarControls.SetCompact(isCompact);
         groupBar.Position = new Vector2(x, y);
         groupBar.Size = new Vector2(width, groupBarHeight);
+    }
+
+    private static void LayoutSearchBar(
+        GroupBarControls groupBarControls,
+        Control? scrollContainer,
+        Vector2 screenOffset,
+        float searchBarHeight)
+    {
+        var searchBar = groupBarControls.SearchBar;
+        float x = ModdingScreenConstants.GroupBarFallbackX;
+        float y = ModdingScreenConstants.GroupBarFallbackY;
+        float width = ModdingScreenConstants.GroupBarFallbackWidth;
+
+        if (scrollContainer != null)
+        {
+            x = scrollContainer.GlobalPosition.X - screenOffset.X;
+            y = scrollContainer.GlobalPosition.Y - screenOffset.Y +
+                scrollContainer.Size.Y +
+                ModdingScreenConstants.SearchBarListGap;
+            width = scrollContainer.Size.X;
+        }
+
+        searchBar.Position = new Vector2(x, y);
+        searchBar.Size = new Vector2(width, searchBarHeight);
     }
 
 }

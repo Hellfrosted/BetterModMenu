@@ -26,6 +26,8 @@ internal static class ModdingScreenConstants
     public const float GroupBarCompactHeight = 58f;
     public const float GroupBarListGap = 4f;
     public const float SearchInputWidth = 220f;
+    public const float SearchBarHeight = 30f;
+    public const float SearchBarListGap = 4f;
     public const float GroupInputWideWidth = 140f;
     public const float GroupInputCompactWidth = 120f;
 
@@ -44,11 +46,10 @@ internal static class ModdingScreenConstants
     public const float DetailActionBottomInset = 18f;
     public const int DetailActionGap = 10;
     public const float DetailStatusLineHeight = 32f;
-    public const int DetailStatusFontSize = 22;
-    public const float DetailConfigButtonHeight = 84f;
+    public const float DetailConfigButtonHeight = 126f;
     public const float DetailDescriptionActionGap = 12f;
     public const float DetailActionContentHeight =
-        DetailStatusLineHeight * 2f + DetailConfigButtonHeight + DetailActionGap * 2f;
+        DetailStatusLineHeight + DetailConfigButtonHeight + DetailActionGap;
     public const float DetailActionPanelHeight =
         DetailActionContentHeight + DetailActionBottomInset;
     public const float DetailDescriptionBottomInset =

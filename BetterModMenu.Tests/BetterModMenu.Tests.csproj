@@ -23,6 +23,7 @@
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
     <Compile Include="..\Data\ModNameStyleCatalog.cs" Link="Data\ModNameStyleCatalog.cs" />
+    <Compile Include="..\Data\ModNameStyleEditorRules.cs" Link="Data\ModNameStyleEditorRules.cs" />
     <Compile Include="..\Data\ModNameStyleRules.cs" Link="Data\ModNameStyleRules.cs" />
     <Compile Include="..\Data\ModInstallPathResolver.cs" Link="Data\ModInstallPathResolver.cs" />
     <Compile Include="..\Data\ModListExportBuilder.cs" Link="Data\ModListExportBuilder.cs" />

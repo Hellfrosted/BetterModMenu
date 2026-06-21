@@ -17,10 +17,11 @@ internal static class ModdingScreenDialogs
             Title = title,
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         var label = CreateReadableBodyLabel(message, layout.BodyFontSize);
         label.CustomMinimumSize = new Vector2(Mathf.Min(720, layout.ContentWidth), 0);
-        popup.AddChild(label);
+        popup.AddChild(CreateStyledDialogShell(label, Mathf.Min(760, layout.ContentWidth + 40)));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(860, 300));
@@ -34,14 +35,12 @@ internal static class ModdingScreenDialogs
             Title = title,
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         var label = CreateReadableBodyLabel(message, layout.BodyFontSize);
         label.CustomMinimumSize = new Vector2(Mathf.Min(760, layout.ContentWidth), 0);
-        popup.AddChild(label);
+        popup.AddChild(CreateStyledDialogShell(label, Mathf.Min(800, layout.ContentWidth + 50)));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
-        var cancelButton = popup.GetCancelButton();
-        cancelButton.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
-        cancelButton.CustomMinimumSize = new Vector2(Mathf.Max(cancelButton.CustomMinimumSize.X, 96), 40);
         popup.Confirmed += onConfirmed;
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(900, 360));
@@ -56,8 +55,10 @@ internal static class ModdingScreenDialogs
             Title = "Load Backup",
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         var body = new VBoxContainer();
+        body.AddThemeConstantOverride("separation", 8);
         var helpLabel = CreateReadableBodyLabel(
             backups.Count > visibleBackups.Count
                 ? "Choose a backup to load. Showing the newest " + visibleBackups.Count + " of " + backups.Count + " backups."
@@ -77,11 +78,8 @@ internal static class ModdingScreenDialogs
         backupDropdown.Select(0);
         body.AddChild(backupDropdown);
 
-        popup.AddChild(body);
+        popup.AddChild(CreateStyledDialogShell(body, 560));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
-        var cancelButton = popup.GetCancelButton();
-        cancelButton.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
-        cancelButton.CustomMinimumSize = new Vector2(Mathf.Max(cancelButton.CustomMinimumSize.X, 96), 40);
         popup.Confirmed += () =>
         {
             int selectedIndex = backupDropdown.Selected;
@@ -100,6 +98,7 @@ internal static class ModdingScreenDialogs
             Title = title,
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         popup.AddChild(CreateLogDialogBody(layout, content, () => OpenLogFolder(screen, logPath)));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
@@ -111,6 +110,7 @@ internal static class ModdingScreenDialogs
     {
         LogLevelFilter includedLevels = LogLevelFilter.All;
         string displayedContent = content;
+        int renderVersion = 0;
         var dialogBox = new VBoxContainer
         {
             CustomMinimumSize = new Vector2(layout.PanelWidth, layout.PanelHeight + layout.ActionRowHeight + layout.ToolbarGap),
@@ -138,38 +138,42 @@ internal static class ModdingScreenDialogs
         };
         ModdingScreenVanillaStyle.ApplyLogPanel(panel);
 
-        var scroll = new ScrollContainer
+        var label = new RichTextLabel
         {
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            BbcodeEnabled = false,
+            Text = displayedContent,
+            SelectionEnabled = false,
+            ContextMenuEnabled = false,
+            ScrollActive = true,
+            FitContent = false,
+            Threaded = true,
+            ProgressBarDelay = 250,
+            FocusMode = Control.FocusModeEnum.None,
             CustomMinimumSize = new Vector2(0, layout.ScrollHeight),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
         };
-        var contentBox = new VBoxContainer
-        {
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill
-        };
-
-        var label = new RichTextLabel
-        {
-            BbcodeEnabled = true,
-            Text = LogHighlightService.BuildHighlightedBbCode(displayedContent),
-            SelectionEnabled = true,
-            ContextMenuEnabled = true,
-            ScrollActive = false,
-            FitContent = true,
-            CustomMinimumSize = new Vector2(0, 0),
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill
-        };
         label.AddThemeColorOverride("default_color", new Color(0.96f, 0.91f, 0.82f, 1f));
-        label.AddThemeColorOverride("selection_color", new Color(0.86f, 0.62f, 0.27f, 0.38f));
-        label.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
+        label.AddThemeFontSizeOverride("normal_font_size", layout.BodyFontSize);
+        label.AddThemeFontSizeOverride("bold_font_size", layout.BodyFontSize);
+        label.AddThemeFontSizeOverride("italics_font_size", layout.BodyFontSize);
+        label.AddThemeFontSizeOverride("bold_italics_font_size", layout.BodyFontSize);
 
         void RefreshLogText()
         {
             displayedContent = LogLevelFilterService.Filter(content, includedLevels);
+            int currentRenderVersion = ++renderVersion;
+            label.BbcodeEnabled = false;
+            label.Text = displayedContent;
+            Callable.From(() => ApplyHighlightedLogText(currentRenderVersion)).CallDeferred();
+        }
+
+        void ApplyHighlightedLogText(int expectedRenderVersion)
+        {
+            if (expectedRenderVersion != renderVersion)
+                return;
+
+            label.BbcodeEnabled = true;
             label.Text = LogHighlightService.BuildHighlightedBbCode(displayedContent);
         }
 
@@ -212,9 +216,8 @@ internal static class ModdingScreenDialogs
         actionRow.AddChild(CreateLogLevelToggle("Error", LogLevelFilter.Error));
         actionRow.AddChild(CreateLogLevelToggle("Other", LogLevelFilter.Other));
 
-        contentBox.AddChild(label);
-        scroll.AddChild(contentBox);
-        panel.AddChild(scroll);
+        Callable.From(RefreshLogText).CallDeferred();
+        panel.AddChild(label);
         toolbarPanel.AddChild(actionRow);
         dialogBox.AddChild(toolbarPanel);
         dialogBox.AddChild(panel);
@@ -264,6 +267,7 @@ internal static class ModdingScreenDialogs
             Title = "Better Mod Menu v" + version,
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         var scroll = new ScrollContainer
         {
@@ -274,7 +278,7 @@ internal static class ModdingScreenDialogs
         var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(), layout.BodyFontSize);
         label.CustomMinimumSize = new Vector2(layout.ContentWidth, 0);
         scroll.AddChild(label);
-        popup.AddChild(scroll);
+        popup.AddChild(CreateStyledDialogShell(scroll, layout.ContentWidth + 32, layout.ContentHeight + 24));
         popup.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += onDismissed;
@@ -312,8 +316,10 @@ internal static class ModdingScreenDialogs
             Title = title,
             DialogText = string.Empty
         };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
         var body = new VBoxContainer();
+        body.AddThemeConstantOverride("separation", 8);
         var helpLabel = CreateReadableBodyLabel(helpText, 20);
         helpLabel.CustomMinimumSize = new Vector2(440, 0);
         body.AddChild(helpLabel);
@@ -326,8 +332,9 @@ internal static class ModdingScreenDialogs
         ModdingScreenVanillaStyle.ApplyLineEdit(input);
         body.AddChild(input);
 
-        popup.AddChild(body);
+        popup.AddChild(CreateStyledDialogShell(body, 480));
         popup.Confirmed += () => onConfirmed(input.Text);
+        ApplyReadableDialogButtons(popup, 22);
 
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(520, 180));
@@ -348,11 +355,41 @@ internal static class ModdingScreenDialogs
         return label;
     }
 
+    private static PanelContainer CreateStyledDialogShell(Control content, float width, float height = 0)
+    {
+        var shell = new PanelContainer
+        {
+            CustomMinimumSize = new Vector2(width, height),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyDialogPanel(shell);
+
+        var margins = new MarginContainer();
+        margins.AddThemeConstantOverride("margin_left", 12);
+        margins.AddThemeConstantOverride("margin_right", 12);
+        margins.AddThemeConstantOverride("margin_top", 10);
+        margins.AddThemeConstantOverride("margin_bottom", 10);
+        margins.AddChild(content);
+        shell.AddChild(margins);
+        return shell;
+    }
+
     private static void ApplyReadableDialogButtons(AcceptDialog popup, int fontSize)
     {
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
         var okButton = popup.GetOkButton();
+        ModdingScreenVanillaStyle.ApplyButton(okButton);
         okButton.AddThemeFontSizeOverride("font_size", fontSize);
         okButton.CustomMinimumSize = new Vector2(Mathf.Max(okButton.CustomMinimumSize.X, 72), 40);
+
+        if (popup is ConfirmationDialog confirmation)
+        {
+            var cancelButton = confirmation.GetCancelButton();
+            ModdingScreenVanillaStyle.ApplyButton(cancelButton);
+            cancelButton.AddThemeFontSizeOverride("font_size", fontSize);
+            cancelButton.CustomMinimumSize = new Vector2(Mathf.Max(cancelButton.CustomMinimumSize.X, 96), 40);
+        }
     }
 
     private static TutorialDialogLayout GetTutorialLayoutForScreen(NModdingScreen screen)
