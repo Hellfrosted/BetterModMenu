@@ -9,6 +9,10 @@ internal static class ModdingScreenDialogs
 {
     private const int MaxVisibleBackupChoices = 12;
 
+    private static string T(string key, string fallback) => ModdingScreenText.Get(key, fallback);
+
+    private static string F(string key, string fallback, params object[] args) => ModdingScreenText.Format(key, fallback, args);
+
     public static void ShowInfoDialog(NModdingScreen screen, string title, string message)
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
@@ -52,7 +56,7 @@ internal static class ModdingScreenDialogs
         var visibleBackups = backups.Take(MaxVisibleBackupChoices).ToList();
         var popup = new ConfirmationDialog
         {
-            Title = "Load Backup",
+            Title = T(BmmText.DialogLoadBackupTitle, "Load Backup"),
             DialogText = string.Empty
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
@@ -61,8 +65,8 @@ internal static class ModdingScreenDialogs
         body.AddThemeConstantOverride("separation", 8);
         var helpLabel = CreateReadableBodyLabel(
             backups.Count > visibleBackups.Count
-                ? "Choose a backup to load. Showing the newest " + visibleBackups.Count + " of " + backups.Count + " backups."
-                : "Choose a backup to load. Installed mod files are not changed.",
+                ? F(BmmText.DialogLoadBackupBodyManyFormat, "Choose a backup to load. Showing the newest {0} of {1} backups.", visibleBackups.Count, backups.Count)
+                : T(BmmText.DialogLoadBackupBody, "Choose a backup to load. Installed mod files are not changed."),
             20);
         helpLabel.CustomMinimumSize = new Vector2(520, 0);
         body.AddChild(helpLabel);
@@ -70,11 +74,11 @@ internal static class ModdingScreenDialogs
         var backupDropdown = new OptionButton
         {
             CustomMinimumSize = new Vector2(520, ModdingScreenConstants.ToolbarControlHeight),
-            TooltipText = "Backups are ordered from newest to oldest."
+            TooltipText = T(BmmText.DialogLoadBackupOrderTooltip, "Backups are ordered from newest to oldest.")
         };
         ModdingScreenVanillaStyle.ApplyOptionButton(backupDropdown);
         for (int i = 0; i < visibleBackups.Count; i++)
-            backupDropdown.AddItem(visibleBackups[i].Label, i);
+            backupDropdown.AddItem(BuildBackupDisplayLabel(visibleBackups[i]), i);
         backupDropdown.Select(0);
         body.AddChild(backupDropdown);
 
@@ -93,6 +97,9 @@ internal static class ModdingScreenDialogs
     public static void ShowLogDialog(NModdingScreen screen, string title, string content, string logPath)
     {
         LogDialogLayout layout = ModdingScreenDialogRules.GetPreferredLogDialogLayout();
+        if (content == LogViewerService.EmptyLogContent)
+            content = T(BmmText.LogFileEmpty, LogViewerService.EmptyLogContent);
+
         var popup = new AcceptDialog
         {
             Title = title,
@@ -179,8 +186,8 @@ internal static class ModdingScreenDialogs
 
         var copyButton = new Button
         {
-            Text = "Copy All",
-            TooltipText = "Copy the full displayed log text to the clipboard"
+            Text = T(BmmText.LogCopyAll, "Copy All"),
+            TooltipText = T(BmmText.LogCopyAllTooltip, "Copy the full displayed log text to the clipboard")
         };
         ModdingScreenVanillaStyle.ApplyButton(copyButton);
         copyButton.Pressed += () => DisplayServer.ClipboardSet(displayedContent);
@@ -188,8 +195,8 @@ internal static class ModdingScreenDialogs
 
         var openFolderButton = new Button
         {
-            Text = "Open Folder",
-            TooltipText = "Open the folder that contains this log file."
+            Text = T(BmmText.LogOpenFolder, "Open Folder"),
+            TooltipText = T(BmmText.LogOpenFolderTooltip, "Open the folder that contains this log file.")
         };
         ModdingScreenVanillaStyle.ApplyButton(openFolderButton);
         openFolderButton.Pressed += onOpenFolderPressed;
@@ -203,18 +210,18 @@ internal static class ModdingScreenDialogs
 
         var levelLabel = new Label
         {
-            Text = "Levels",
-            TooltipText = "Checked levels are shown. Uncheck a level to exclude it."
+            Text = T(BmmText.LogLevels, "Levels"),
+            TooltipText = T(BmmText.LogLevelsTooltip, "Checked levels are shown. Uncheck a level to exclude it.")
         };
         ModdingScreenVanillaStyle.ApplyLabel(levelLabel);
         levelLabel.AddThemeFontSizeOverride("font_size", layout.ButtonFontSize);
         actionRow.AddChild(levelLabel);
 
-        actionRow.AddChild(CreateLogLevelToggle("Debug", LogLevelFilter.Debug));
-        actionRow.AddChild(CreateLogLevelToggle("Info", LogLevelFilter.Info));
-        actionRow.AddChild(CreateLogLevelToggle("Warn", LogLevelFilter.Warning));
-        actionRow.AddChild(CreateLogLevelToggle("Error", LogLevelFilter.Error));
-        actionRow.AddChild(CreateLogLevelToggle("Other", LogLevelFilter.Other));
+        actionRow.AddChild(CreateLogLevelToggle(T(BmmText.LogLevelDebug, "Debug"), LogLevelFilter.Debug));
+        actionRow.AddChild(CreateLogLevelToggle(T(BmmText.LogLevelInfo, "Info"), LogLevelFilter.Info));
+        actionRow.AddChild(CreateLogLevelToggle(T(BmmText.LogLevelWarn, "Warn"), LogLevelFilter.Warning));
+        actionRow.AddChild(CreateLogLevelToggle(T(BmmText.LogLevelError, "Error"), LogLevelFilter.Error));
+        actionRow.AddChild(CreateLogLevelToggle(T(BmmText.LogLevelOther, "Other"), LogLevelFilter.Other));
 
         Callable.From(RefreshLogText).CallDeferred();
         panel.AddChild(label);
@@ -228,7 +235,7 @@ internal static class ModdingScreenDialogs
             {
                 Text = text,
                 ButtonPressed = true,
-                TooltipText = "Show or hide " + text.ToLowerInvariant() + " log lines."
+                TooltipText = F(BmmText.LogLevelTooltipFormat, "Show or hide {0} log lines.", text.ToLowerInvariant())
             };
             ModdingScreenVanillaStyle.ApplyButton(toggle);
             toggle.CustomMinimumSize = new Vector2(Mathf.Max(toggle.CustomMinimumSize.X, 82), 34);
@@ -250,12 +257,40 @@ internal static class ModdingScreenDialogs
     {
         if (!LogFolderOpenRules.TryGetContainingDirectory(logPath, out string directory, out string? error))
         {
-            ShowInfoDialog(screen, "Log Folder Not Opened", error ?? "The log folder could not be opened.");
+            string localizedError = ModdingScreenText.LocalizeKnownError(error);
+            ShowInfoDialog(
+                screen,
+                T(BmmText.LogFolderNotOpenedTitle, "Log Folder Not Opened"),
+                string.IsNullOrWhiteSpace(localizedError)
+                    ? T(BmmText.LogFolderNotOpenedGeneric, "The log folder could not be opened.")
+                    : localizedError);
             return;
         }
 
         if (!LogFolderOpenRules.TryOpenDirectory(directory, out string? openError))
-            ShowInfoDialog(screen, "Log Folder Not Opened", "The operating system could not open this folder:\n" + directory + "\n\nError:\n" + openError);
+        {
+            ShowInfoDialog(
+                screen,
+                T(BmmText.LogFolderNotOpenedTitle, "Log Folder Not Opened"),
+                F(BmmText.LogFolderOsErrorFormat, "The operating system could not open this folder:\n{0}\n\nError:\n{1}", directory, ModdingScreenText.LocalizeKnownError(openError)));
+        }
+    }
+
+    private static string BuildBackupDisplayLabel(ProfileBackupEntry entry)
+    {
+        string reason = entry.Reason switch
+        {
+            ProfileBackupReason.Manual => T(BmmText.BackupReasonManual, "Manual backup"),
+            ProfileBackupReason.Resume => T(BmmText.BackupReasonAuto, "Auto backup"),
+            ProfileBackupReason.RunStart => T(BmmText.BackupReasonStartup, "Startup backup"),
+            _ => T(BmmText.BackupReasonGeneric, "Backup")
+        };
+
+        int separator = entry.Label.LastIndexOf(" - ", StringComparison.Ordinal);
+        if (separator < 0)
+            return reason;
+
+        return entry.Label[..separator] + " - " + reason;
     }
 
 
@@ -264,7 +299,7 @@ internal static class ModdingScreenDialogs
         TutorialDialogLayout layout = GetTutorialLayoutForScreen(screen);
         var popup = new AcceptDialog
         {
-            Title = "Better Mod Menu v" + version,
+            Title = F(BmmText.TutorialTitleFormat, "Better Mod Menu v{0}", version),
             DialogText = string.Empty
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
@@ -275,7 +310,7 @@ internal static class ModdingScreenDialogs
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(), layout.BodyFontSize);
+        var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(ModdingScreenText.Get), layout.BodyFontSize);
         label.CustomMinimumSize = new Vector2(layout.ContentWidth, 0);
         scroll.AddChild(label);
         popup.AddChild(CreateStyledDialogShell(scroll, layout.ContentWidth + 32, layout.ContentHeight + 24));
@@ -296,17 +331,32 @@ internal static class ModdingScreenDialogs
 
     public static void ShowRenameGroupDialog(NModdingScreen screen, string oldName, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Rename Group", oldName, "This changes the group label for every mod currently assigned to it.", onConfirmed);
+        ShowTextInputDialog(
+            screen,
+            T(BmmText.DialogRenameGroupTitle, "Rename Group"),
+            oldName,
+            T(BmmText.DialogRenameGroupHelp, "This changes the group label for every mod currently assigned to it."),
+            onConfirmed);
     }
 
     public static void ShowRenameProfileDialog(NModdingScreen screen, string currentName, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Rename Profile", currentName, "This changes the profile name only. The enabled and disabled mods in the profile stay the same.", onConfirmed);
+        ShowTextInputDialog(
+            screen,
+            T(BmmText.DialogRenameProfileTitle, "Rename Profile"),
+            currentName,
+            T(BmmText.DialogRenameProfileHelp, "This changes the profile name only. The enabled and disabled mods in the profile stay the same."),
+            onConfirmed);
     }
 
     public static void ShowCloudBackupDialog(NModdingScreen screen, string currentDirectory, Action<string> onConfirmed)
     {
-        ShowTextInputDialog(screen, "Cloud Backup Folder", currentDirectory, "Enter a OneDrive, Dropbox, or other synced folder. Leave it blank to turn cloud mirroring off.", onConfirmed);
+        ShowTextInputDialog(
+            screen,
+            T(BmmText.DialogCloudFolderTitle, "Cloud Backup Folder"),
+            currentDirectory,
+            T(BmmText.DialogCloudFolderHelp, "Enter a OneDrive, Dropbox, or other synced folder. Leave it blank to turn cloud mirroring off."),
+            onConfirmed);
     }
 
     private static void ShowTextInputDialog(NModdingScreen screen, string title, string initialText, string helpText, Action<string> onConfirmed)

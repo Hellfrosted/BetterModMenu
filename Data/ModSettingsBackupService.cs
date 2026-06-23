@@ -11,6 +11,8 @@ internal sealed class ModSettingsBackupRow
 
 internal static class ModSettingsBackupService
 {
+    public const string ErrorNoBackupDirectory = "No backup directory was provided.";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
@@ -30,7 +32,7 @@ internal static class ModSettingsBackupService
         try
         {
             if (string.IsNullOrWhiteSpace(directory))
-                throw new InvalidOperationException("No backup directory was provided.");
+                throw new InvalidOperationException(ErrorNoBackupDirectory);
 
             var rows = mods
                 .Where(mod => !string.IsNullOrWhiteSpace(mod.ModId))

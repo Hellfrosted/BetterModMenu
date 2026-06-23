@@ -6,10 +6,11 @@ internal static class LogViewerService
 {
     public const int DefaultMaxLines = 5000;
     public const int DefaultMaxChars = 500000;
+    public const string EmptyLogContent = "(Log file is empty.)";
+    public const string ErrorNoLogFileFound = "No log file was found in the known Better Mod Menu log locations.";
+    public const string ErrorLogFileDoesNotExist = "Log file does not exist.";
     private static readonly string[] KnownLogFileNames =
     [
-        "TTSMM.log",
-        "ttsmm.log",
         "BetterModMenu.log",
         "bettermodmenu.log",
         "godot.log",
@@ -90,7 +91,7 @@ internal static class LogViewerService
         string? path = candidatePaths.FirstOrDefault(File.Exists);
         if (string.IsNullOrWhiteSpace(path))
         {
-            error = "No log file was found in the known BetterModMenu/TTSMM locations.";
+            error = ErrorNoLogFileFound;
             return false;
         }
 
@@ -119,7 +120,7 @@ internal static class LogViewerService
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                error = "Log file does not exist.";
+                error = ErrorLogFileDoesNotExist;
                 return false;
             }
 
@@ -129,7 +130,7 @@ internal static class LogViewerService
             if (text.Length > charCount)
                 text = text[^charCount..];
 
-            content = string.IsNullOrEmpty(text) ? "(Log file is empty.)" : text;
+            content = string.IsNullOrEmpty(text) ? EmptyLogContent : text;
             return true;
         }
         catch (Exception ex)

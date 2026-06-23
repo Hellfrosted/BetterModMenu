@@ -22,6 +22,8 @@ internal sealed class ModListExportRow
 
 internal static class ModListExportBuilder
 {
+    public const string ErrorNoExportDirectory = "No export directory was provided.";
+
     private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group", "Workshop Link"];
 
     public static List<ModListExportRow> BuildRows(
@@ -63,7 +65,7 @@ internal static class ModListExportBuilder
         try
         {
             if (string.IsNullOrWhiteSpace(directory))
-                throw new InvalidOperationException("No export directory was provided.");
+                throw new InvalidOperationException(ErrorNoExportDirectory);
 
             Directory.CreateDirectory(directory);
             exportPath = GetUniqueExportPath(directory, timestamp);

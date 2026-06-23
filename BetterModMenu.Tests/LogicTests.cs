@@ -2,7 +2,9 @@ using BetterModMenu.Data;
 using BetterModMenu.Patches;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace BetterModMenu.Tests;
 
@@ -249,6 +251,20 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void Search_ProvidesLocalizationKeyForMatchReason()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("Example.Mod", "Example Mod") { Author = "Tester" }
+        };
+
+        var results = ModSearchRules.Search(documents, "Tester");
+
+        Assert.AreEqual(BmmText.SearchMatchAuthor, results[0].MatchReasonKey);
+        Assert.AreEqual("Matched author", results[0].MatchReason);
+    }
+
+    [TestMethod]
     public void Search_ToleratesTyposAndLookalikesForLongQueries()
     {
         var documents = new[]
@@ -473,22 +489,219 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void GetTopBarPresentation_UsesCompactLabels_when_AvailableWidthIsNarrow()
+    public void GetTopBarPresentation_UsesIconOnlyActions()
     {
         var compact = ModdingScreenLayoutRules.GetTopBarPresentation(isCompact: true);
 
-        Assert.AreEqual("New", compact.NewProfile.Text);
-        Assert.AreEqual("Edit", compact.RenameProfile.Text);
-        Assert.AreEqual("Del", compact.DeleteProfile.Text);
-        Assert.IsTrue(compact.NewProfile.TooltipText.Contains("New profile", StringComparison.Ordinal));
-        Assert.IsTrue(compact.RenameProfile.TooltipText.Contains("Rename profile", StringComparison.Ordinal));
-        Assert.IsTrue(compact.DeleteProfile.TooltipText.Contains("Delete profile", StringComparison.Ordinal));
+        Assert.AreEqual(string.Empty, compact.NewProfile.Text);
+        Assert.AreEqual(string.Empty, compact.RenameProfile.Text);
+        Assert.AreEqual(string.Empty, compact.DeleteProfile.Text);
+        Assert.AreEqual(ModdingScreenConstants.TopBarButtonCompactWidth, compact.ButtonWidth);
+        Assert.AreEqual(BmmText.NewProfileTooltip, compact.NewProfile.TooltipKey);
+        Assert.AreEqual(BmmText.RenameProfileTooltip, compact.RenameProfile.TooltipKey);
+        Assert.AreEqual(BmmText.DeleteProfileTooltip, compact.DeleteProfile.TooltipKey);
 
         var wide = ModdingScreenLayoutRules.GetTopBarPresentation(isCompact: false);
 
-        Assert.AreEqual("+ New", wide.NewProfile.Text);
-        Assert.AreEqual("Rename", wide.RenameProfile.Text);
-        Assert.AreEqual("Del", wide.DeleteProfile.Text);
+        Assert.AreEqual(string.Empty, wide.NewProfile.Text);
+        Assert.AreEqual(string.Empty, wide.RenameProfile.Text);
+        Assert.AreEqual(string.Empty, wide.DeleteProfile.Text);
+        Assert.AreEqual(ModdingScreenConstants.TopBarButtonCompactWidth, wide.ButtonWidth);
+    }
+
+    [TestMethod]
+    public void Localization_UsesSts2LanguageCodesPlusVietnamese()
+    {
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                "eng",
+                "fra",
+                "ita",
+                "deu",
+                "esp",
+                "jpn",
+                "kor",
+                "pol",
+                "ptb",
+                "rus",
+                "zhs",
+                "spa",
+                "tha",
+                "tur",
+                "vie"
+            },
+            BmmLocalization.SupportedLanguageCodes.ToList());
+    }
+
+    [TestMethod]
+    public void Localization_NormalizesGameAndLocaleCodes()
+    {
+        var cases = new Dictionary<string, string[]>
+        {
+            ["eng"] = ["english", "en", "en-US", "en_GB", "eng"],
+            ["fra"] = ["french", "fr", "fr-FR", "fra"],
+            ["ita"] = ["italian", "it", "it-IT", "ita"],
+            ["deu"] = ["german", "de", "de-DE", "deu"],
+            ["esp"] = ["spanish", "spanish_spain", "es", "es-ES", "esp"],
+            ["jpn"] = ["japanese", "ja", "ja-JP", "jpn"],
+            ["kor"] = ["koreana", "korean", "ko", "ko-KR", "kor"],
+            ["pol"] = ["polish", "pl", "pl-PL", "pol"],
+            ["ptb"] = ["brazilian", "portuguese_brazil", "pt", "pt-BR", "ptb"],
+            ["rus"] = ["russian", "ru", "ru-RU", "rus"],
+            ["zhs"] = ["schinese", "simplified_chinese", "zh", "zh-CN", "zh-Hans", "zh-SG", "zhs"],
+            ["spa"] = ["latam", "spanish_latin_america", "es-419", "es-MX", "es-AR", "es-CL", "es-CO", "spa"],
+            ["tha"] = ["thai", "th", "th-TH", "tha"],
+            ["tur"] = ["turkish", "tr", "tr-TR", "tur"],
+            ["vie"] = ["vietnamese", "vi", "vi-VN", "vie"]
+        };
+
+        foreach (var entry in cases)
+        {
+            foreach (string input in entry.Value)
+                Assert.AreEqual(entry.Key, BmmLocalization.NormalizeLanguageCode(input), input);
+        }
+    }
+
+    [TestMethod]
+    public void Localization_FilesCoverEveryEnglishKey()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var catalogs = BmmLocalization.SupportedLanguageCodes.ToDictionary(
+            code => code,
+            code => BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, code + ".json")),
+            StringComparer.Ordinal);
+
+        var errors = BmmLocalization.FindCoverageErrors(catalogs);
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Localization_EnglishFileCoversEveryBmmTextKey()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var englishCatalog = BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, BmmLocalization.EnglishLanguageCode + ".json"));
+        var bmmTextKeys = typeof(BmmText)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(field => field.IsLiteral && !field.IsInitOnly && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .OrderBy(key => key, StringComparer.Ordinal)
+            .ToList();
+        var missing = bmmTextKeys
+            .Where(key => !englishCatalog.ContainsKey(key))
+            .ToList();
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, missing));
+    }
+
+    [TestMethod]
+    public void Localization_UnsupportedLanguageFallsBackToEnglishThenCallerFallback()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var englishCatalog = BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, BmmLocalization.EnglishLanguageCode + ".json"));
+        var catalog = new BmmLocalizationCatalog(
+            BmmLocalization.NormalizeLanguageCode("nl-NL"),
+            englishCatalog,
+            new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.AreEqual("nl_nl", catalog.Language);
+        Assert.AreEqual("Backup", catalog.Get(BmmText.Backup, "fallback"));
+        Assert.AreEqual("fallback", catalog.Get("MISSING.KEY", "fallback"));
+    }
+
+    [TestMethod]
+    public void Localization_FilesDoNotContainDuplicateKeys()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var errors = new List<string>();
+
+        foreach (string code in BmmLocalization.SupportedLanguageCodes)
+        {
+            string path = Path.Combine(localizationDirectory, code + ".json");
+            var duplicates = ReadDuplicateJsonPropertyNames(path);
+
+            if (duplicates.Count > 0)
+                errors.Add(code + " has duplicate localization keys: " + string.Join(", ", duplicates));
+        }
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Localization_FilesUseEnglishKeyOrder()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var englishKeys = ReadJsonPropertyNames(Path.Combine(localizationDirectory, BmmLocalization.EnglishLanguageCode + ".json"));
+        var errors = new List<string>();
+
+        foreach (string code in BmmLocalization.SupportedLanguageCodes.Where(code => code != BmmLocalization.EnglishLanguageCode))
+        {
+            var keys = ReadJsonPropertyNames(Path.Combine(localizationDirectory, code + ".json"));
+            if (!englishKeys.SequenceEqual(keys))
+                errors.Add(code + " localization keys are not in English source order.");
+        }
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Localization_TargetFilesAreNotEnglishPlaceholders()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var englishCatalog = BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, BmmLocalization.EnglishLanguageCode + ".json"));
+        int maxAllowedEnglishCopies = englishCatalog.Count / 4;
+        var errors = new List<string>();
+
+        foreach (string code in BmmLocalization.SupportedLanguageCodes.Where(code => code != BmmLocalization.EnglishLanguageCode))
+        {
+            var catalog = BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, code + ".json"));
+            int copiedValueCount = catalog.Count(entry =>
+                englishCatalog.TryGetValue(entry.Key, out string? englishValue) &&
+                string.Equals(entry.Value, englishValue, StringComparison.Ordinal));
+
+            if (copiedValueCount > maxAllowedEnglishCopies)
+            {
+                errors.Add(
+                    code + " has " + copiedValueCount + " values identical to English; " +
+                    "this looks like an English placeholder catalog.");
+            }
+        }
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Localization_FormatStringsAcceptEnglishPlaceholderShape()
+    {
+        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
+        var catalogs = BmmLocalization.SupportedLanguageCodes.ToDictionary(
+            code => code,
+            code => BmmLocalization.LoadJsonFile(Path.Combine(localizationDirectory, code + ".json")),
+            StringComparer.Ordinal);
+        var errors = new List<string>();
+
+        foreach (var key in catalogs[BmmLocalization.EnglishLanguageCode].Keys)
+        {
+            int argumentCount = CountFormatArguments(catalogs[BmmLocalization.EnglishLanguageCode][key]);
+            if (argumentCount == 0)
+                continue;
+
+            object[] args = Enumerable.Range(0, argumentCount).Select(index => (object)("value" + index)).ToArray();
+            foreach (var catalog in catalogs)
+            {
+                try
+                {
+                    _ = string.Format(catalog.Value[key], args);
+                }
+                catch (FormatException ex)
+                {
+                    errors.Add(catalog.Key + " has invalid format string for " + key + ": " + ex.Message);
+                }
+            }
+        }
+
+        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
     }
 
     [TestMethod]
@@ -933,7 +1146,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllLines(logPath, new[] { "one", "two", "three", "four" });
 
             bool read = LogViewerService.TryReadTail(logPath, maxLines: 2, maxChars: 100, out string content, out string? error);
@@ -953,7 +1166,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllLines(logPath, Enumerable.Range(1, 6000).Select(number => "line " + number));
 
             bool read = LogViewerService.TryReadTail(logPath, maxLines: 5000, maxChars: 500000, out string content, out string? error);
@@ -975,7 +1188,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllText(logPath, new string('a', 100_000) + new string('b', 12_000));
 
             bool read = LogViewerService.TryReadTail(logPath, maxLines: 1, maxChars: 10000, out string content, out string? error);
@@ -1094,7 +1307,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllText(logPath, "abcdef");
 
             bool read = LogViewerService.TryReadTail(logPath, maxLines: 10, maxChars: 3, out string content, out string? error);
@@ -1137,7 +1350,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
             File.WriteAllLines(logPath, Enumerable.Range(1, 250).Select(number => "line " + number));
 
             bool read = LogViewerService.TryReadLatestLog(
@@ -1164,7 +1377,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string logPath = Path.Combine(tempDirectory, "logs", "TTSMM.log");
+            string logPath = Path.Combine(tempDirectory, "logs", "BetterModMenu.log");
             Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
             File.WriteAllText(logPath, "hello");
 
@@ -1896,8 +2109,7 @@ public class LogicTests
         {
             var paths = LogViewerService.BuildCandidatePaths(new[] { tempDirectory, tempDirectory });
 
-            CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "TTSMM.log"));
-            CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "logs", "TTSMM.log"));
+            CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "BetterModMenu.log"));
             CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "logs", "BetterModMenu.log"));
             CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "player.log"));
             Assert.AreEqual(paths.Count, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
@@ -2113,6 +2325,65 @@ public class LogicTests
             directory = directory.Parent;
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find BetterModMenu.csproj.");
+    }
+
+    private static int CountFormatArguments(string format)
+    {
+        int maxIndex = -1;
+        for (int i = 0; i < format.Length; i++)
+        {
+            if (format[i] != '{')
+                continue;
+
+            if (i + 1 < format.Length && format[i + 1] == '{')
+            {
+                i++;
+                continue;
+            }
+
+            int cursor = i + 1;
+            int index = 0;
+            bool hasDigit = false;
+            while (cursor < format.Length && char.IsDigit(format[cursor]))
+            {
+                hasDigit = true;
+                index = (index * 10) + (format[cursor] - '0');
+                cursor++;
+            }
+
+            if (hasDigit)
+                maxIndex = Math.Max(maxIndex, index);
+        }
+
+        return maxIndex + 1;
+    }
+
+    private static List<string> ReadJsonPropertyNames(string path)
+    {
+        var keys = new List<string>();
+        var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(File.ReadAllText(path)));
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.PropertyName)
+                keys.Add(reader.GetString() ?? string.Empty);
+        }
+
+        return keys;
+    }
+
+    private static List<string> ReadDuplicateJsonPropertyNames(string path)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var duplicates = new List<string>();
+
+        foreach (string key in ReadJsonPropertyNames(path))
+        {
+            if (!seen.Add(key))
+                duplicates.Add(key);
+        }
+
+        return duplicates;
     }
 
     private static void AssertModNameStyleSettingsEqual(ModNameStyleSettings expected, ModNameStyleSettings actual)

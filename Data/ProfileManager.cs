@@ -10,6 +10,8 @@ namespace BetterModMenu.Data;
 
 public static class ProfileManager
 {
+    public const string ErrorRestoredProfileSaveCouldNotBeWritten = "The restored profile save could not be written.";
+
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
     private const string UnassignedGroupName = "Unassigned";
     private static readonly ProfileConfigPathResolver ConfigPaths = new("BetterModMenu", ".json5", ".jsonc", ".json");
@@ -213,7 +215,7 @@ public static class ProfileManager
             return true;
         }
 
-        error = LastPersistenceError ?? "The restored profile save could not be written.";
+        error = LastPersistenceError ?? ErrorRestoredProfileSaveCouldNotBeWritten;
         LastBackupError = error;
         ApplySaveData(previousState);
         SaveInMemoryState();

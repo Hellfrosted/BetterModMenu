@@ -29,7 +29,7 @@ internal static class ModdingScreenInfoPanelOps
         string providerName = GetProviderName(provider);
 
         bool affectsGameplay = ProfileManager.ModGameplayImpactCache.TryGetValue(selectedModId, out bool cachedImpact) && cachedImpact;
-        configButton.Text = "Config";
+        configButton.Text = ModdingScreenText.Get(BmmText.DetailConfig, "Config");
         gameplayBadge.Visible = affectsGameplay;
         reasonLabel.Text = BuildMatchReason(session, selectedModId);
         reasonLabel.Visible = !string.IsNullOrWhiteSpace(reasonLabel.Text);
@@ -37,8 +37,13 @@ internal static class ModdingScreenInfoPanelOps
         bool hasConfigProvider = provider != ModConfigProviderKind.None;
         ModdingScreenVanillaStyle.ApplyDetailActionAvailability(configButton, hasConfigProvider);
         configButton.TooltipText = provider == ModConfigProviderKind.None
-            ? BuildConfigTooltip("No RitsuLib or BaseLib config is available for the selected mod.", affectsGameplay)
-            : BuildConfigTooltip("Open this mod's " + providerName + " config.", affectsGameplay);
+            ? BuildConfigTooltip(ModdingScreenText.Get(
+                BmmText.DetailConfigUnavailableTooltip,
+                "No RitsuLib or BaseLib config is available for the selected mod."), affectsGameplay)
+            : BuildConfigTooltip(ModdingScreenText.Format(
+                BmmText.DetailConfigOpenTooltipFormat,
+                "Open this mod's {0} config.",
+                providerName), affectsGameplay);
     }
 
     public static void ReserveDescriptionActionArea(Control? description)
@@ -78,7 +83,7 @@ internal static class ModdingScreenInfoPanelOps
             Name = MatchReasonName,
             Text = "",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            TooltipText = "Why the selected mod matched the current search.",
+            TooltipText = ModdingScreenText.Get(BmmText.DetailSearchMatchTooltip, "Why the selected mod matched the current search."),
             CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailStatusLineHeight),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
@@ -88,7 +93,7 @@ internal static class ModdingScreenInfoPanelOps
         var config = new Button
         {
             Name = ConfigButtonName,
-            Text = "Config",
+            Text = ModdingScreenText.Get(BmmText.DetailConfig, "Config"),
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             ClipContents = true,
             CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailConfigButtonHeight),
@@ -100,7 +105,7 @@ internal static class ModdingScreenInfoPanelOps
         var gameplayBadge = new Label
         {
             Name = GameplayBadgeName,
-            Text = "Affects gameplay",
+            Text = ModdingScreenText.Get(BmmText.DetailGameplayBadge, "Affects gameplay"),
             Visible = false,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ClipText = true
@@ -141,7 +146,7 @@ internal static class ModdingScreenInfoPanelOps
     private static string BuildConfigTooltip(string baseText, bool affectsGameplay)
     {
         return affectsGameplay
-            ? baseText + "\nThis mod affects gameplay."
+            ? baseText + "\n" + ModdingScreenText.Get(BmmText.GameplayImpactTooltip, "This mod affects gameplay.")
             : baseText;
     }
 
@@ -178,11 +183,14 @@ internal static class ModdingScreenInfoPanelOps
             return string.Empty;
 
         if (string.IsNullOrWhiteSpace(selectedModId))
-            return "No matching mods.";
+            return ModdingScreenText.Get(BmmText.DetailNoMatchingMods, "No matching mods.");
 
-        return session.SearchResults.TryGetValue(selectedModId, out var result)
+        if (!session.SearchResults.TryGetValue(selectedModId, out var result))
+            return string.Empty;
+
+        return string.IsNullOrWhiteSpace(result.MatchReasonKey)
             ? result.MatchReason
-            : string.Empty;
+            : ModdingScreenText.Get(result.MatchReasonKey, result.MatchReason);
     }
 
     private static string GetProviderName(ModConfigProviderKind provider)
@@ -191,7 +199,7 @@ internal static class ModdingScreenInfoPanelOps
         {
             ModConfigProviderKind.RitsuLib => "RitsuLib",
             ModConfigProviderKind.BaseLib => "BaseLib",
-            _ => "mod"
+            _ => ModdingScreenText.Get(BmmText.DetailProviderMod, "mod")
         };
     }
 }

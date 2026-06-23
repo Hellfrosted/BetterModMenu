@@ -93,12 +93,17 @@ internal static class ModdingScreenGroupUi
             Version = manifest?.version ?? string.Empty,
             Dependencies = manifest?.dependencies?.Select(dependency => dependency.id).Where(id => !string.IsNullOrWhiteSpace(id)).ToArray() ?? Array.Empty<string>(),
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
-                ? group
-                : ModdingScreenConstants.UnassignedGroup,
+                ? GetSearchGroupName(group)
+                : GetSearchGroupName(ModdingScreenConstants.UnassignedGroup),
             Enabled = IsRowEnabled(row),
             WorkshopId = workshopId,
             WorkshopUrl = workshopUrl
         };
+    }
+
+    private static string GetSearchGroupName(string groupName)
+    {
+        return ModdingGroupStateOps.GetDisplayGroupName(groupName);
     }
 
     private static bool IsRowEnabled(NModMenuRow row)
@@ -225,13 +230,7 @@ internal static class ModdingScreenGroupUi
         };
         ModdingScreenVanillaStyle.ApplyGroupHeader(header);
 
-        var collapseBtn = new Button
-        {
-            Text = isCollapsed ? "► " + groupName : "▼ " + groupName,
-            TooltipText = isCollapsed ? "Show the mods in this group." : "Hide the mods in this group without changing whether they are enabled.",
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
-        };
-        ModdingScreenVanillaStyle.ApplyButton(collapseBtn);
+        var collapseBtn = BuildCollapseButton(groupName, isCollapsed);
         collapseBtn.Pressed += () =>
         {
             ToggleCollapsedGroup(groupName);
@@ -240,16 +239,19 @@ internal static class ModdingScreenGroupUi
         header.AddChild(collapseBtn);
 
         bool hasRows = groupRows.Count > 0;
-        bool allEnabled = AreAllRowsEnabled(groupRows);
-        var toggleAllBtn = new Button
-        {
-            Text = allEnabled ? "Disable All" : "Enable All",
-            TooltipText = allEnabled ? "Turn off every mod in this group." : "Turn on every mod in this group.",
-            Disabled = !hasRows
-        };
-        ModdingScreenVanillaStyle.ApplyButton(toggleAllBtn);
-        toggleAllBtn.Pressed += () => toggleAllInGroup(groupName, !allEnabled);
-        header.AddChild(toggleAllBtn);
+        var enableAllBtn = BuildIconButton(
+            ModdingScreenIcon.ListChecks,
+            ModdingScreenText.Get(BmmText.GroupEnableAllTooltip, "Turn on every mod in this group."),
+            () => toggleAllInGroup(groupName, true),
+            !hasRows);
+        header.AddChild(enableAllBtn);
+
+        var disableAllBtn = BuildIconButton(
+            ModdingScreenIcon.ListX,
+            ModdingScreenText.Get(BmmText.GroupDisableAllTooltip, "Turn off every mod in this group."),
+            () => toggleAllInGroup(groupName, false),
+            !hasRows);
+        header.AddChild(disableAllBtn);
 
         if (groupName == ModdingScreenConstants.UnassignedGroup)
         {
@@ -257,50 +259,32 @@ internal static class ModdingScreenGroupUi
             return header;
         }
 
-        var renameBtn = new Button
-        {
-            Text = "Rename",
-            TooltipText = "Rename this group. Mods already in it stay in it."
-        };
-        ModdingScreenVanillaStyle.ApplyButton(renameBtn);
-        renameBtn.Pressed += () => renameGroup(groupName);
+        var renameBtn = BuildIconButton(
+            ModdingScreenIcon.PencilLine,
+            ModdingScreenText.Get(BmmText.GroupRenameTooltip, "Rename this group. Mods already in it stay in it."),
+            () => renameGroup(groupName));
         header.AddChild(renameBtn);
 
-        header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
-
-        var upBtn = new Button
-        {
-            Text = "^",
-            TooltipText = "Move this group higher in the mod list."
-        };
-        ModdingScreenVanillaStyle.ApplySmallButton(upBtn);
-        upBtn.Pressed += () => moveGroup(groupName, -1);
+        var upBtn = BuildIconButton(
+            ModdingScreenIcon.ChevronUp,
+            ModdingScreenText.Get(BmmText.GroupMoveUpTooltip, "Move this group higher in the mod list."),
+            () => moveGroup(groupName, -1));
         header.AddChild(upBtn);
 
-        header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
-
-        var downBtn = new Button
-        {
-            Text = "v",
-            TooltipText = "Move this group lower in the mod list."
-        };
-        ModdingScreenVanillaStyle.ApplySmallButton(downBtn);
-        downBtn.Pressed += () => moveGroup(groupName, 1);
+        var downBtn = BuildIconButton(
+            ModdingScreenIcon.ChevronDown,
+            ModdingScreenText.Get(BmmText.GroupMoveDownTooltip, "Move this group lower in the mod list."),
+            () => moveGroup(groupName, 1));
         header.AddChild(downBtn);
 
-        header.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
-
-        var deleteBtn = new Button
-        {
-            Text = "Del",
-            TooltipText = "Delete this group label. The mods stay installed and move back to Unassigned."
-        };
-        ModdingScreenVanillaStyle.ApplyButton(deleteBtn);
-        deleteBtn.Pressed += () =>
+        var deleteBtn = BuildIconButton(
+            ModdingScreenIcon.Trash,
+            ModdingScreenText.Get(BmmText.GroupDeleteTooltip, "Delete this group label. The mods stay installed and move back to Unassigned."),
+            () =>
         {
             if (ModdingGroupStateOps.DeleteGroup(groupName))
                 refreshGroupsUI();
-        };
+        });
         header.AddChild(deleteBtn);
 
         AddHeaderScrollbarSpacer(header);
@@ -308,28 +292,70 @@ internal static class ModdingScreenGroupUi
         return header;
     }
 
+    private static Button BuildCollapseButton(string groupName, bool isCollapsed)
+    {
+        var button = new Button
+        {
+            TooltipText = isCollapsed
+                ? ModdingScreenText.Get(BmmText.GroupShowTooltip, "Show the mods in this group.")
+                : ModdingScreenText.Get(BmmText.GroupHideTooltip, "Hide the mods in this group without changing whether they are enabled."),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyButton(button);
+
+        var content = new HBoxContainer
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        content.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        content.OffsetLeft = 8;
+        content.OffsetRight = -8;
+        content.AddThemeConstantOverride("separation", 4);
+
+        var icon = new TextureRect
+        {
+            Texture = ModdingScreenIcons.Get(isCollapsed ? ModdingScreenIcon.ListChevronsUpDown : ModdingScreenIcon.ListChevronsDownUp),
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupHeaderIconSize, ModdingScreenConstants.GroupHeaderIconSize),
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        content.AddChild(icon);
+
+        var label = new Label
+        {
+            Text = ModdingGroupStateOps.GetDisplayGroupName(groupName),
+            ClipText = true,
+            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        ModdingScreenVanillaStyle.ApplyLabel(label);
+        content.AddChild(label);
+
+        button.AddChild(content);
+        return button;
+    }
+
+    private static Button BuildIconButton(ModdingScreenIcon icon, string tooltip, Action pressed, bool disabled = false)
+    {
+        var button = new Button
+        {
+            Icon = ModdingScreenIcons.Get(icon),
+            TooltipText = tooltip,
+            Disabled = disabled
+        };
+        ModdingScreenVanillaStyle.ApplyIconButton(button);
+        button.Pressed += pressed;
+        return button;
+    }
+
     private static void AddHeaderScrollbarSpacer(HBoxContainer header)
     {
         header.AddChild(new Control
         {
-            CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupHeaderScrollbarReserveWidth, 0),
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupHeaderTrailingPadding, 0),
             MouseFilter = Control.MouseFilterEnum.Ignore
         });
-    }
-
-    private static bool AreAllRowsEnabled(List<NModMenuRow> groupRows)
-    {
-        if (groupRows.Count == 0)
-            return false;
-
-        foreach (var row in groupRows)
-        {
-            var tick = row.GetNodeOrNull<NTickbox>(ModdingScreenConstants.TickboxPath);
-            if (tick != null && !(bool)tick.Get("IsTicked"))
-                return false;
-        }
-
-        return true;
     }
 
     private static void ToggleCollapsedGroup(string groupName)

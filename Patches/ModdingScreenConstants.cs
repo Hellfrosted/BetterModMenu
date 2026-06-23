@@ -15,7 +15,7 @@ internal static class ModdingScreenConstants
     public const float TopBarFallbackY = 55f;
     public const float TopBarFallbackWidth = 360f;
     public const float TopBarButtonMinWidth = 62f;
-    public const float TopBarButtonCompactWidth = 52f;
+    public const float TopBarButtonCompactWidth = 60f;
     public const float ToolbarControlHeight = 30f;
 
     public const float GroupBarCompactThreshold = 980f;
@@ -39,7 +39,12 @@ internal static class ModdingScreenConstants
     public const float RowMinimumLeftContentWidth = 480f;
     public const float RowGameplayIndicatorSlotWidth = 22f;
     public const float RowGameplayIndicatorSize = 14f;
-    public const float GroupHeaderScrollbarReserveWidth = 52f;
+    public const float GroupHeaderIconButtonSize = 34f;
+    public const int GroupHeaderIconSize = 20;
+    public const float GroupHeaderTrailingPadding = 0f;
+    public const float ModsScrollbarOutsideGap = 8f;
+    public const float ModsScrollbarLaneWidth = 44f;
+    public const float ModsScrollbarOpticalCenterOffset = 3f;
     public const float ScrollFitTolerance = 1f;
 
     public const float DetailActionHorizontalInset = 28f;

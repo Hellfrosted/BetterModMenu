@@ -40,33 +40,40 @@ public static class NModMenuRowPatch
         if (ProfileManager.ModGameplayImpactCache.TryGetValue(modId, out bool affectsGameplay) && affectsGameplay)
             AddGameplayImpactIndicator(container);
 
-        const string orderTooltip = "Move this mod in the saved load order for the next launch. Dependency rules may still move it during startup.";
+        string orderTooltip = ModdingScreenText.Get(
+            BmmText.RowMoveOrderTooltip,
+            "Move this mod in the saved load order for the next launch. Dependency rules may still move it during startup.");
 
         var upBtn = new Button
         {
-            Text = "^",
+            Icon = ModdingScreenIcons.Get(ModdingScreenIcon.ChevronUp),
             CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
             TooltipText = orderTooltip
         };
-        ModdingScreenVanillaStyle.ApplySmallButton(upBtn);
+        ModdingScreenVanillaStyle.ApplyIconButton(upBtn);
         upBtn.Pressed += () => QueueMoveModOrder(__instance, modId, -1);
         container.AddChild(upBtn);
 
         var downBtn = new Button
         {
-            Text = "v",
+            Icon = ModdingScreenIcons.Get(ModdingScreenIcon.ChevronDown),
             CustomMinimumSize = new Vector2(ModdingScreenConstants.RowButtonSize, ModdingScreenConstants.RowButtonSize),
             TooltipText = orderTooltip
         };
-        ModdingScreenVanillaStyle.ApplySmallButton(downBtn);
+        ModdingScreenVanillaStyle.ApplyIconButton(downBtn);
         downBtn.Pressed += () => QueueMoveModOrder(__instance, modId, 1);
         container.AddChild(downBtn);
 
         var groupDropdown = new OptionButton
         {
             Name = "GroupDropdown",
-            TooltipText = "Choose which custom group this mod appears under. This does not enable, disable, install, or uninstall the mod.",
-            CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0)
+            TooltipText = ModdingScreenText.Get(
+                BmmText.RowGroupDropdownTooltip,
+                "Choose which custom group this mod appears under. This does not enable, disable, install, or uninstall the mod."),
+            CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, 0),
+            FitToLongestItem = false,
+            ClipText = true,
+            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis
         };
         ModdingScreenVanillaStyle.ApplyOptionButton(groupDropdown);
 
@@ -74,12 +81,12 @@ public static class NModMenuRowPatch
         {
             bool hadPreviousAssignment = Data.ProfileManager.ModGroups.TryGetValue(modId, out string? previousAssignedGroup);
             string previousVisibleGroup = ModdingGroupStateOps.GetAssignedGroup(modId);
-            var selectedText = groupDropdown.GetItemText((int)idx);
+            string selectedGroup = ModdingGroupStateOps.GetDropdownGroupValue(groupDropdown, (int)idx);
 
-            if (selectedText == ModdingScreenConstants.UnassignedGroup)
+            if (selectedGroup == ModdingScreenConstants.UnassignedGroup)
                 Data.ProfileManager.ModGroups.Remove(modId);
             else
-                Data.ProfileManager.ModGroups[modId] = selectedText;
+                Data.ProfileManager.ModGroups[modId] = selectedGroup;
 
             if (!Data.ProfileManager.SaveInMemoryState())
             {
@@ -116,7 +123,7 @@ public static class NModMenuRowPatch
         var slot = new CenterContainer
         {
             Name = "GameplayImpactIndicator",
-            TooltipText = "This mod affects gameplay.",
+            TooltipText = ModdingScreenText.Get(BmmText.GameplayImpactTooltip, "This mod affects gameplay."),
             CustomMinimumSize = new Vector2(
                 ModdingScreenConstants.RowGameplayIndicatorSlotWidth,
                 ModdingScreenConstants.RowButtonSize)
@@ -355,10 +362,13 @@ public static class NModMenuRowPatch
         }
 
         float width = container.GetCombinedMinimumSize().X;
+        float height = container.GetCombinedMinimumSize().Y;
         container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         container.GrowHorizontal = Control.GrowDirection.Begin;
         container.OffsetRight = -(ModdingScreenConstants.RowControlsRightPadding + ModdingScreenConstants.RowNativeTickboxReserveWidth);
         container.OffsetLeft = container.OffsetRight - width;
+        container.OffsetTop = -height / 2f;
+        container.OffsetBottom = height / 2f;
     }
 
     private static void QueueMoveModOrder(NModMenuRow row, string modId, int direction)

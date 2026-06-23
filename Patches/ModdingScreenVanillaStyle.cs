@@ -57,6 +57,21 @@ internal static class ModdingScreenVanillaStyle
         button.CustomMinimumSize = new Vector2(Mathf.Max(button.CustomMinimumSize.X, 42), 28);
     }
 
+    public static void ApplyIconButton(Button button)
+    {
+        ApplyButton(button);
+        button.CustomMinimumSize = new Vector2(
+            ModdingScreenConstants.GroupHeaderIconButtonSize,
+            ModdingScreenConstants.GroupHeaderIconButtonSize);
+        button.Alignment = HorizontalAlignment.Center;
+        button.IconAlignment = HorizontalAlignment.Center;
+        button.VerticalIconAlignment = VerticalAlignment.Center;
+        button.ExpandIcon = false;
+        button.ClipText = true;
+        button.AddThemeConstantOverride("h_separation", 0);
+        button.AddThemeConstantOverride("icon_max_width", ModdingScreenConstants.GroupHeaderIconSize);
+    }
+
     public static void ApplyLabel(Label label, bool muted = false)
     {
         label.AddThemeColorOverride("font_color", muted ? MutedTextColor : TextColor);

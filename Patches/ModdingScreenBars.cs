@@ -1,4 +1,5 @@
 using System;
+using BetterModMenu.Data;
 using Godot;
 
 namespace BetterModMenu.Patches;
@@ -20,11 +21,14 @@ internal sealed class TopBarControls(
     {
         var presentation = ModdingScreenLayoutRules.GetTopBarPresentation(isCompact);
         NewProfileButton.Text = presentation.NewProfile.Text;
-        NewProfileButton.TooltipText = presentation.NewProfile.TooltipText;
+        NewProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePlus);
+        NewProfileButton.TooltipText = ModdingScreenText.Get(presentation.NewProfile.TooltipKey, "New profile: copy the current enabled/disabled mods into a separate saved setup.");
         RenameProfileButton.Text = presentation.RenameProfile.Text;
-        RenameProfileButton.TooltipText = presentation.RenameProfile.TooltipText;
+        RenameProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePenLine);
+        RenameProfileButton.TooltipText = ModdingScreenText.Get(presentation.RenameProfile.TooltipKey, "Rename profile: change the selected profile's name without changing its mods.");
         DeleteProfileButton.Text = presentation.DeleteProfile.Text;
-        DeleteProfileButton.TooltipText = presentation.DeleteProfile.TooltipText;
+        DeleteProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FileX);
+        DeleteProfileButton.TooltipText = ModdingScreenText.Get(presentation.DeleteProfile.TooltipKey, "Delete profile: remove the selected saved setup. Your installed mod files stay installed.");
 
         var minSize = new Vector2(presentation.ButtonWidth, ModdingScreenConstants.ToolbarControlHeight);
         NewProfileButton.CustomMinimumSize = minSize;
@@ -126,8 +130,8 @@ internal static class ModdingScreenBars
 
         var profileLabel = new Label
         {
-            Text = "Profile:",
-            TooltipText = "Saved enabled/disabled mod setup."
+            Text = ModdingScreenText.Get(BmmText.ProfileLabel, "Profile:"),
+            TooltipText = ModdingScreenText.Get(BmmText.ProfileTooltip, "Saved enabled/disabled mod setup.")
         };
         ModdingScreenVanillaStyle.ApplyLabel(profileLabel, muted: true);
         topBar.AddChild(profileLabel);
@@ -135,28 +139,37 @@ internal static class ModdingScreenBars
         var profileDropdown = new OptionButton
         {
             CustomMinimumSize = new Vector2(120, 0),
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            FitToLongestItem = false,
+            ClipText = true,
+            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis
         };
         ModdingScreenVanillaStyle.ApplyOptionButton(profileDropdown);
         profileDropdown.ItemSelected += index => onProfileSelected(index);
         topBar.AddChild(profileDropdown);
 
-        var newProfileBtn = new Button { Text = "+ New", CustomMinimumSize = new Vector2(ModdingScreenConstants.TopBarButtonMinWidth, 0) };
-        ModdingScreenVanillaStyle.ApplyButton(newProfileBtn);
+        var newProfileBtn = new Button { Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePlus) };
+        ApplyProfileIconButton(newProfileBtn);
         newProfileBtn.Pressed += onNewProfilePressed;
         topBar.AddChild(newProfileBtn);
 
-        var renameProfileBtn = new Button { Text = "Rename", CustomMinimumSize = new Vector2(ModdingScreenConstants.TopBarButtonMinWidth, 0) };
-        ModdingScreenVanillaStyle.ApplyButton(renameProfileBtn);
+        var renameProfileBtn = new Button { Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePenLine) };
+        ApplyProfileIconButton(renameProfileBtn);
         renameProfileBtn.Pressed += onRenameProfilePressed;
         topBar.AddChild(renameProfileBtn);
 
-        var delProfileBtn = new Button { Text = "Del", CustomMinimumSize = new Vector2(ModdingScreenConstants.TopBarButtonMinWidth, 0) };
-        ModdingScreenVanillaStyle.ApplyButton(delProfileBtn);
+        var delProfileBtn = new Button { Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FileX) };
+        ApplyProfileIconButton(delProfileBtn);
         delProfileBtn.Pressed += onDeleteProfilePressed;
         topBar.AddChild(delProfileBtn);
 
         return new TopBarControls(topBar, profileDropdown, newProfileBtn, renameProfileBtn, delProfileBtn);
+    }
+
+    private static void ApplyProfileIconButton(Button button)
+    {
+        ModdingScreenVanillaStyle.ApplyIconButton(button);
+        button.CustomMinimumSize = new Vector2(ModdingScreenConstants.TopBarButtonCompactWidth, ModdingScreenConstants.ToolbarControlHeight);
     }
 
     public static GroupBarControls CreateGroupBar(
@@ -185,9 +198,9 @@ internal static class ModdingScreenBars
 
         var portableToggle = new CheckButton
         {
-            Text = "Portable Mode",
+            Text = ModdingScreenText.Get(BmmText.PortableMode, "Portable Mode"),
             ButtonPressed = portableModeEnabled,
-            TooltipText = "Portable Mode: save Better Mod Menu data beside the mod files instead of the normal game save folder."
+            TooltipText = ModdingScreenText.Get(BmmText.PortableModeTooltip, "Portable Mode: save Better Mod Menu data beside the mod files instead of the normal game save folder.")
         };
         ModdingScreenVanillaStyle.ApplyButton(portableToggle);
         portableToggle.Toggled += isToggled => onPortableModeToggled(isToggled);
@@ -195,8 +208,8 @@ internal static class ModdingScreenBars
 
         var backupButton = new Button
         {
-            Text = "Backup",
-            TooltipText = "Backup: save copies of your profiles, groups, and current enabled-mod settings."
+            Text = ModdingScreenText.Get(BmmText.Backup, "Backup"),
+            TooltipText = ModdingScreenText.Get(BmmText.BackupTooltip, "Backup: save copies of your profiles, groups, and current enabled-mod settings.")
         };
         ModdingScreenVanillaStyle.ApplyButton(backupButton);
         backupButton.Pressed += onManualBackupPressed;
@@ -204,8 +217,8 @@ internal static class ModdingScreenBars
 
         var loadBackupButton = new Button
         {
-            Text = "Load",
-            TooltipText = "Load: choose a Better Mod Menu profile and group backup to restore."
+            Text = ModdingScreenText.Get(BmmText.Load, "Load"),
+            TooltipText = ModdingScreenText.Get(BmmText.LoadTooltip, "Load: choose a Better Mod Menu profile and group backup to restore.")
         };
         ModdingScreenVanillaStyle.ApplyButton(loadBackupButton);
         loadBackupButton.Pressed += onLoadBackupPressed;
@@ -213,24 +226,36 @@ internal static class ModdingScreenBars
 
         var exportButton = new Button
         {
-            Text = "CSV",
-            TooltipText = "CSV: export installed mods with versions, enabled state, group names, and Steam Workshop links when available."
+            Text = ModdingScreenText.Get(BmmText.Csv, "CSV"),
+            TooltipText = ModdingScreenText.Get(BmmText.CsvTooltip, "CSV: export installed mods with versions, enabled state, group names, and Steam Workshop links when available.")
         };
         ModdingScreenVanillaStyle.ApplyButton(exportButton);
         exportButton.Pressed += onExportModListPressed;
         primaryRow.AddChild(exportButton);
 
-        var logsButton = new Button { Text = "Logs", TooltipText = "Open full BetterModMenu/TTSMM log output with warnings and errors highlighted." };
+        var logsButton = new Button
+        {
+            Text = ModdingScreenText.Get(BmmText.Logs, "Logs"),
+            TooltipText = ModdingScreenText.Get(BmmText.LogsTooltip, "Open full Better Mod Menu log output with warnings and errors highlighted.")
+        };
         ModdingScreenVanillaStyle.ApplyButton(logsButton);
         logsButton.Pressed += onViewLogsPressed;
         primaryRow.AddChild(logsButton);
 
-        var styleButton = new Button { Text = "Style", TooltipText = "Customize in-game mod name colors by Steam Workshop tag or individual mod." };
+        var styleButton = new Button
+        {
+            Text = ModdingScreenText.Get(BmmText.Style, "Style"),
+            TooltipText = ModdingScreenText.Get(BmmText.StyleTooltip, "Customize in-game mod name colors by Steam Workshop tag or individual mod.")
+        };
         ModdingScreenVanillaStyle.ApplyButton(styleButton);
         styleButton.Pressed += onStyleEditorPressed;
         primaryRow.AddChild(styleButton);
 
-        var tutorialButton = new Button { Text = "Help", TooltipText = "Help: explain what each Better Mod Menu control does." };
+        var tutorialButton = new Button
+        {
+            Text = ModdingScreenText.Get(BmmText.Help, "Help"),
+            TooltipText = ModdingScreenText.Get(BmmText.HelpTooltip, "Help: explain what each Better Mod Menu control does.")
+        };
         ModdingScreenVanillaStyle.ApplyButton(tutorialButton);
         tutorialButton.Pressed += onTutorialPressed;
         primaryRow.AddChild(tutorialButton);
@@ -239,8 +264,8 @@ internal static class ModdingScreenBars
 #if BETTERMODMENU_CLOUD_FEATURES
         cloudButton = new Button
         {
-            Text = "Cloud",
-            TooltipText = "Cloud: choose a synced folder where backups and CSV exports should also be copied."
+            Text = ModdingScreenText.Get(BmmText.Cloud, "Cloud"),
+            TooltipText = ModdingScreenText.Get(BmmText.CloudTooltip, "Cloud: choose a synced folder where backups and CSV exports should also be copied.")
         };
         ModdingScreenVanillaStyle.ApplyButton(cloudButton);
         cloudButton.Pressed += onCloudBackupPressed;
@@ -250,8 +275,8 @@ internal static class ModdingScreenBars
         var flexibleSpacer = new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         var searchInput = new LineEdit
         {
-            PlaceholderText = "Search mods...",
-            TooltipText = "Search by mod name, id, author, description, version, dependency, group, enabled state, or Steam Workshop id.",
+            PlaceholderText = ModdingScreenText.Get(BmmText.SearchPlaceholder, "Search mods..."),
+            TooltipText = ModdingScreenText.Get(BmmText.SearchTooltip, "Search by mod name, id, author, description, version, dependency, group, enabled state, or Steam Workshop id."),
             CustomMinimumSize = new Vector2(ModdingScreenConstants.SearchInputWidth, 0),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
@@ -262,7 +287,7 @@ internal static class ModdingScreenBars
         var searchResultLabel = new Label
         {
             Text = "",
-            TooltipText = "Search result count."
+            TooltipText = ModdingScreenText.Get(BmmText.SearchResultTooltip, "Search result count.")
         };
         ModdingScreenVanillaStyle.ApplyLabel(searchResultLabel, muted: true);
         searchBar.AddChild(searchResultLabel);
@@ -271,16 +296,16 @@ internal static class ModdingScreenBars
 
         var groupLabel = new Label
         {
-            Text = "Group:",
-            TooltipText = "Custom labels for organizing mods."
+            Text = ModdingScreenText.Get(BmmText.GroupLabel, "Group:"),
+            TooltipText = ModdingScreenText.Get(BmmText.GroupTooltip, "Custom labels for organizing mods.")
         };
         ModdingScreenVanillaStyle.ApplyLabel(groupLabel, muted: true);
         primaryRow.AddChild(groupLabel);
 
         var newGroupInput = new LineEdit
         {
-            PlaceholderText = "Group name...",
-            TooltipText = "Type a new group name, then press Add.",
+            PlaceholderText = ModdingScreenText.Get(BmmText.GroupNamePlaceholder, "Group name..."),
+            TooltipText = ModdingScreenText.Get(BmmText.GroupNameTooltip, "Type a new group name, then press Add."),
             CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupInputWideWidth, 0)
         };
         ModdingScreenVanillaStyle.ApplyLineEdit(newGroupInput);
@@ -288,8 +313,8 @@ internal static class ModdingScreenBars
 
         var newGroupBtn = new Button
         {
-            Text = "+ Add",
-            TooltipText = "Add this group name to the mod list."
+            Text = ModdingScreenText.Get(BmmText.AddGroup, "+ Add"),
+            TooltipText = ModdingScreenText.Get(BmmText.AddGroupTooltip, "Add this group name to the mod list.")
         };
         ModdingScreenVanillaStyle.ApplyButton(newGroupBtn);
         newGroupBtn.Pressed += () =>

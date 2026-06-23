@@ -19,6 +19,12 @@ internal sealed class FolderOpenCommand
 
 internal static class LogFolderOpenRules
 {
+    public const string ErrorNoLogFilePath = "No log file path is available.";
+    public const string ErrorLogFileNoLongerExists = "Log file no longer exists.";
+    public const string ErrorLogFolderNoLongerExists = "Log folder no longer exists.";
+    public const string ErrorNoFolderPath = "No folder path is available.";
+    public const string ErrorFileManagerDidNotStart = "The operating system did not start a file manager.";
+
     public static bool TryGetContainingDirectory(string logPath, out string directory, out string? error)
     {
         directory = string.Empty;
@@ -26,20 +32,20 @@ internal static class LogFolderOpenRules
 
         if (string.IsNullOrWhiteSpace(logPath))
         {
-            error = "No log file path is available.";
+            error = ErrorNoLogFilePath;
             return false;
         }
 
         if (!File.Exists(logPath))
         {
-            error = "Log file no longer exists.";
+            error = ErrorLogFileNoLongerExists;
             return false;
         }
 
         string? parentDirectory = Path.GetDirectoryName(Path.GetFullPath(logPath));
         if (string.IsNullOrWhiteSpace(parentDirectory) || !Directory.Exists(parentDirectory))
         {
-            error = "Log folder no longer exists.";
+            error = ErrorLogFolderNoLongerExists;
             return false;
         }
 
@@ -72,7 +78,7 @@ internal static class LogFolderOpenRules
         IReadOnlyList<FolderOpenCommand> commands = BuildOpenFolderCommands(directory, GetCurrentPlatform());
         if (commands.Count == 0)
         {
-            error = "No folder path is available.";
+            error = ErrorNoFolderPath;
             return false;
         }
 
@@ -126,7 +132,7 @@ internal static class LogFolderOpenRules
             if (process.Start())
                 return true;
 
-            error = "The operating system did not start a file manager.";
+            error = ErrorFileManagerDidNotStart;
             return false;
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)

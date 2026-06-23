@@ -21,6 +21,7 @@
     <Compile Include="..\Data\LogFolderOpenRules.cs" Link="Data\LogFolderOpenRules.cs" />
     <Compile Include="..\Data\LogLevelFilterService.cs" Link="Data\LogLevelFilterService.cs" />
     <Compile Include="..\Data\LogViewerService.cs" Link="Data\LogViewerService.cs" />
+    <Compile Include="..\Data\Localization.cs" Link="Data\Localization.cs" />
     <Compile Include="..\Data\LogHighlightService.cs" Link="Data\LogHighlightService.cs" />
     <Compile Include="..\Data\ModNameStyleCatalog.cs" Link="Data\ModNameStyleCatalog.cs" />
     <Compile Include="..\Data\ModNameStyleEditorRules.cs" Link="Data\ModNameStyleEditorRules.cs" />

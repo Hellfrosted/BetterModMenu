@@ -155,6 +155,14 @@ public class ProjectFileTests
         Assert.IsFalse(project.Contains("BeforeTargets=\"Build\" Condition=\"'$(UploadSteamWorkshop)'", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public void LocalizationCatalogs_AreEmbeddedIntoMainAssembly()
+    {
+        string project = File.ReadAllText(ProjectPath);
+
+        StringAssert.Contains(project, "<EmbeddedResource Include=\"Localization\\*.json\" />");
+    }
+
     private static string ProjectPath => Path.Combine(RepoRoot, "BetterModMenu.csproj");
 
     private static string RepoRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));

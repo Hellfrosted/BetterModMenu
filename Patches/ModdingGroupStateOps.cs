@@ -51,14 +51,14 @@ internal static class ModdingGroupStateOps
     public static void SyncGroupDropdown(OptionButton dropdown, string assignedGroup)
     {
         string currentSelection = (dropdown.ItemCount > 0 && dropdown.Selected >= 0)
-            ? dropdown.GetItemText(dropdown.Selected)
+            ? GetDropdownGroupValue(dropdown, dropdown.Selected)
             : string.Empty;
 
-        if (currentSelection == assignedGroup && dropdown.ItemCount == ProfileManager.CustomGroups.Count + 1)
+        if (currentSelection == assignedGroup && DropdownItemsMatchGroups(dropdown))
             return;
 
         dropdown.Clear();
-        dropdown.AddItem(ModdingScreenConstants.UnassignedGroup, 0);
+        dropdown.AddItem(GetDisplayGroupName(ModdingScreenConstants.UnassignedGroup), 0);
         for (int i = 0; i < ProfileManager.CustomGroups.Count; i++)
             dropdown.AddItem(ProfileManager.CustomGroups[i], i + 1);
 
@@ -66,6 +66,37 @@ internal static class ModdingGroupStateOps
             ? 0
             : ProfileManager.CustomGroups.IndexOf(assignedGroup) + 1;
         dropdown.Select(selectedIndex);
+    }
+
+    public static string GetDisplayGroupName(string groupName)
+    {
+        return groupName == ModdingScreenConstants.UnassignedGroup
+            ? ModdingScreenText.Get(BmmText.GroupUnassigned, "Unassigned")
+            : groupName;
+    }
+
+    public static string GetDropdownGroupValue(OptionButton dropdown, int itemIndex)
+    {
+        return itemIndex <= 0
+            ? ModdingScreenConstants.UnassignedGroup
+            : dropdown.GetItemText(itemIndex);
+    }
+
+    private static bool DropdownItemsMatchGroups(OptionButton dropdown)
+    {
+        if (dropdown.ItemCount != ProfileManager.CustomGroups.Count + 1)
+            return false;
+
+        if (dropdown.GetItemText(0) != GetDisplayGroupName(ModdingScreenConstants.UnassignedGroup))
+            return false;
+
+        for (int i = 0; i < ProfileManager.CustomGroups.Count; i++)
+        {
+            if (dropdown.GetItemText(i + 1) != ProfileManager.CustomGroups[i])
+                return false;
+        }
+
+        return true;
     }
 
     public static bool TryMoveGroup(string groupName, int direction)

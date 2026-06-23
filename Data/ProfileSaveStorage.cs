@@ -4,6 +4,10 @@ namespace BetterModMenu.Data;
 
 internal static class ProfileSaveStorage
 {
+    public const string ErrorNoWritableConfigPath = "No writable config path could be resolved.";
+    public const string ErrorBackupFileNotFound = "Backup file was not found.";
+    public const string ErrorBackupFileNoProfiles = "Backup file does not contain any profiles.";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -69,7 +73,7 @@ internal static class ProfileSaveStorage
         try
         {
             if (string.IsNullOrWhiteSpace(path))
-                throw new InvalidOperationException("No writable config path could be resolved.");
+                throw new InvalidOperationException(ErrorNoWritableConfigPath);
 
             setActiveConfigExtensionFromPath(path);
 
@@ -111,7 +115,7 @@ internal static class ProfileSaveStorage
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                error = "Backup file was not found.";
+                error = ErrorBackupFileNotFound;
                 return false;
             }
 
@@ -119,7 +123,7 @@ internal static class ProfileSaveStorage
             if (TryReadSaveDataWithProfiles(json, out saveData))
                 return true;
 
-            error = "Backup file does not contain any profiles.";
+            error = ErrorBackupFileNoProfiles;
             return false;
         }
         catch (Exception ex)

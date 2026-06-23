@@ -22,6 +22,7 @@ internal sealed class ModSearchResult
     public string ModId { get; init; } = string.Empty;
     public int Score { get; init; }
     public string MatchReason { get; init; } = string.Empty;
+    public string MatchReasonKey { get; init; } = string.Empty;
 }
 
 internal static class ModSearchRules
@@ -71,7 +72,7 @@ internal static class ModSearchRules
     {
         var fields = BuildFields(document);
         int score = 0;
-        string reason = string.Empty;
+        SearchReason reason = SearchReason.Empty;
 
         foreach (var field in fields)
         {
@@ -87,7 +88,8 @@ internal static class ModSearchRules
         {
             ModId = document.ModId,
             Score = score,
-            MatchReason = reason
+            MatchReason = reason.Fallback,
+            MatchReasonKey = reason.Key
         };
     }
 
@@ -217,15 +219,21 @@ internal static class ModSearchRules
         };
     }
 
-    private static string BuildReason(SearchField field)
+    private static SearchReason BuildReason(SearchField field)
     {
         return field.Name switch
         {
-            "id" => "Matched mod id",
-            "name" => "Matched mod name",
-            "Steam Workshop id" => "Matched Steam Workshop id",
-            "Steam Workshop link" => "Matched Steam Workshop link",
-            _ => "Matched " + field.Name
+            "id" => new SearchReason(BmmText.SearchMatchModId, "Matched mod id"),
+            "name" => new SearchReason(BmmText.SearchMatchModName, "Matched mod name"),
+            "author" => new SearchReason(BmmText.SearchMatchAuthor, "Matched author"),
+            "version" => new SearchReason(BmmText.SearchMatchVersion, "Matched version"),
+            "group" => new SearchReason(BmmText.SearchMatchGroup, "Matched group"),
+            "state" => new SearchReason(BmmText.SearchMatchState, "Matched state"),
+            "Steam Workshop id" => new SearchReason(BmmText.SearchMatchWorkshopId, "Matched Steam Workshop id"),
+            "Steam Workshop link" => new SearchReason(BmmText.SearchMatchWorkshopLink, "Matched Steam Workshop link"),
+            "description" => new SearchReason(BmmText.SearchMatchDescription, "Matched description"),
+            "dependency" => new SearchReason(BmmText.SearchMatchDependency, "Matched dependency"),
+            _ => new SearchReason(string.Empty, "Matched " + field.Name)
         };
     }
 
@@ -330,4 +338,9 @@ internal static class ModSearchRules
         int PrefixScore,
         int FuzzyScore,
         bool IncludeContainsForShortQuery);
+
+    private readonly record struct SearchReason(string Key, string Fallback)
+    {
+        public static SearchReason Empty => new(string.Empty, string.Empty);
+    }
 }

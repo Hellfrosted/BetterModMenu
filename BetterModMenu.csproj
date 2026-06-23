@@ -35,6 +35,9 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\*.json" />
+  </ItemGroup>
   <!-- Custom Target to run after Build -->
   <Target Name="PackageMod" AfterTargets="Build" Condition="'$(PackageModOnBuild)' == 'true'">
     <PropertyGroup>

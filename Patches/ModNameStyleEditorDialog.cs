@@ -7,7 +7,12 @@ namespace BetterModMenu.Patches;
 internal static class ModNameStyleEditorDialog
 {
     private const string PreviewModId = "BetterModMenu.StylePreview";
-    private const string PreviewDisplayName = "Preview Mod";
+
+    private static string T(string key, string fallback) => ModdingScreenText.Get(key, fallback);
+
+    private static string F(string key, string fallback, params object[] args) => ModdingScreenText.Format(key, fallback, args);
+
+    private static string PreviewDisplayName => T(BmmText.StylePreviewMod, "Preview Mod");
 
     public static void Show(NModdingScreen screen, Action onSaved)
     {
@@ -19,14 +24,14 @@ internal static class ModNameStyleEditorDialog
 
         var popup = new ConfirmationDialog
         {
-            Title = "Mod Name Style",
+            Title = T(BmmText.StyleTitle, "Mod Name Style"),
             DialogText = string.Empty,
             Unresizable = true
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
-        var enabledToggle = CreateToggle("Enabled", workingSettings.Enabled);
-        var defaultTagToggle = CreateToggle("Use Defaults", workingSettings.UseDefaultTagFormats);
+        var enabledToggle = CreateToggle(T(BmmText.StyleEnabled, "Enabled"), workingSettings.Enabled);
+        var defaultTagToggle = CreateToggle(T(BmmText.StyleUseDefaults, "Use Defaults"), workingSettings.UseDefaultTagFormats);
         var tagDropdown = CreateTagDropdown(selectedTag, layout);
         var tagColorInput = CreateColorInput("#74a6ff", layout);
         var tagSwatch = CreateColorSwatch(layout);
@@ -34,7 +39,7 @@ internal static class ModNameStyleEditorDialog
         var modKeyInput = new LineEdit
         {
             Text = initialModKey,
-            PlaceholderText = "mod id or name",
+            PlaceholderText = T(BmmText.StyleModKeyPlaceholder, "mod id or name"),
             CustomMinimumSize = new Vector2(layout.SettingWidth, ModdingScreenConstants.ToolbarControlHeight),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
@@ -44,14 +49,14 @@ internal static class ModNameStyleEditorDialog
         var modPreview = CreatePreviewLabel(layout);
         var statusLabel = CreateStatusLabel(layout);
 
-        var applyTagButton = CreateEditorButton("Apply", layout, "Stage this color for the selected Workshop tag.");
-        var disableTagButton = CreateEditorButton("Disable Tag", layout, "Disable coloring for the selected Workshop tag.");
-        var resetTagButton = CreateEditorButton("Reset Tag", layout, "Remove the selected tag override or disabled state.");
-        var applyModButton = CreateEditorButton("Apply", layout, "Stage this color for the entered mod id or name.");
-        var removeModButton = CreateEditorButton("Remove Override", layout, "Remove the entered mod-specific color override.");
-        var resetAllButton = CreateEditorButton("Reset All", layout, "Stage default mod-name style settings.");
-        var saveButton = CreateEditorButton("Save", layout, "Save the staged style settings.");
-        var cancelButton = CreateEditorButton("Cancel", layout, "Close without saving staged style changes.");
+        var applyTagButton = CreateEditorButton(T(BmmText.StyleApply, "Apply"), layout, T(BmmText.StyleApplyTagTooltip, "Stage this color for the selected Workshop tag."));
+        var disableTagButton = CreateEditorButton(T(BmmText.StyleDisableTag, "Disable Tag"), layout, T(BmmText.StyleDisableTagTooltip, "Disable coloring for the selected Workshop tag."));
+        var resetTagButton = CreateEditorButton(T(BmmText.StyleResetTag, "Reset Tag"), layout, T(BmmText.StyleResetTagTooltip, "Remove the selected tag override or disabled state."));
+        var applyModButton = CreateEditorButton(T(BmmText.StyleApply, "Apply"), layout, T(BmmText.StyleApplyModTooltip, "Stage this color for the entered mod id or name."));
+        var removeModButton = CreateEditorButton(T(BmmText.StyleRemoveOverride, "Remove Override"), layout, T(BmmText.StyleRemoveModTooltip, "Remove the entered mod-specific color override."));
+        var resetAllButton = CreateEditorButton(T(BmmText.StyleResetAll, "Reset All"), layout, T(BmmText.StyleResetAllTooltip, "Stage default mod-name style settings."));
+        var saveButton = CreateEditorButton(T(BmmText.StyleSave, "Save"), layout, T(BmmText.StyleSaveTooltip, "Save the staged style settings."));
+        var cancelButton = CreateEditorButton(T(BmmText.StyleCancel, "Cancel"), layout, T(BmmText.StyleCancelTooltip, "Close without saving staged style changes."));
 
         void SetStatus(string text, bool error = false)
         {
@@ -118,14 +123,14 @@ internal static class ModNameStyleEditorDialog
         {
             if (!ModNameStyleEditorRules.TrySetTagColor(workingSettings, selectedTag, tagColorInput.Text, out string supportedTag, out string normalizedColor))
             {
-                SetStatus("Use #rgb, #rrggbb, or #rrggbbaa for tag colors.", error: true);
+                SetStatus(T(BmmText.StyleStatusInvalidTagColor, "Use #rgb, #rrggbb, or #rrggbbaa for tag colors."), error: true);
                 SetSwatchColor(tagSwatch, tagColorInput.Text);
                 return;
             }
 
             selectedTag = supportedTag;
             tagColorInput.Text = normalizedColor;
-            SetStatus("Tag color staged.");
+            SetStatus(T(BmmText.StyleStatusTagColorStaged, "Tag color staged."));
             RefreshAll();
         }
 
@@ -133,12 +138,12 @@ internal static class ModNameStyleEditorDialog
         {
             if (!ModNameStyleEditorRules.TryDisableTagColor(workingSettings, selectedTag, out string supportedTag))
             {
-                SetStatus("Choose a supported Workshop tag first.", error: true);
+                SetStatus(T(BmmText.StyleStatusChooseTag, "Choose a supported Workshop tag first."), error: true);
                 return;
             }
 
             selectedTag = supportedTag;
-            SetStatus("Tag disabled in staged settings.");
+            SetStatus(T(BmmText.StyleStatusTagDisabled, "Tag disabled in staged settings."));
             RefreshAll();
         }
 
@@ -146,12 +151,12 @@ internal static class ModNameStyleEditorDialog
         {
             if (!ModNameStyleEditorRules.TryResetTagColor(workingSettings, selectedTag, out string supportedTag))
             {
-                SetStatus("Choose a supported Workshop tag first.", error: true);
+                SetStatus(T(BmmText.StyleStatusChooseTag, "Choose a supported Workshop tag first."), error: true);
                 return;
             }
 
             selectedTag = supportedTag;
-            SetStatus("Tag reset in staged settings.");
+            SetStatus(T(BmmText.StyleStatusTagReset, "Tag reset in staged settings."));
             RefreshAll();
         }
 
@@ -159,13 +164,13 @@ internal static class ModNameStyleEditorDialog
         {
             if (!ModNameStyleEditorRules.TrySetModColor(workingSettings, modKeyInput.Text, modColorInput.Text, out string normalizedColor))
             {
-                SetStatus("Enter a mod id or name and a valid hex color.", error: true);
+                SetStatus(T(BmmText.StyleStatusInvalidModColor, "Enter a mod id or name and a valid hex color."), error: true);
                 SetSwatchColor(modSwatch, modColorInput.Text);
                 return;
             }
 
             modColorInput.Text = normalizedColor;
-            SetStatus("Mod override staged.");
+            SetStatus(T(BmmText.StyleStatusModOverrideStaged, "Mod override staged."));
             RefreshModControls();
         }
 
@@ -174,12 +179,12 @@ internal static class ModNameStyleEditorDialog
             if (ModNameStyleEditorRules.RemoveModColor(workingSettings, modKeyInput.Text))
             {
                 modColorInput.Text = string.Empty;
-                SetStatus("Mod override removed from staged settings.");
+                SetStatus(T(BmmText.StyleStatusModOverrideRemoved, "Mod override removed from staged settings."));
                 RefreshModControls();
                 return;
             }
 
-            SetStatus("No override exists for that mod.", error: true);
+            SetStatus(T(BmmText.StyleStatusNoModOverride, "No override exists for that mod."), error: true);
         }
 
         bool TryStageCurrentInputsForSave()
@@ -188,7 +193,7 @@ internal static class ModNameStyleEditorDialog
             {
                 if (!ModNameStyleEditorRules.TryNormalizeColor(tagColorInput.Text, out string normalizedTagColor))
                 {
-                    SetStatus("The selected tag color is not valid. Use #rgb, #rrggbb, or #rrggbbaa.", error: true);
+                    SetStatus(T(BmmText.StyleStatusSelectedTagColorInvalid, "The selected tag color is not valid. Use #rgb, #rrggbb, or #rrggbbaa."), error: true);
                     SetSwatchColor(tagSwatch, tagColorInput.Text);
                     return false;
                 }
@@ -207,7 +212,7 @@ internal static class ModNameStyleEditorDialog
                             out string stagedTag,
                             out string stagedColor))
                     {
-                        SetStatus("The selected Workshop tag cannot be edited.", error: true);
+                        SetStatus(T(BmmText.StyleStatusTagCannotEdit, "The selected Workshop tag cannot be edited."), error: true);
                         return false;
                     }
 
@@ -223,7 +228,7 @@ internal static class ModNameStyleEditorDialog
 
             if (!ModNameStyleEditorRules.TrySetModColor(workingSettings, modKeyInput.Text, modColorInput.Text, out string normalizedModColor))
             {
-                SetStatus("The mod override needs a mod id or name and a valid hex color.", error: true);
+                SetStatus(T(BmmText.StyleStatusModOverrideInvalid, "The mod override needs a mod id or name and a valid hex color."), error: true);
                 SetSwatchColor(modSwatch, modColorInput.Text);
                 return false;
             }
@@ -235,13 +240,17 @@ internal static class ModNameStyleEditorDialog
         enabledToggle.Toggled += pressed =>
         {
             workingSettings.Enabled = pressed;
-            SetStatus(pressed ? "Mod-name styling staged as enabled." : "Mod-name styling staged as disabled.");
+            SetStatus(pressed
+                ? T(BmmText.StyleStatusStylingEnabled, "Mod-name styling staged as enabled.")
+                : T(BmmText.StyleStatusStylingDisabled, "Mod-name styling staged as disabled."));
             RefreshAll();
         };
         defaultTagToggle.Toggled += pressed =>
         {
             workingSettings.UseDefaultTagFormats = pressed;
-            SetStatus(pressed ? "Default tag colors staged as enabled." : "Default tag colors staged as disabled.");
+            SetStatus(pressed
+                ? T(BmmText.StyleStatusDefaultTagsEnabled, "Default tag colors staged as enabled.")
+                : T(BmmText.StyleStatusDefaultTagsDisabled, "Default tag colors staged as disabled."));
             RefreshAll();
         };
         tagDropdown.ItemSelected += index =>
@@ -268,7 +277,7 @@ internal static class ModNameStyleEditorDialog
         {
             ModNameStyleEditorRules.ResetToDefaults(workingSettings);
             selectedTag = ModNameStyleRules.GetDefaultTagFormats().Keys.First();
-            SetStatus("Defaults staged.");
+            SetStatus(T(BmmText.StyleStatusDefaultsStaged, "Defaults staged."));
             RefreshAll();
         };
         saveButton.Pressed += () =>
@@ -324,9 +333,9 @@ internal static class ModNameStyleEditorDialog
 
         ProfileManager.ModNameStyles = previousSettings;
         string error = string.IsNullOrWhiteSpace(ProfileManager.LastPersistenceError)
-            ? "The style settings could not be saved. Your previous settings are still in memory."
-            : "The style settings could not be saved. Your previous settings are still in memory.\n\nError:\n" + ProfileManager.LastPersistenceError;
-        ModdingScreenDialogs.ShowInfoDialog(screen, "Styles Not Saved", error);
+            ? T(BmmText.StyleSaveFailedMessage, "The style settings could not be saved. Your previous settings are still in memory.")
+            : F(BmmText.StyleSaveFailedErrorFormat, "The style settings could not be saved. Your previous settings are still in memory.\n\nError:\n{0}", ModdingScreenText.LocalizeKnownError(ProfileManager.LastPersistenceError));
+        ModdingScreenDialogs.ShowInfoDialog(screen, T(BmmText.StyleSaveFailedTitle, "Styles Not Saved"), error);
         return false;
     }
 
@@ -379,17 +388,17 @@ internal static class ModNameStyleEditorDialog
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         rows.AddThemeConstantOverride("separation", 4);
-        rows.AddChild(CreateEditorRow("Enabled", enabledToggle, layout));
-        rows.AddChild(CreateEditorRow("Default Tags", defaultTagToggle, layout));
-        rows.AddChild(CreateEditorRow("Workshop Tag", tagDropdown, layout));
-        rows.AddChild(CreateEditorRow("Tag Color", tagColorControl, layout));
-        rows.AddChild(CreateEditorRow("Tag Preview", tagPreview, layout));
-        rows.AddChild(CreateEditorRow("Tag Actions", tagActions, layout));
-        rows.AddChild(CreateEditorRow("Mod Key", modKeyInput, layout));
-        rows.AddChild(CreateEditorRow("Mod Color", modColorControl, layout));
-        rows.AddChild(CreateEditorRow("Mod Preview", modPreview, layout));
-        rows.AddChild(CreateEditorRow("Mod Actions", modActions, layout));
-        rows.AddChild(CreateEditorRow("Reset", resetActions, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowEnabled, "Enabled"), enabledToggle, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowDefaultTags, "Default Tags"), defaultTagToggle, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowWorkshopTag, "Workshop Tag"), tagDropdown, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowTagColor, "Tag Color"), tagColorControl, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowTagPreview, "Tag Preview"), tagPreview, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowTagActions, "Tag Actions"), tagActions, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowModKey, "Mod Key"), modKeyInput, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowModColor, "Mod Color"), modColorControl, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowModPreview, "Mod Preview"), modPreview, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowModActions, "Mod Actions"), modActions, layout));
+        rows.AddChild(CreateEditorRow(T(BmmText.StyleRowReset, "Reset"), resetActions, layout));
         scroll.AddChild(rows);
 
         stack.AddChild(scroll);
@@ -444,7 +453,7 @@ internal static class ModNameStyleEditorDialog
         var dropdown = new OptionButton
         {
             CustomMinimumSize = new Vector2(layout.SettingWidth, ModdingScreenConstants.ToolbarControlHeight),
-            TooltipText = "Supported Steam Workshop tag."
+            TooltipText = T(BmmText.StyleTagDropdownTooltip, "Supported Steam Workshop tag.")
         };
         ModdingScreenVanillaStyle.ApplyOptionButton(dropdown);
         foreach (string tag in ModNameStyleRules.GetDefaultTagFormats().Keys)
@@ -515,7 +524,7 @@ internal static class ModNameStyleEditorDialog
         var swatch = new PanelContainer
         {
             CustomMinimumSize = new Vector2(layout.SwatchSize, layout.SwatchSize),
-            TooltipText = "Color preview."
+            TooltipText = T(BmmText.StyleColorPreviewTooltip, "Color preview.")
         };
         ModdingScreenVanillaStyle.ApplySwatchPanel(swatch);
 
@@ -624,7 +633,7 @@ internal static class ModNameStyleEditorDialog
         }
 
         fill.Color = new Color(0.16f, 0.16f, 0.16f, 1f);
-        swatch.TooltipText = "No valid color selected.";
+        swatch.TooltipText = T(BmmText.StyleNoValidColorTooltip, "No valid color selected.");
     }
 
     private static bool TryParseColor(string color, out Color parsedColor)

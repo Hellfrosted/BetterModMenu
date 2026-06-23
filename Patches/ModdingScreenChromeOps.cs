@@ -253,7 +253,7 @@ internal static class ModdingScreenChromeOps
 
         controls.SearchResultLabel.Text = string.IsNullOrWhiteSpace(session.SearchQuery)
             ? string.Empty
-            : session.SearchResults.Count + " found";
+            : ModdingScreenText.Format(BmmText.SearchResultFoundFormat, "{0} found", session.SearchResults.Count);
     }
 
     private static void EnsureLayoutSignals(NModdingScreen screen, ModdingScreenSession session)
@@ -344,7 +344,7 @@ internal static class ModdingScreenChromeOps
         if (ClampModsScrollIfContentFits(screen, scrollContainer))
             return;
 
-        ForceModsScrollbarVisible(scrollContainer);
+        ForceModsScrollbarVisible(screen, scrollContainer);
     }
 
     private static bool ClampModsScrollIfContentFits(NModdingScreen screen, NScrollableContainer scrollContainer)
@@ -363,16 +363,36 @@ internal static class ModdingScreenChromeOps
         return true;
     }
 
-    private static void ForceModsScrollbarVisible(NScrollableContainer scrollContainer)
+    private static void ForceModsScrollbarVisible(NModdingScreen screen, NScrollableContainer scrollContainer)
     {
         if (scrollContainer.Scrollbar == null)
             return;
 
-        scrollContainer.Scrollbar.CustomMinimumSize = new Vector2(ModdingScreenConstants.GroupHeaderScrollbarReserveWidth, 0);
+        float scrollbarWidth = ModdingScreenConstants.ModsScrollbarLaneWidth;
+        float scrollbarX = GetCenteredModsScrollbarX(screen, scrollContainer, scrollbarWidth);
+        scrollContainer.Scrollbar.CustomMinimumSize = new Vector2(scrollbarWidth, 0);
+        scrollContainer.Scrollbar.Size = new Vector2(scrollbarWidth, scrollContainer.Scrollbar.Size.Y);
+        scrollContainer.Scrollbar.Position = new Vector2(scrollbarX, scrollContainer.Scrollbar.Position.Y);
         scrollContainer.Scrollbar.Visible = true;
         scrollContainer.Scrollbar.Show();
         scrollContainer.Scrollbar.MouseFilter = Control.MouseFilterEnum.Stop;
         scrollContainer.Scrollbar.MoveToFront();
+    }
+
+    private static float GetCenteredModsScrollbarX(NModdingScreen screen, NScrollableContainer scrollContainer, float scrollbarWidth)
+    {
+        var infoPanel = screen.GetNodeOrNull<Control>("%ModInfoContainer");
+        if (infoPanel == null)
+            return scrollContainer.Size.X + ModdingScreenConstants.ModsScrollbarOutsideGap;
+
+        float scrollRight = scrollContainer.GlobalPosition.X + scrollContainer.Size.X;
+        float availableGap = infoPanel.GlobalPosition.X - scrollRight;
+        if (availableGap <= scrollbarWidth)
+            return scrollContainer.Size.X;
+
+        return scrollContainer.Size.X +
+            ((availableGap - scrollbarWidth) / 2f) +
+            ModdingScreenConstants.ModsScrollbarOpticalCenterOffset;
     }
 
     private static void LayoutTopBar(

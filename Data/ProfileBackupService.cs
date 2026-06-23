@@ -10,7 +10,7 @@ internal enum ProfileBackupReason
     Manual
 }
 
-internal readonly record struct ProfileBackupEntry(string Path, string Label);
+internal readonly record struct ProfileBackupEntry(string Path, string Label, ProfileBackupReason? Reason);
 
 internal static class ProfileBackupService
 {
@@ -45,7 +45,11 @@ internal static class ProfileBackupService
                 .Where(file => extensions.Contains(file.Extension))
                 .OrderByDescending(file => file.LastWriteTimeUtc)
                 .ThenByDescending(file => file.Name, StringComparer.Ordinal)
-                .Select(file => new ProfileBackupEntry(file.FullName, BuildBackupLabel(file)))
+                .Select(file =>
+                {
+                    ProfileBackupReason? reason = GetReason(file.Name);
+                    return new ProfileBackupEntry(file.FullName, BuildBackupLabel(file, reason), reason);
+                })
                 .ToList();
 
             return backups.Count > 0;
@@ -106,22 +110,33 @@ internal static class ProfileBackupService
         return extension.StartsWith(".", StringComparison.Ordinal) ? extension : "." + extension;
     }
 
-    private static string BuildBackupLabel(FileInfo file)
+    private static string BuildBackupLabel(FileInfo file, ProfileBackupReason? reason)
     {
-        return $"{file.LastWriteTime:yyyy-MM-dd HH:mm} - {GetReasonLabel(file.Name)}";
+        return $"{file.LastWriteTime:yyyy-MM-dd HH:mm} - {GetReasonLabel(reason)}";
     }
 
-    private static string GetReasonLabel(string fileName)
+    private static ProfileBackupReason? GetReason(string fileName)
     {
         if (fileName.Contains(".manual.", StringComparison.OrdinalIgnoreCase))
-            return "Manual backup";
+            return ProfileBackupReason.Manual;
 
         if (fileName.Contains(".resume.", StringComparison.OrdinalIgnoreCase))
-            return "Auto backup";
+            return ProfileBackupReason.Resume;
 
         if (fileName.Contains(".runstart.", StringComparison.OrdinalIgnoreCase))
-            return "Startup backup";
+            return ProfileBackupReason.RunStart;
 
-        return "Backup";
+        return null;
+    }
+
+    private static string GetReasonLabel(ProfileBackupReason? reason)
+    {
+        return reason switch
+        {
+            ProfileBackupReason.Manual => "Manual backup",
+            ProfileBackupReason.Resume => "Auto backup",
+            ProfileBackupReason.RunStart => "Startup backup",
+            _ => "Backup"
+        };
     }
 }
