@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "読み込むバックアップを選びます。インストール済みModファイルは変更されません。",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "読み込むバックアップを選びます。{1}件中最新{0}件を表示しています。",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "バックアップは新しい順に並びます。",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "より新しいバックアップを表示します。",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "より古いバックアップを表示します。",
   "DIALOG.RENAME_GROUP.TITLE": "グループ名変更",
   "DIALOG.RENAME_GROUP.HELP": "現在割り当てられているすべてのModのグループラベルを変更します。",
   "DIALOG.RENAME_PROFILE.TITLE": "プロファイル名変更",

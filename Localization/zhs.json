@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "选择要载入的备份。已安装的模组文件不会更改。",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "选择要载入的备份。显示 {1} 个备份中最新的 {0} 个。",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "备份按从新到旧排序。",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "显示较新的备份。",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "显示较旧的备份。",
   "DIALOG.RENAME_GROUP.TITLE": "重命名分组",
   "DIALOG.RENAME_GROUP.HELP": "更改当前分配到该分组的所有模组标签。",
   "DIALOG.RENAME_PROFILE.TITLE": "重命名配置",

@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Elige una copia para cargar. Los archivos de mods instalados no cambian.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Elige una copia para cargar. Mostrando las {0} más recientes de {1} copias.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Las copias están ordenadas de más reciente a más antigua.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Mostrar copias más recientes.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Mostrar copias más antiguas.",
   "DIALOG.RENAME_GROUP.TITLE": "Renombrar grupo",
   "DIALOG.RENAME_GROUP.HELP": "Cambia la etiqueta del grupo para cada mod asignado.",
   "DIALOG.RENAME_PROFILE.TITLE": "Renombrar perfil",

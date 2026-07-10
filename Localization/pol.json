@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Wybierz kopię do wczytania. Pliki zainstalowanych modów nie zostaną zmienione.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Wybierz kopię do wczytania. Pokazano najnowsze {0} z {1} kopii.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Kopie są ułożone od najnowszej do najstarszej.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Pokaż nowsze kopie.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Pokaż starsze kopie.",
   "DIALOG.RENAME_GROUP.TITLE": "Zmień nazwę grupy",
   "DIALOG.RENAME_GROUP.HELP": "Zmienia etykietę grupy dla każdego obecnie przypisanego moda.",
   "DIALOG.RENAME_PROFILE.TITLE": "Zmień nazwę profilu",

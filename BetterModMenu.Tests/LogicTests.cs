@@ -839,27 +839,153 @@ public class LogicTests
             Directory.CreateDirectory(backupDirectory);
             string oldBackup = Path.Combine(backupDirectory, "mod_profiles.20260605-210000.manual.json");
             string newBackup = Path.Combine(backupDirectory, "mod_profiles.20260606-210000.manual.json");
+            string collisionBackup = Path.Combine(backupDirectory, "mod_profiles.20260606-210000.manual-2.json");
             string settingsBackup = Path.Combine(backupDirectory, "mod_settings.20260607-210000.manual.json");
             File.WriteAllText(oldBackup, "{ \"Profiles\": [{ \"Name\": \"Old\" }] }");
             File.WriteAllText(newBackup, "{ \"Profiles\": [{ \"Name\": \"New\" }] }");
+            File.WriteAllText(collisionBackup, "{ \"Profiles\": [{ \"Name\": \"Collision\" }] }");
             File.WriteAllText(settingsBackup, "[]");
             File.SetLastWriteTimeUtc(oldBackup, new DateTime(2026, 6, 5, 21, 0, 0, DateTimeKind.Utc));
             File.SetLastWriteTimeUtc(newBackup, new DateTime(2026, 6, 6, 21, 0, 0, DateTimeKind.Utc));
+            File.SetLastWriteTimeUtc(collisionBackup, new DateTime(2026, 6, 6, 22, 0, 0, DateTimeKind.Utc));
             File.SetLastWriteTimeUtc(settingsBackup, new DateTime(2026, 6, 7, 21, 0, 0, DateTimeKind.Utc));
 
             bool found = ProfileBackupService.TryListBackups(savePath, new[] { ".json", ".json5", ".jsonc" }, out var backups, out string? error);
 
             Assert.IsTrue(found, error);
-            Assert.AreEqual(2, backups.Count);
-            Assert.AreEqual(newBackup, backups[0].Path);
-            Assert.AreEqual(oldBackup, backups[1].Path);
+            Assert.AreEqual(3, backups.Count);
+            Assert.AreEqual(collisionBackup, backups[0].Path);
+            Assert.AreEqual(newBackup, backups[1].Path);
+            Assert.AreEqual(oldBackup, backups[2].Path);
             StringAssert.Contains(backups[0].Label, "2026-06-06");
             StringAssert.Contains(backups[0].Label, "Manual backup");
+            Assert.AreEqual(ProfileBackupReason.Manual, backups[0].Reason);
         }
         finally
         {
             Directory.Delete(tempDirectory, true);
         }
+    }
+
+    [TestMethod]
+    public void TryPruneAutomaticProfileBackups_KeepsNewestTwelveAndPreservesOtherFiles()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            string savePath = Path.Combine(tempDirectory, "mod_profiles.json5");
+            File.WriteAllText(savePath, "{ \"Profiles\": [] }");
+            var automaticBackups = new List<string>();
+
+            for (int i = 0; i < 14; i++)
+            {
+                var timestamp = new DateTimeOffset(2026, 6, 1, 0, i, 0, TimeSpan.Zero);
+                var reason = i % 2 == 0 ? ProfileBackupReason.RunStart : ProfileBackupReason.Resume;
+                Assert.IsTrue(ProfileBackupService.TryBackupExistingSave(savePath, reason, timestamp, out string backupPath, out string? backupError), backupError);
+                File.SetLastWriteTimeUtc(backupPath, timestamp.UtcDateTime);
+                automaticBackups.Add(backupPath);
+            }
+
+            var manualBackups = new List<string>();
+            var manualTimestamp = new DateTimeOffset(2026, 6, 2, 0, 0, 0, TimeSpan.Zero);
+            for (int i = 0; i < 14; i++)
+            {
+                Assert.IsTrue(ProfileBackupService.TryBackupExistingSave(savePath, ProfileBackupReason.Manual, manualTimestamp, out string manualBackup, out string? manualError), manualError);
+                manualBackups.Add(manualBackup);
+            }
+            string backupDirectory = Path.Combine(tempDirectory, "backups");
+            string unknownBackup = Path.Combine(backupDirectory, "mod_profiles.not-a-timestamp.runstart.json5");
+            string unrelatedBackup = Path.Combine(backupDirectory, "other_profiles.20260602-020000.runstart.json5");
+            string settingsBackup = Path.Combine(backupDirectory, "mod_settings.20260602-030000.runstart.json");
+            File.WriteAllText(unknownBackup, "{}");
+            File.WriteAllText(unrelatedBackup, "{}");
+            File.WriteAllText(settingsBackup, "[]");
+
+            bool pruned = ProfileBackupService.TryPruneAutomaticBackups(
+                savePath,
+                new[] { ".json", ".json5", ".jsonc" },
+                12,
+                out string? error);
+
+            Assert.IsTrue(pruned, error);
+            Assert.IsFalse(File.Exists(automaticBackups[0]));
+            Assert.IsFalse(File.Exists(automaticBackups[1]));
+            Assert.IsTrue(automaticBackups.Skip(2).All(File.Exists));
+            Assert.IsTrue(manualBackups.All(File.Exists));
+            Assert.IsTrue(File.Exists(unknownBackup));
+            Assert.IsTrue(File.Exists(unrelatedBackup));
+            Assert.IsTrue(File.Exists(settingsBackup));
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void TryPruneAutomaticModSettingsBackups_KeepsNewestTwelveAndPreservesOtherFiles()
+    {
+        string tempDirectory = CreateTempDirectory();
+        try
+        {
+            var mods = new[] { new InstalledModExportInput { ModId = "Example.Mod", Enabled = true } };
+            var automaticBackups = new List<string>();
+
+            for (int i = 0; i < 14; i++)
+            {
+                var timestamp = new DateTimeOffset(2026, 6, 1, 0, i, 0, TimeSpan.Zero);
+                var reason = i % 2 == 0 ? ProfileBackupReason.RunStart : ProfileBackupReason.Resume;
+                Assert.IsTrue(ModSettingsBackupService.TryWriteSnapshot(tempDirectory, mods, reason, timestamp, out string backupPath, out string? backupError), backupError);
+                File.SetLastWriteTimeUtc(backupPath, timestamp.UtcDateTime);
+                automaticBackups.Add(backupPath);
+            }
+
+            var manualBackups = new List<string>();
+            var manualTimestamp = new DateTimeOffset(2026, 6, 2, 0, 0, 0, TimeSpan.Zero);
+            for (int i = 0; i < 14; i++)
+            {
+                Assert.IsTrue(ModSettingsBackupService.TryWriteSnapshot(tempDirectory, mods, ProfileBackupReason.Manual, manualTimestamp, out string manualBackup, out string? manualError), manualError);
+                manualBackups.Add(manualBackup);
+            }
+            string unknownBackup = Path.Combine(tempDirectory, "mod_settings.not-a-timestamp.runstart.json");
+            string unrelatedBackup = Path.Combine(tempDirectory, "other_settings.20260602-020000.runstart.json");
+            string profileBackup = Path.Combine(tempDirectory, "mod_profiles.20260602-030000.runstart.json5");
+            File.WriteAllText(unknownBackup, "[]");
+            File.WriteAllText(unrelatedBackup, "[]");
+            File.WriteAllText(profileBackup, "{}");
+
+            bool pruned = ModSettingsBackupService.TryPruneAutomaticBackups(tempDirectory, 12, out string? error);
+
+            Assert.IsTrue(pruned, error);
+            Assert.IsFalse(File.Exists(automaticBackups[0]));
+            Assert.IsFalse(File.Exists(automaticBackups[1]));
+            Assert.IsTrue(automaticBackups.Skip(2).All(File.Exists));
+            Assert.IsTrue(manualBackups.All(File.Exists));
+            Assert.IsTrue(File.Exists(unknownBackup));
+            Assert.IsTrue(File.Exists(unrelatedBackup));
+            Assert.IsTrue(File.Exists(profileBackup));
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void BackupSelectionPages_BoundEachDropdownPageAndReachEveryBackup()
+    {
+        BackupSelectionPage firstPage = ModdingScreenDialogRules.GetBackupSelectionPage(25, 0, 12);
+        BackupSelectionPage secondPage = ModdingScreenDialogRules.GetBackupSelectionPage(25, 1, 12);
+        BackupSelectionPage lastPage = ModdingScreenDialogRules.GetBackupSelectionPage(25, 99, 12);
+        BackupSelectionPage clampedFirstPage = ModdingScreenDialogRules.GetBackupSelectionPage(25, -1, 12);
+
+        Assert.AreEqual(new BackupSelectionPage(0, 12, 0, 3), firstPage);
+        Assert.AreEqual(new BackupSelectionPage(12, 12, 1, 3), secondPage);
+        Assert.AreEqual(new BackupSelectionPage(24, 1, 2, 3), lastPage);
+        Assert.AreEqual(firstPage, clampedFirstPage);
+
+        var backupPaths = Enumerable.Range(0, 25).Select(index => $"backup-{index}").ToList();
+        Assert.AreEqual("backup-24", backupPaths[lastPage.StartIndex]);
     }
 
     [TestMethod]

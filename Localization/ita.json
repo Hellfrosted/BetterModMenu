@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Scegli un backup da caricare. I file mod installati non vengono modificati.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Scegli un backup da caricare. Mostro i {0} più recenti di {1} backup.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "I backup sono ordinati dal più recente al più vecchio.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Mostra backup più recenti.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Mostra backup meno recenti.",
   "DIALOG.RENAME_GROUP.TITLE": "Rinomina gruppo",
   "DIALOG.RENAME_GROUP.HELP": "Cambia l’etichetta del gruppo per ogni mod attualmente assegnata.",
   "DIALOG.RENAME_PROFILE.TITLE": "Rinomina profilo",

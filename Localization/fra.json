@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Choisissez une sauvegarde à charger. Les fichiers de mods installés ne sont pas modifiés.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Choisissez une sauvegarde à charger. Affichage des {0} plus récentes sur {1} sauvegardes.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Les sauvegardes sont classées de la plus récente à la plus ancienne.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Afficher des sauvegardes plus récentes.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Afficher des sauvegardes plus anciennes.",
   "DIALOG.RENAME_GROUP.TITLE": "Renommer le groupe",
   "DIALOG.RENAME_GROUP.HELP": "Change le libellé du groupe pour chaque mod qui y est actuellement assigné.",
   "DIALOG.RENAME_PROFILE.TITLE": "Renommer le profil",

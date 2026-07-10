@@ -7,7 +7,7 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenDialogs
 {
-    private const int MaxVisibleBackupChoices = 12;
+    private const int BackupChoicesPerPage = 12;
 
     private static string T(string key, string fallback) => ModdingScreenText.Get(key, fallback);
 
@@ -53,7 +53,6 @@ internal static class ModdingScreenDialogs
     public static void ShowBackupSelectionDialog(NModdingScreen screen, IReadOnlyList<ProfileBackupEntry> backups, Action<string> onConfirmed)
     {
         TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
-        var visibleBackups = backups.Take(MaxVisibleBackupChoices).ToList();
         var popup = new ConfirmationDialog
         {
             Title = T(BmmText.DialogLoadBackupTitle, "Load Backup"),
@@ -64,9 +63,7 @@ internal static class ModdingScreenDialogs
         var body = new VBoxContainer();
         body.AddThemeConstantOverride("separation", 8);
         var helpLabel = CreateReadableBodyLabel(
-            backups.Count > visibleBackups.Count
-                ? F(BmmText.DialogLoadBackupBodyManyFormat, "Choose a backup to load. Showing the newest {0} of {1} backups.", visibleBackups.Count, backups.Count)
-                : T(BmmText.DialogLoadBackupBody, "Choose a backup to load. Installed mod files are not changed."),
+            T(BmmText.DialogLoadBackupBody, "Choose a backup to load. Installed mod files are not changed."),
             20);
         helpLabel.CustomMinimumSize = new Vector2(520, 0);
         body.AddChild(helpLabel);
@@ -77,18 +74,77 @@ internal static class ModdingScreenDialogs
             TooltipText = T(BmmText.DialogLoadBackupOrderTooltip, "Backups are ordered from newest to oldest.")
         };
         ModdingScreenVanillaStyle.ApplyOptionButton(backupDropdown);
-        for (int i = 0; i < visibleBackups.Count; i++)
-            backupDropdown.AddItem(BuildBackupDisplayLabel(visibleBackups[i]), i);
-        backupDropdown.Select(0);
         body.AddChild(backupDropdown);
+
+        var pageRow = new HBoxContainer();
+        pageRow.AddThemeConstantOverride("separation", 8);
+        string newerBackupsLabel = T(BmmText.DialogLoadBackupNewerPageTooltip, "Show newer backups.");
+        var newerButton = new Button
+        {
+            Text = "<",
+            TooltipText = newerBackupsLabel,
+            AccessibilityName = newerBackupsLabel
+        };
+        ModdingScreenVanillaStyle.ApplyButton(newerButton);
+        pageRow.AddChild(newerButton);
+        var pageLabel = new Label
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyLabel(pageLabel, muted: true);
+        pageLabel.AddThemeFontSizeOverride("font_size", 18);
+        pageRow.AddChild(pageLabel);
+        string olderBackupsLabel = T(BmmText.DialogLoadBackupOlderPageTooltip, "Show older backups.");
+        var olderButton = new Button
+        {
+            Text = ">",
+            TooltipText = olderBackupsLabel,
+            AccessibilityName = olderBackupsLabel
+        };
+        ModdingScreenVanillaStyle.ApplyButton(olderButton);
+        pageRow.AddChild(olderButton);
+        body.AddChild(pageRow);
+
+        int requestedPageIndex = 0;
+        int pageStartIndex = 0;
+        void RefreshPage()
+        {
+            BackupSelectionPage page = ModdingScreenDialogRules.GetBackupSelectionPage(backups.Count, requestedPageIndex, BackupChoicesPerPage);
+            requestedPageIndex = page.PageIndex;
+            pageStartIndex = page.StartIndex;
+            backupDropdown.Clear();
+            for (int i = 0; i < page.ItemCount; i++)
+                backupDropdown.AddItem(BuildBackupDisplayLabel(backups[page.StartIndex + i]), i);
+            if (page.ItemCount > 0)
+                backupDropdown.Select(0);
+
+            int firstVisible = page.ItemCount == 0 ? 0 : page.StartIndex + 1;
+            pageLabel.Text = $"{firstVisible}-{page.StartIndex + page.ItemCount} / {backups.Count}";
+            newerButton.Disabled = page.PageIndex == 0;
+            olderButton.Disabled = page.PageIndex + 1 >= page.PageCount;
+        }
+
+        newerButton.Pressed += () =>
+        {
+            requestedPageIndex--;
+            RefreshPage();
+        };
+        olderButton.Pressed += () =>
+        {
+            requestedPageIndex++;
+            RefreshPage();
+        };
+        RefreshPage();
 
         popup.AddChild(CreateStyledDialogShell(body, 560));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += () =>
         {
             int selectedIndex = backupDropdown.Selected;
-            if (selectedIndex >= 0 && selectedIndex < visibleBackups.Count)
-                onConfirmed(visibleBackups[selectedIndex].Path);
+            int backupIndex = pageStartIndex + selectedIndex;
+            if (selectedIndex >= 0 && backupIndex < backups.Count)
+                onConfirmed(backups[backupIndex].Path);
         };
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(640, 220));

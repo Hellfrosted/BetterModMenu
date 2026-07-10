@@ -13,6 +13,7 @@ public static class ProfileManager
     public const string ErrorRestoredProfileSaveCouldNotBeWritten = "The restored profile save could not be written.";
 
     public static readonly MegaCrit.Sts2.Core.Logging.Logger ModLogger = new("BetterModMenu", LogType.Generic);
+    private const int AutomaticBackupRetentionCount = 12;
     private const string UnassignedGroupName = "Unassigned";
     private static readonly ProfileConfigPathResolver ConfigPaths = new("BetterModMenu", ".json5", ".jsonc", ".json");
     private static readonly HashSet<ProfileBackupReason> AutomaticBackupsThisProcess = new();
@@ -317,6 +318,12 @@ public static class ProfileManager
         {
             LastBackupError = null;
             MirrorCloudBackup(CloudBackupKind.ProfileSettings, backupPath);
+            if (reason != ProfileBackupReason.Manual &&
+                !ProfileBackupService.TryPruneAutomaticBackups(savePath, ConfigExtensions, AutomaticBackupRetentionCount, out string? pruneError) &&
+                !string.IsNullOrEmpty(pruneError))
+            {
+                ModLogger.Error($"Failed to prune automatic profile backups: {pruneError}");
+            }
             return true;
         }
 
@@ -348,6 +355,12 @@ public static class ProfileManager
         if (ModSettingsBackupService.TryWriteSnapshot(BackupDirectory, inputs, reason, DateTimeOffset.UtcNow, out settingsBackupPath, out string? error))
         {
             MirrorCloudBackup(CloudBackupKind.ModSettings, settingsBackupPath);
+            if (reason != ProfileBackupReason.Manual &&
+                !ModSettingsBackupService.TryPruneAutomaticBackups(BackupDirectory, AutomaticBackupRetentionCount, out string? pruneError) &&
+                !string.IsNullOrEmpty(pruneError))
+            {
+                ModLogger.Error($"Failed to prune automatic mod-settings backups: {pruneError}");
+            }
             return true;
         }
 

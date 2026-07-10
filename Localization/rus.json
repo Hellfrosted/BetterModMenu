@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Выберите резервную копию. Установленные файлы модов не изменятся.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Выберите резервную копию. Показаны новейшие {0} из {1}.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Резервы отсортированы от новых к старым.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Показать более новые резервные копии.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Показать более старые резервные копии.",
   "DIALOG.RENAME_GROUP.TITLE": "Переименовать группу",
   "DIALOG.RENAME_GROUP.HELP": "Изменяет метку группы для всех модов, назначенных ей сейчас.",
   "DIALOG.RENAME_PROFILE.TITLE": "Переименовать профиль",

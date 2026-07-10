@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Choose a backup to load. Installed mod files are not changed.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Choose a backup to load. Showing the newest {0} of {1} backups.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Backups are ordered from newest to oldest.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Show newer backups.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Show older backups.",
   "DIALOG.RENAME_GROUP.TITLE": "Rename Group",
   "DIALOG.RENAME_GROUP.HELP": "This changes the group label for every mod currently assigned to it.",
   "DIALOG.RENAME_PROFILE.TITLE": "Rename Profile",

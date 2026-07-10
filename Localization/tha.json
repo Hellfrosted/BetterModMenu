@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "เลือกไฟล์สำรองที่จะโหลด ไฟล์ม็อดที่ติดตั้งจะไม่ถูกเปลี่ยน",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "เลือกไฟล์สำรองที่จะโหลด แสดง {0} รายการใหม่สุดจาก {1} รายการ",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "ไฟล์สำรองเรียงจากใหม่สุดไปเก่าสุด",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "แสดงไฟล์สำรองที่ใหม่กว่า",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "แสดงไฟล์สำรองที่เก่ากว่า",
   "DIALOG.RENAME_GROUP.TITLE": "เปลี่ยนชื่อกลุ่ม",
   "DIALOG.RENAME_GROUP.HELP": "เปลี่ยนป้ายกลุ่มของม็อดทุกตัวที่อยู่ในกลุ่มนี้",
   "DIALOG.RENAME_PROFILE.TITLE": "เปลี่ยนชื่อโปรไฟล์",

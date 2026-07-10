@@ -40,8 +40,26 @@ internal readonly record struct StyleEditorDialogLayout(
     int HorizontalMargin,
     int VerticalMargin);
 
+internal readonly record struct BackupSelectionPage(
+    int StartIndex,
+    int ItemCount,
+    int PageIndex,
+    int PageCount);
+
 internal static class ModdingScreenDialogRules
 {
+    public static BackupSelectionPage GetBackupSelectionPage(int backupCount, int requestedPageIndex, int pageSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(backupCount);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+        int pageCount = backupCount == 0 ? 0 : 1 + ((backupCount - 1) / pageSize);
+        int pageIndex = pageCount == 0 ? 0 : Math.Clamp(requestedPageIndex, 0, pageCount - 1);
+        int startIndex = pageIndex * pageSize;
+        int itemCount = Math.Min(pageSize, backupCount - startIndex);
+        return new BackupSelectionPage(startIndex, itemCount, pageIndex, pageCount);
+    }
+
     public static LogDialogLayout GetPreferredLogDialogLayout()
     {
         return new LogDialogLayout(

@@ -67,6 +67,40 @@ internal static class ModSettingsBackupService
         return $"mod_settings.{timestamp.UtcDateTime:yyyyMMdd-HHmmss}.{reasonSlug}.json";
     }
 
+    public static bool TryPruneAutomaticBackups(string directory, int retentionCount, out string? error)
+    {
+        error = null;
+
+        try
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(retentionCount);
+
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+                return true;
+
+            var expiredBackups = Directory
+                .EnumerateFiles(directory, "mod_settings.*.json")
+                .Select(path => new FileInfo(path))
+                .Where(file =>
+                    ProfileBackupService.TryGetGeneratedBackupReason(file.Name, "mod_settings", out var reason) &&
+                    reason is ProfileBackupReason.RunStart or ProfileBackupReason.Resume)
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ThenByDescending(file => file.Name, StringComparer.Ordinal)
+                .Skip(retentionCount)
+                .ToList();
+
+            foreach (var backup in expiredBackups)
+                backup.Delete();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     private static string GetUniqueBackupPath(string directory, ProfileBackupReason reason, DateTimeOffset timestamp)
     {
         string fileName = BuildBackupFileName(reason, timestamp);

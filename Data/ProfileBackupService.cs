@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 
 namespace BetterModMenu.Data;
@@ -47,7 +48,9 @@ internal static class ProfileBackupService
                 .ThenByDescending(file => file.Name, StringComparer.Ordinal)
                 .Select(file =>
                 {
-                    ProfileBackupReason? reason = GetReason(file.Name);
+                    ProfileBackupReason? reason = TryGetGeneratedBackupReason(file.Name, baseName, out var generatedReason)
+                        ? generatedReason
+                        : null;
                     return new ProfileBackupEntry(file.FullName, BuildBackupLabel(file, reason), reason);
                 })
                 .ToList();
@@ -91,6 +94,98 @@ internal static class ProfileBackupService
         }
     }
 
+    public static bool TryPruneAutomaticBackups(
+        string savePath,
+        IReadOnlyCollection<string> configExtensions,
+        int retentionCount,
+        out string? error)
+    {
+        error = null;
+
+        try
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(retentionCount);
+
+            string? directory = Path.GetDirectoryName(savePath);
+            if (string.IsNullOrWhiteSpace(directory))
+                return true;
+
+            string backupDirectory = Path.Combine(directory, "backups");
+            if (!Directory.Exists(backupDirectory))
+                return true;
+
+            string baseName = Path.GetFileNameWithoutExtension(savePath);
+            var extensions = configExtensions
+                .Where(extension => !string.IsNullOrWhiteSpace(extension))
+                .Select(NormalizeExtension)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var expiredBackups = Directory
+                .EnumerateFiles(backupDirectory, baseName + ".*")
+                .Select(path => new FileInfo(path))
+                .Where(file => extensions.Contains(file.Extension))
+                .Where(file =>
+                    TryGetGeneratedBackupReason(file.Name, baseName, out var reason) &&
+                    reason is ProfileBackupReason.RunStart or ProfileBackupReason.Resume)
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ThenByDescending(file => file.Name, StringComparer.Ordinal)
+                .Skip(retentionCount)
+                .ToList();
+
+            foreach (var backup in expiredBackups)
+                backup.Delete();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    internal static bool TryGetGeneratedBackupReason(string fileName, string expectedBaseName, out ProfileBackupReason reason)
+    {
+        reason = default;
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        string prefix = expectedBaseName + ".";
+        if (!stem.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        string generatedSuffix = stem[prefix.Length..];
+        int separatorIndex = generatedSuffix.IndexOf('.');
+        if (separatorIndex < 0 ||
+            !DateTime.TryParseExact(
+                generatedSuffix[..separatorIndex],
+                "yyyyMMdd-HHmmss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out _))
+        {
+            return false;
+        }
+
+        string reasonSlug = generatedSuffix[(separatorIndex + 1)..];
+        int collisionSuffixIndex = reasonSlug.LastIndexOf('-');
+        if (collisionSuffixIndex > 0 &&
+            int.TryParse(reasonSlug[(collisionSuffixIndex + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out int collisionNumber) &&
+            collisionNumber > 0)
+        {
+            reasonSlug = reasonSlug[..collisionSuffixIndex];
+        }
+
+        if (reasonSlug.Equals("runstart", StringComparison.OrdinalIgnoreCase))
+            reason = ProfileBackupReason.RunStart;
+        else if (reasonSlug.Equals("resume", StringComparison.OrdinalIgnoreCase))
+            reason = ProfileBackupReason.Resume;
+        else if (reasonSlug.Equals("manual", StringComparison.OrdinalIgnoreCase))
+            reason = ProfileBackupReason.Manual;
+        else
+            return false;
+
+        return true;
+    }
+
     public static string BuildBackupFileName(string savePath, ProfileBackupReason reason, DateTimeOffset timestamp)
     {
         string baseName = Path.GetFileNameWithoutExtension(savePath);
@@ -113,20 +208,6 @@ internal static class ProfileBackupService
     private static string BuildBackupLabel(FileInfo file, ProfileBackupReason? reason)
     {
         return $"{file.LastWriteTime:yyyy-MM-dd HH:mm} - {GetReasonLabel(reason)}";
-    }
-
-    private static ProfileBackupReason? GetReason(string fileName)
-    {
-        if (fileName.Contains(".manual.", StringComparison.OrdinalIgnoreCase))
-            return ProfileBackupReason.Manual;
-
-        if (fileName.Contains(".resume.", StringComparison.OrdinalIgnoreCase))
-            return ProfileBackupReason.Resume;
-
-        if (fileName.Contains(".runstart.", StringComparison.OrdinalIgnoreCase))
-            return ProfileBackupReason.RunStart;
-
-        return null;
     }
 
     private static string GetReasonLabel(ProfileBackupReason? reason)

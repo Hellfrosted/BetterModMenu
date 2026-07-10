@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Wähle ein Backup zum Laden. Installierte Mod-Dateien werden nicht geändert.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Wähle ein Backup zum Laden. Zeige die neuesten {0} von {1} Backups.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Backups sind vom neuesten zum ältesten sortiert.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Neuere Backups anzeigen.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Ältere Backups anzeigen.",
   "DIALOG.RENAME_GROUP.TITLE": "Gruppe umbenennen",
   "DIALOG.RENAME_GROUP.HELP": "Ändert das Gruppenlabel für alle aktuell zugewiesenen Mods.",
   "DIALOG.RENAME_PROFILE.TITLE": "Profil umbenennen",

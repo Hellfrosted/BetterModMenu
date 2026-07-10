@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Elige un respaldo para cargar. Los archivos de mods instalados no cambian.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Elige un respaldo para cargar. Mostrando los {0} más recientes de {1} respaldos.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Los respaldos están ordenados del más reciente al más antiguo.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Mostrar respaldos más recientes.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Mostrar respaldos más antiguos.",
   "DIALOG.RENAME_GROUP.TITLE": "Cambiar nombre de grupo",
   "DIALOG.RENAME_GROUP.HELP": "Cambia la etiqueta del grupo para cada mod asignado.",
   "DIALOG.RENAME_PROFILE.TITLE": "Cambiar nombre de perfil",

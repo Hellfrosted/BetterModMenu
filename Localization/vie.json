@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Chọn bản sao lưu để tải. Tệp mod đã cài không bị thay đổi.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Chọn bản sao lưu để tải. Hiển thị {0} bản mới nhất trong {1} bản.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Bản sao lưu được sắp từ mới nhất đến cũ nhất.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Hiển thị các bản sao lưu mới hơn.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Hiển thị các bản sao lưu cũ hơn.",
   "DIALOG.RENAME_GROUP.TITLE": "Đổi tên nhóm",
   "DIALOG.RENAME_GROUP.HELP": "Đổi nhãn nhóm cho mọi mod đang được gán vào nhóm đó.",
   "DIALOG.RENAME_PROFILE.TITLE": "Đổi tên hồ sơ",

@@ -63,6 +63,8 @@
   "DIALOG.LOAD_BACKUP.BODY": "Yüklenecek yedeği seçin. Kurulu mod dosyaları değişmez.",
   "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT": "Yüklenecek yedeği seçin. {1} yedekten en yeni {0} tanesi gösteriliyor.",
   "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP": "Yedekler en yeniden en eskiye sıralanır.",
+  "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP": "Daha yeni yedekleri göster.",
+  "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP": "Daha eski yedekleri göster.",
   "DIALOG.RENAME_GROUP.TITLE": "Grubu yeniden adlandır",
   "DIALOG.RENAME_GROUP.HELP": "Bu gruba atanmış tüm modların grup etiketini değiştirir.",
   "DIALOG.RENAME_PROFILE.TITLE": "Profili yeniden adlandır",

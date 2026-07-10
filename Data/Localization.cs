@@ -70,6 +70,8 @@ internal static class BmmText
     public const string DialogLoadBackupBody = "DIALOG.LOAD_BACKUP.BODY";
     public const string DialogLoadBackupBodyManyFormat = "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT";
     public const string DialogLoadBackupOrderTooltip = "DIALOG.LOAD_BACKUP.ORDER_TOOLTIP";
+    public const string DialogLoadBackupNewerPageTooltip = "DIALOG.LOAD_BACKUP.NEWER_PAGE.TOOLTIP";
+    public const string DialogLoadBackupOlderPageTooltip = "DIALOG.LOAD_BACKUP.OLDER_PAGE.TOOLTIP";
     public const string DialogRenameGroupTitle = "DIALOG.RENAME_GROUP.TITLE";
     public const string DialogRenameGroupHelp = "DIALOG.RENAME_GROUP.HELP";
     public const string DialogRenameProfileTitle = "DIALOG.RENAME_PROFILE.TITLE";
