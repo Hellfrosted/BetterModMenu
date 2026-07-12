@@ -34,9 +34,11 @@ internal static class ModdingScreenConstants
     public const float RowButtonSize = 32f;
     public const float RowDropdownWidth = 140f;
     public const float RowDropdownCompactWidth = 112f;
+    public const float RowDropdownNarrowWidth = 80f;
     public const float RowControlsRightPadding = 12f;
     public const float RowNativeTickboxReserveWidth = 84f;
     public const float RowMinimumLeftContentWidth = 480f;
+    public const float RowMinimumCompactLeftContentWidth = 160f;
     public const float RowGameplayIndicatorSlotWidth = 22f;
     public const float RowGameplayIndicatorSize = 14f;
     public const float GroupHeaderIconButtonSize = 34f;
