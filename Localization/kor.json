@@ -191,5 +191,17 @@
   "ERROR.NO_WRITABLE_CONFIG_PATH": "쓰기 가능한 Better Mod Menu 설정 경로를 찾을 수 없습니다.",
   "ERROR.NO_BACKUP_DIRECTORY": "사용 가능한 백업 폴더가 없습니다.",
   "ERROR.NO_EXPORT_DIRECTORY": "사용 가능한 내보내기 폴더가 없습니다.",
-  "ERROR.RESTORED_PROFILE_SAVE_WRITE_FAILED": "복원된 프로필 저장을 쓸 수 없습니다."
+  "ERROR.RESTORED_PROFILE_SAVE_WRITE_FAILED": "복원된 프로필 저장을 쓸 수 없습니다.",
+  "DETAIL.ANNOTATION": "Alias / Notes",
+  "DETAIL.ANNOTATION.TOOLTIP": "Add a personal alias or notes for the selected mod.",
+  "SEARCH.MATCH.ALIAS": "Matched alias",
+  "SEARCH.MATCH.NOTES": "Matched notes",
+  "DIALOG.ANNOTATION.TITLE_FORMAT": "Alias / Notes — {0}",
+  "DIALOG.ANNOTATION.ALIAS": "Alias",
+  "DIALOG.ANNOTATION.ALIAS_PLACEHOLDER": "Personal name for this mod...",
+  "DIALOG.ANNOTATION.NOTES": "Notes",
+  "DIALOG.ANNOTATION.NOTES_PLACEHOLDER": "What this mod does, compatibility reminders, or setup notes...",
+  "DIALOG.ANNOTATION.HELP": "Aliases and notes are personal metadata. They are searchable, included in backups and CSV exports, and do not rename the installed mod.",
+  "ANNOTATION.SAVE_FAILED.TITLE": "Alias / Notes Not Saved",
+  "ANNOTATION.SAVE_FAILED.MESSAGE_FORMAT": "The alias and notes could not be saved. Your previous annotation is still in use.\n\nError:\n{0}"
 }

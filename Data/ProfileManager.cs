@@ -39,6 +39,7 @@ public static class ProfileManager
     public static TutorialState Tutorial { get; set; } = new();
     public static CloudBackupSettings CloudBackups { get; set; } = new();
     public static ModNameStyleSettings ModNameStyles { get; set; } = new();
+    public static Dictionary<string, ModAnnotation> ModAnnotations { get; set; } = new();
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
     public static Dictionary<string, List<string>> ModWorkshopTagsCache { get; set; } = new();
     private static bool WorkshopTagCacheAttempted { get; set; }
@@ -53,6 +54,7 @@ public static class ProfileManager
         Tutorial = new();
         CloudBackups = new();
         ModNameStyles = new();
+        ModAnnotations = new();
         ModGameplayImpactCache = new();
         ModWorkshopTagsCache = new();
         WorkshopTagCacheAttempted = false;
@@ -110,6 +112,43 @@ public static class ProfileManager
     public static bool SaveInMemoryState()
     {
         return SaveToPath(SavePath);
+    }
+
+    public static ModAnnotation GetModAnnotation(string modId)
+    {
+        return !string.IsNullOrWhiteSpace(modId) && ModAnnotations.TryGetValue(modId, out ModAnnotation? annotation)
+            ? annotation
+            : new ModAnnotation();
+    }
+
+    public static bool TrySaveModAnnotation(string modId, string? alias, string? notes, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(modId))
+        {
+            error = "No mod is selected.";
+            return false;
+        }
+
+        if (!ModAnnotationRules.TryNormalize(alias, notes, out ModAnnotation annotation, out error))
+            return false;
+
+        bool hadPrevious = ModAnnotations.TryGetValue(modId, out ModAnnotation? previous);
+        if (string.IsNullOrEmpty(annotation.Alias) && string.IsNullOrEmpty(annotation.Notes))
+            ModAnnotations.Remove(modId);
+        else
+            ModAnnotations[modId] = annotation;
+
+        if (SaveInMemoryState())
+            return true;
+
+        if (hadPrevious && previous != null)
+            ModAnnotations[modId] = previous;
+        else
+            ModAnnotations.Remove(modId);
+
+        error = LastPersistenceError;
+        return false;
     }
 
     /// <summary>
@@ -225,7 +264,7 @@ public static class ProfileManager
 
     internal static bool TryExportModList(IEnumerable<InstalledModExportInput> mods, out string exportPath)
     {
-        var rows = ModListExportBuilder.BuildRows(mods, ModGroups, UnassignedGroupName);
+        var rows = ModListExportBuilder.BuildRows(mods, ModGroups, UnassignedGroupName, ModAnnotations);
         if (ModListExportBuilder.TryWriteCsv(ExportDirectory, rows, DateTimeOffset.UtcNow, out exportPath, out string? error))
         {
             MirrorCloudBackup(CloudBackupKind.ModList, exportPath);
@@ -289,7 +328,8 @@ public static class ProfileManager
             CollapsedGroups,
             Tutorial,
             CloudBackups,
-            ModNameStyles);
+            ModNameStyles,
+            ModAnnotations);
     }
 
     private static void ApplySaveData(ProfileSaveData saveData)
@@ -303,6 +343,7 @@ public static class ProfileManager
         Tutorial = normalized.Tutorial;
         CloudBackups = normalized.CloudBackups;
         ModNameStyles = normalized.ModNameStyles;
+        ModAnnotations = normalized.ModAnnotations;
         NormalizeProfileIndex();
     }
 

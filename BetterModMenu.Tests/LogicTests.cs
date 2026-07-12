@@ -265,6 +265,51 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void Search_MatchesPersonalAliasAndNotes()
+    {
+        var documents = new[]
+        {
+            new ModSearchDocument("Example.Mod", "Example Mod")
+            {
+                Alias = "Daily run helper",
+                Notes = "Disable before multiplayer"
+            }
+        };
+
+        var aliasResults = ModSearchRules.Search(documents, "Daily run helper");
+        var noteResults = ModSearchRules.Search(documents, "multiplayer");
+
+        Assert.AreEqual(BmmText.SearchMatchAlias, aliasResults[0].MatchReasonKey);
+        Assert.AreEqual(BmmText.SearchMatchNotes, noteResults[0].MatchReasonKey);
+    }
+
+    [TestMethod]
+    public void ModAnnotations_NormalizeWhitespaceAndDiscardEmptyEntries()
+    {
+        var annotations = ModAnnotationRules.NormalizeDictionary(new Dictionary<string, ModAnnotation>
+        {
+            [" Example.Mod "] = new() { Alias = "  Helper  ", Notes = "line one\r\nline two  " },
+            ["Empty.Mod"] = new()
+        });
+
+        Assert.AreEqual(1, annotations.Count);
+        Assert.AreEqual("Helper", annotations["Example.Mod"].Alias);
+        Assert.AreEqual("line one\nline two", annotations["Example.Mod"].Notes);
+    }
+
+    [TestMethod]
+    public void ModAnnotations_LoadNormalizationPreservesFutureOrManuallyEditedLengths()
+    {
+        string longNotes = new('x', ModAnnotationRules.MaxNotesLength + 1);
+        var annotations = ModAnnotationRules.NormalizeDictionary(new Dictionary<string, ModAnnotation>
+        {
+            ["Example.Mod"] = new() { Notes = longNotes }
+        });
+
+        Assert.AreEqual(longNotes, annotations["Example.Mod"].Notes);
+    }
+
+    [TestMethod]
     public void Search_ToleratesTyposAndLookalikesForLongQueries()
     {
         var documents = new[]
@@ -507,6 +552,14 @@ public class LogicTests
         Assert.AreEqual(string.Empty, wide.RenameProfile.Text);
         Assert.AreEqual(string.Empty, wide.DeleteProfile.Text);
         Assert.AreEqual(ModdingScreenConstants.TopBarButtonCompactWidth, wide.ButtonWidth);
+    }
+
+    [TestMethod]
+    public void ShouldStackTopBar_UsesAvailableLocalizedTitleSpace()
+    {
+        Assert.IsTrue(ModdingScreenLayoutRules.ShouldStackTopBar(0f, 275f));
+        Assert.IsTrue(ModdingScreenLayoutRules.ShouldStackTopBar(274f, 275f));
+        Assert.IsFalse(ModdingScreenLayoutRules.ShouldStackTopBar(275f, 275f));
     }
 
     [TestMethod]
@@ -775,7 +828,11 @@ public class LogicTests
                 CurrentProfileIndex = 0,
                 CustomGroups = new List<string> { "Bosses" },
                 ModGroups = new Dictionary<string, string> { ["mod-a"] = "Bosses" },
-                CollapsedGroups = new HashSet<string> { "Bosses" }
+                CollapsedGroups = new HashSet<string> { "Bosses" },
+                ModAnnotations = new Dictionary<string, ModAnnotation>
+                {
+                    ["mod-a"] = new() { Alias = "My boss mod", Notes = "Load after BaseLib" }
+                }
             };
 
             bool wrote = ProfileSaveStorage.TryWrite(savePath, saveData, _ => { }, out string? error);
@@ -787,6 +844,8 @@ public class LogicTests
             Assert.AreEqual("Bosses", loaded.CustomGroups[0]);
             Assert.AreEqual("Bosses", loaded.ModGroups["mod-a"]);
             Assert.IsTrue(loaded.CollapsedGroups.Contains("Bosses"));
+            Assert.AreEqual("My boss mod", loaded.ModAnnotations["mod-a"].Alias);
+            Assert.AreEqual("Load after BaseLib", loaded.ModAnnotations["mod-a"].Notes);
         }
         finally
         {
@@ -1020,8 +1079,8 @@ public class LogicTests
         });
 
         string expected = string.Join(Environment.NewLine,
-            "Mod Id,Name,Version,Enabled,Group,Workshop Link",
-            "Example.Mod,\"Example, Mod\",1.2.3,TRUE,\"QoL \"\"Core\"\"\",",
+            "Mod Id,Name,Version,Enabled,Group,Workshop Link,Alias,Notes",
+            "Example.Mod,\"Example, Mod\",1.2.3,TRUE,\"QoL \"\"Core\"\"\",,,",
             string.Empty);
 
         Assert.AreEqual(expected, csv);
@@ -1084,7 +1143,11 @@ public class LogicTests
                     }
                 },
                 new Dictionary<string, string> { ["Example.Mod"] = "Core" },
-                "Unassigned");
+                "Unassigned",
+                new Dictionary<string, ModAnnotation>
+                {
+                    ["Example.Mod"] = new() { Alias = "My helper", Notes = "Keep enabled" }
+                });
 
             Assert.AreEqual(1, rows.Count);
             Assert.AreEqual("Example.Mod", rows[0].ModId);
@@ -1093,6 +1156,8 @@ public class LogicTests
             Assert.IsFalse(rows[0].Enabled);
             Assert.AreEqual("Core", rows[0].Group);
             Assert.AreEqual("https://steamcommunity.com/sharedfiles/filedetails/?id=3456789012", rows[0].WorkshopUrl);
+            Assert.AreEqual("My helper", rows[0].Alias);
+            Assert.AreEqual("Keep enabled", rows[0].Notes);
         }
         finally
         {

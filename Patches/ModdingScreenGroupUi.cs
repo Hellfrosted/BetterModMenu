@@ -84,12 +84,15 @@ internal static class ModdingScreenGroupUi
     {
         var manifest = row.Mod?.manifest;
         string modId = manifest?.id ?? string.Empty;
+        ModAnnotation annotation = ProfileManager.GetModAnnotation(modId);
         SteamWorkshopLinkResolver.TryGetPublishedFileId(row.Mod?.path, out string workshopId);
         SteamWorkshopLinkResolver.TryGetWorkshopUrl(row.Mod?.path, out string workshopUrl);
         return new ModSearchDocument(modId, manifest?.name ?? modId)
         {
             Author = manifest?.author ?? string.Empty,
             Description = manifest?.description ?? string.Empty,
+            Alias = annotation.Alias,
+            Notes = annotation.Notes,
             Version = manifest?.version ?? string.Empty,
             Dependencies = manifest?.dependencies?.Select(dependency => dependency.id).Where(id => !string.IsNullOrWhiteSpace(id)).ToArray() ?? Array.Empty<string>(),
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)

@@ -23,7 +23,8 @@ internal static class ProfileSaveStorage
         HashSet<string> collapsedGroups,
         TutorialState tutorial,
         CloudBackupSettings cloudBackups,
-        ModNameStyleSettings modNameStyles)
+        ModNameStyleSettings modNameStyles,
+        Dictionary<string, ModAnnotation> modAnnotations)
     {
         return new ProfileSaveData
         {
@@ -34,7 +35,8 @@ internal static class ProfileSaveStorage
             CollapsedGroups = collapsedGroups,
             Tutorial = tutorial,
             CloudBackups = cloudBackups,
-            ModNameStyles = modNameStyles
+            ModNameStyles = modNameStyles,
+            ModAnnotations = modAnnotations
         };
     }
 
@@ -49,7 +51,8 @@ internal static class ProfileSaveStorage
             CollapsedGroups = saveData.CollapsedGroups ?? new(),
             Tutorial = saveData.Tutorial ?? new(),
             CloudBackups = saveData.CloudBackups ?? new(),
-            ModNameStyles = NormalizeModNameStyleSettings(saveData.ModNameStyles)
+            ModNameStyles = NormalizeModNameStyleSettings(saveData.ModNameStyles),
+            ModAnnotations = ModAnnotationRules.NormalizeDictionary(saveData.ModAnnotations)
         };
     }
 

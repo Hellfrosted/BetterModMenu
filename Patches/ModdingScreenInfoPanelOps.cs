@@ -8,7 +8,9 @@ internal static class ModdingScreenInfoPanelOps
 {
     private const string ActionRootName = "BetterModMenuSelectedModActions";
     private const string MatchReasonName = "BetterModMenuSearchMatchReason";
+    private const string ActionRowName = "BetterModMenuDetailActionRow";
     private const string ConfigButtonName = "BetterModMenuConfigButton";
+    private const string AnnotationButtonName = "BetterModMenuAnnotationButton";
     private const string GameplayBadgeName = "BetterModMenuGameplayBadge";
 
     public static void Refresh(NModdingScreen screen, ModdingScreenSession session)
@@ -20,6 +22,7 @@ internal static class ModdingScreenInfoPanelOps
         var root = EnsureActionRoot(infoContainer);
         var reasonLabel = root.GetNode<Label>(MatchReasonName);
         var configButton = root.GetNode<Button>(ConfigButtonName);
+        var annotationButton = root.GetNode<Button>(AnnotationButtonName);
         var gameplayBadge = configButton.GetNode<Label>(GameplayBadgeName);
 
         string selectedModId = session.SelectedModId;
@@ -30,12 +33,17 @@ internal static class ModdingScreenInfoPanelOps
 
         bool affectsGameplay = ProfileManager.ModGameplayImpactCache.TryGetValue(selectedModId, out bool cachedImpact) && cachedImpact;
         configButton.Text = ModdingScreenText.Get(BmmText.DetailConfig, "Config");
+        annotationButton.Text = ModdingScreenText.Get(BmmText.DetailAnnotation, "Alias / Notes");
         gameplayBadge.Visible = affectsGameplay;
         reasonLabel.Text = BuildMatchReason(session, selectedModId);
         reasonLabel.Visible = !string.IsNullOrWhiteSpace(reasonLabel.Text);
         UpdateActionRootLayout(root, reasonLabel.Visible);
         bool hasConfigProvider = provider != ModConfigProviderKind.None;
         ModdingScreenVanillaStyle.ApplyDetailActionAvailability(configButton, hasConfigProvider);
+        bool hasSelection = !string.IsNullOrWhiteSpace(selectedModId);
+        ModdingScreenVanillaStyle.ApplyDetailActionAvailability(annotationButton, hasSelection);
+        annotationButton.TooltipText = BuildAnnotationTooltip(
+            hasSelection ? ProfileManager.GetModAnnotation(selectedModId) : null);
         configButton.TooltipText = provider == ModConfigProviderKind.None
             ? BuildConfigTooltip(ModdingScreenText.Get(
                 BmmText.DetailConfigUnavailableTooltip,
@@ -90,6 +98,15 @@ internal static class ModdingScreenInfoPanelOps
         ModdingScreenVanillaStyle.ApplyLabel(reason, muted: true);
         root.AddChild(reason);
 
+        var actionRow = new HBoxContainer
+        {
+            Name = ActionRowName,
+            CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailConfigButtonHeight),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        actionRow.AddThemeConstantOverride("separation", ModdingScreenConstants.DetailActionGap);
+        root.AddChild(actionRow);
+
         var config = new Button
         {
             Name = ConfigButtonName,
@@ -128,7 +145,53 @@ internal static class ModdingScreenInfoPanelOps
             var provider = ModConfigProviderAdapter.GetProvider(session.SelectedModId);
             ModConfigProviderAdapter.Open(screen, session.SelectedModId, provider);
         };
-        root.AddChild(config);
+        actionRow.AddChild(config);
+
+        var annotation = new Button
+        {
+            Name = AnnotationButtonName,
+            Text = ModdingScreenText.Get(BmmText.DetailAnnotation, "Alias / Notes"),
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            ClipContents = true,
+            CustomMinimumSize = new Vector2(0, ModdingScreenConstants.DetailConfigButtonHeight),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyDetailActionButton(annotation);
+        MatchDetailPanelFont(infoContainer, annotation);
+        annotation.Pressed += () =>
+        {
+            var screen = ModdingScreenNodeOps.FindOwningScreen(annotation);
+            if (screen == null)
+                return;
+
+            var session = ModdingScreenContext.GetSession(screen);
+            string modId = session.SelectedModId;
+            if (string.IsNullOrWhiteSpace(modId))
+                return;
+
+            ModdingScreenDialogs.ShowModAnnotationDialog(
+                screen,
+                FindSelectedModName(screen, modId),
+                ProfileManager.GetModAnnotation(modId),
+                (alias, notes) =>
+                {
+                    if (!ProfileManager.TrySaveModAnnotation(modId, alias, notes, out string? error))
+                    {
+                        ModdingScreenDialogs.ShowInfoDialog(
+                            screen,
+                            ModdingScreenText.Get(BmmText.AnnotationSaveFailedTitle, "Notes Not Saved"),
+                            ModdingScreenText.Format(
+                                BmmText.AnnotationSaveFailedMessageFormat,
+                                "Better Mod Menu could not save the alias or notes.\n\n{0}",
+                                error ?? "Unknown error."));
+                        return false;
+                    }
+
+                    NModdingScreenPatch.RefreshGroupsUI();
+                    return true;
+                });
+        };
+        actionRow.AddChild(annotation);
 
         infoContainer.AddChild(root);
         return root;
@@ -148,6 +211,40 @@ internal static class ModdingScreenInfoPanelOps
         return affectsGameplay
             ? baseText + "\n" + ModdingScreenText.Get(BmmText.GameplayImpactTooltip, "This mod affects gameplay.")
             : baseText;
+    }
+
+    private static string BuildAnnotationTooltip(ModAnnotation? annotation)
+    {
+        string tooltip = ModdingScreenText.Get(
+            BmmText.DetailAnnotationTooltip,
+            "Add a personal alias or notes for the selected mod.");
+        if (annotation == null)
+            return tooltip;
+
+        if (!string.IsNullOrWhiteSpace(annotation.Alias))
+            tooltip += "\n" + ModdingScreenText.Get(BmmText.DialogAnnotationAlias, "Alias") + ": " + annotation.Alias;
+        if (!string.IsNullOrWhiteSpace(annotation.Notes))
+        {
+            string preview = annotation.Notes.Split('\n')[0];
+            if (preview.Length > 100)
+                preview = preview[..97] + "...";
+            tooltip += "\n" + ModdingScreenText.Get(BmmText.DialogAnnotationNotes, "Notes") + ": " + preview;
+        }
+
+        return tooltip;
+    }
+
+    private static string FindSelectedModName(NModdingScreen screen, string modId)
+    {
+        var rowContainer = ModdingScreenNodeOps.GetModRowContainer(screen);
+        var row = rowContainer?.GetChildren()
+            .OfType<NModMenuRow>()
+            .FirstOrDefault(candidate => string.Equals(
+                candidate.Mod?.manifest?.id,
+                modId,
+                StringComparison.OrdinalIgnoreCase));
+        string displayName = row?.Mod?.manifest?.name ?? string.Empty;
+        return string.IsNullOrWhiteSpace(displayName) ? modId : displayName;
     }
 
     private static void MatchDetailPanelFont(Control infoContainer, Button button)

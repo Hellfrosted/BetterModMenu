@@ -56,6 +56,8 @@ internal static class BmmText
     public const string DetailSearchMatchTooltip = "DETAIL.SEARCH_MATCH.TOOLTIP";
     public const string DetailGameplayBadge = "DETAIL.GAMEPLAY.BADGE";
     public const string DetailNoMatchingMods = "DETAIL.NO_MATCHING_MODS";
+    public const string DetailAnnotation = "DETAIL.ANNOTATION";
+    public const string DetailAnnotationTooltip = "DETAIL.ANNOTATION.TOOLTIP";
     public const string SearchMatchModId = "SEARCH.MATCH.MOD_ID";
     public const string SearchMatchModName = "SEARCH.MATCH.MOD_NAME";
     public const string SearchMatchAuthor = "SEARCH.MATCH.AUTHOR";
@@ -66,6 +68,8 @@ internal static class BmmText
     public const string SearchMatchWorkshopLink = "SEARCH.MATCH.WORKSHOP_LINK";
     public const string SearchMatchDescription = "SEARCH.MATCH.DESCRIPTION";
     public const string SearchMatchDependency = "SEARCH.MATCH.DEPENDENCY";
+    public const string SearchMatchAlias = "SEARCH.MATCH.ALIAS";
+    public const string SearchMatchNotes = "SEARCH.MATCH.NOTES";
     public const string DialogLoadBackupTitle = "DIALOG.LOAD_BACKUP.TITLE";
     public const string DialogLoadBackupBody = "DIALOG.LOAD_BACKUP.BODY";
     public const string DialogLoadBackupBodyManyFormat = "DIALOG.LOAD_BACKUP.BODY_MANY_FORMAT";
@@ -76,6 +80,14 @@ internal static class BmmText
     public const string DialogRenameGroupHelp = "DIALOG.RENAME_GROUP.HELP";
     public const string DialogRenameProfileTitle = "DIALOG.RENAME_PROFILE.TITLE";
     public const string DialogRenameProfileHelp = "DIALOG.RENAME_PROFILE.HELP";
+    public const string DialogAnnotationTitleFormat = "DIALOG.ANNOTATION.TITLE_FORMAT";
+    public const string DialogAnnotationAlias = "DIALOG.ANNOTATION.ALIAS";
+    public const string DialogAnnotationAliasPlaceholder = "DIALOG.ANNOTATION.ALIAS_PLACEHOLDER";
+    public const string DialogAnnotationNotes = "DIALOG.ANNOTATION.NOTES";
+    public const string DialogAnnotationNotesPlaceholder = "DIALOG.ANNOTATION.NOTES_PLACEHOLDER";
+    public const string DialogAnnotationHelp = "DIALOG.ANNOTATION.HELP";
+    public const string AnnotationSaveFailedTitle = "ANNOTATION.SAVE_FAILED.TITLE";
+    public const string AnnotationSaveFailedMessageFormat = "ANNOTATION.SAVE_FAILED.MESSAGE_FORMAT";
     public const string DialogCloudFolderTitle = "DIALOG.CLOUD_FOLDER.TITLE";
     public const string DialogCloudFolderHelp = "DIALOG.CLOUD_FOLDER.HELP";
     public const string LogCopyAll = "LOG.COPY_ALL";

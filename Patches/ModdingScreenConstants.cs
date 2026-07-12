@@ -14,8 +14,11 @@ internal static class ModdingScreenConstants
     public const float TopBarFallbackX = 300f;
     public const float TopBarFallbackY = 55f;
     public const float TopBarFallbackWidth = 360f;
+    public const float TopBarStackGap = 6f;
     public const float TopBarButtonMinWidth = 62f;
-    public const float TopBarButtonCompactWidth = 60f;
+    public const float TopBarButtonCompactWidth = 42f;
+    public const float TopBarDropdownWidth = 120f;
+    public const float TopBarDropdownCompactWidth = 60f;
     public const float ToolbarControlHeight = 30f;
 
     public const float GroupBarCompactThreshold = 980f;

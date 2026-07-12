@@ -88,9 +88,19 @@ internal static class ModdingScreenVanillaStyle
         input.AddThemeStyleboxOverride("read_only", BuildPanelBox(new Color(0.035f, 0.033f, 0.03f, 0.9f), new Color(1f, 0.95f, 0.86f, 0.12f), 1, 0));
     }
 
+    public static void ApplyTextEdit(TextEdit input)
+    {
+        input.AddThemeColorOverride("font_color", TextColor);
+        input.AddThemeColorOverride("font_placeholder_color", MutedTextColor);
+        input.AddThemeStyleboxOverride("normal", BuildPanelBox(new Color(0.04f, 0.038f, 0.034f, 0.98f), new Color(1f, 0.95f, 0.86f, 0.2f), 1, 0));
+        input.AddThemeStyleboxOverride("focus", BuildPanelBox(new Color(0.045f, 0.043f, 0.039f, 0.98f), CyanAccentColor, 1, 2));
+        input.AddThemeStyleboxOverride("read_only", BuildPanelBox(new Color(0.035f, 0.033f, 0.03f, 0.9f), new Color(1f, 0.95f, 0.86f, 0.12f), 1, 0));
+    }
+
     public static void ApplyOptionButton(OptionButton button)
     {
         ApplyButton(button);
+        button.GetPopup().PopupWindow = true;
     }
 
     public static void ApplyLogPanel(Control control)
@@ -105,6 +115,7 @@ internal static class ModdingScreenVanillaStyle
 
     public static void ApplyDialogWindow(AcceptDialog popup)
     {
+        popup.PopupWindow = true;
         popup.AddThemeColorOverride("title_color", TextColor);
         popup.AddThemeColorOverride("title_outline_modulate", new Color(0f, 0f, 0f, 0.82f));
         popup.AddThemeConstantOverride("title_height", DialogTitleHeight);

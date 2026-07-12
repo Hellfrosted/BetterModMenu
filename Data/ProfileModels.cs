@@ -17,6 +17,13 @@ public class ProfileSaveData
     public TutorialState Tutorial { get; set; } = new();
     public CloudBackupSettings CloudBackups { get; set; } = new();
     public ModNameStyleSettings ModNameStyles { get; set; } = new();
+    public Dictionary<string, ModAnnotation> ModAnnotations { get; set; } = new();
+}
+
+public class ModAnnotation
+{
+    public string Alias { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
 }
 
 public class ModNameStyleSettings
