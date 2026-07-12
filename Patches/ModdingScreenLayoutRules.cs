@@ -10,8 +10,29 @@ internal readonly record struct TopBarPresentation(
     TopBarButtonPresentation DeleteProfile,
     float ButtonWidth);
 
+internal readonly record struct VisibleRowSpan(float Left, float Right)
+{
+    public float Width => Math.Max(0f, Right - Left);
+}
+
 internal static class ModdingScreenLayoutRules
 {
+    public static VisibleRowSpan IntersectVisibleRowSpan(
+        VisibleRowSpan current,
+        float rowGlobalLeft,
+        float clipGlobalLeft,
+        float clipWidth)
+    {
+        float clipLeftInRow = clipGlobalLeft - rowGlobalLeft;
+        float clipRightInRow = clipLeftInRow + Math.Max(0f, clipWidth);
+        float left = Math.Max(current.Left, clipLeftInRow);
+        float right = Math.Min(current.Right, clipRightInRow);
+        if (right < left)
+            right = left;
+
+        return new VisibleRowSpan(left, right);
+    }
+
     public static bool ShouldStackTopBar(float availableInlineWidth, float requiredWidth)
     {
         return availableInlineWidth < requiredWidth;

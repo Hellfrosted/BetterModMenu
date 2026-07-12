@@ -105,6 +105,11 @@ public static class NModMenuRowPatch
         container.AddChild(groupDropdown);
 
         __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, upBtn, downBtn, groupDropdown);
+        foreach (Control clippingAncestor in EnumerateClippingAncestors(__instance))
+        {
+            clippingAncestor.Resized += () =>
+                UpdateCustomControlsLayout(__instance, container, upBtn, downBtn, groupDropdown);
+        }
         Callable.From(() => UpdateCustomControlsLayout(__instance, container, upBtn, downBtn, groupDropdown)).CallDeferred();
     }
 
@@ -357,10 +362,14 @@ public static class NModMenuRowPatch
         if (!GodotObject.IsInstanceValid(row) || !GodotObject.IsInstanceValid(container))
             return;
 
+        VisibleRowSpan visibleSpan = GetVisibleRowSpan(row);
+        float visibleRowRight = visibleSpan.Right;
+        float visibleRowWidth = visibleSpan.Width;
+
         groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownWidth, ModdingScreenConstants.ToolbarControlHeight);
 
         float preferredWidth = container.GetCombinedMinimumSize().X;
-        bool isCompact = row.Size.X > 0 && row.Size.X - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;
+        bool isCompact = visibleRowWidth > 0 && visibleRowWidth - preferredWidth < ModdingScreenConstants.RowMinimumLeftContentWidth;
         if (isCompact)
         {
             groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, ModdingScreenConstants.ToolbarControlHeight);
@@ -369,7 +378,7 @@ public static class NModMenuRowPatch
         upButton.Visible = true;
         downButton.Visible = true;
         float compactControlsWidth = container.GetCombinedMinimumSize().X;
-        bool showMoveButtons = ModdingScreenLayoutRules.ShouldShowRowMoveButtons(row.Size.X, compactControlsWidth);
+        bool showMoveButtons = ModdingScreenLayoutRules.ShouldShowRowMoveButtons(visibleRowWidth, compactControlsWidth);
         upButton.Visible = showMoveButtons;
         downButton.Visible = showMoveButtons;
         if (!showMoveButtons)
@@ -377,12 +386,38 @@ public static class NModMenuRowPatch
 
         float width = container.GetCombinedMinimumSize().X;
         float height = container.GetCombinedMinimumSize().Y;
-        container.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
-        container.GrowHorizontal = Control.GrowDirection.Begin;
-        container.OffsetRight = -(ModdingScreenConstants.RowControlsRightPadding + ModdingScreenConstants.RowNativeTickboxReserveWidth);
-        container.OffsetLeft = container.OffsetRight - width;
-        container.OffsetTop = -height / 2f;
-        container.OffsetBottom = height / 2f;
+        container.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+        container.Position = new Vector2(
+            visibleRowRight - ModdingScreenConstants.RowControlsRightPadding - ModdingScreenConstants.RowNativeTickboxReserveWidth - width,
+            Math.Max(0f, (row.Size.Y - height) / 2f));
+        container.Size = new Vector2(width, height);
+    }
+
+    private static VisibleRowSpan GetVisibleRowSpan(NModMenuRow row)
+    {
+        var visibleSpan = new VisibleRowSpan(0f, Math.Max(0f, row.Size.X));
+        foreach (Control control in EnumerateClippingAncestors(row))
+        {
+            visibleSpan = ModdingScreenLayoutRules.IntersectVisibleRowSpan(
+                visibleSpan,
+                row.GlobalPosition.X,
+                control.GlobalPosition.X,
+                control.Size.X);
+        }
+
+        return visibleSpan;
+    }
+
+    private static IEnumerable<Control> EnumerateClippingAncestors(Node node)
+    {
+        Node? ancestor = node.GetParent();
+        while (ancestor != null)
+        {
+            if (ancestor is Control control && control.ClipContents)
+                yield return control;
+
+            ancestor = ancestor.GetParent();
+        }
     }
 
     private static void QueueMoveModOrder(NModMenuRow row, string modId, int direction)

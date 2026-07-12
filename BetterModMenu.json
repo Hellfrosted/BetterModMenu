@@ -3,7 +3,7 @@
   "name": "Better Mod Menu",
   "author": "Crunch",
   "description": "Adds profile and grouping functionality to the Slay the Spire 2 mod manager.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "min_game_version": "0.107.1",
   "has_pck": false,
   "has_dll": true,

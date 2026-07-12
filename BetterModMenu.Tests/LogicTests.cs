@@ -579,6 +579,36 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void IntersectVisibleRowSpan_UsesActualClippingIntersection()
+    {
+        var aligned = ModdingScreenLayoutRules.IntersectVisibleRowSpan(
+            new VisibleRowSpan(0f, 900f),
+            rowGlobalLeft: 200f,
+            clipGlobalLeft: 200f,
+            clipWidth: 300f);
+        var inset = ModdingScreenLayoutRules.IntersectVisibleRowSpan(
+            new VisibleRowSpan(0f, 900f),
+            rowGlobalLeft: 200f,
+            clipGlobalLeft: 250f,
+            clipWidth: 300f);
+        var zero = ModdingScreenLayoutRules.IntersectVisibleRowSpan(
+            new VisibleRowSpan(0f, 900f),
+            rowGlobalLeft: 200f,
+            clipGlobalLeft: 200f,
+            clipWidth: 0f);
+        var nested = ModdingScreenLayoutRules.IntersectVisibleRowSpan(
+            inset,
+            rowGlobalLeft: 200f,
+            clipGlobalLeft: 300f,
+            clipWidth: 100f);
+
+        Assert.AreEqual(new VisibleRowSpan(0f, 300f), aligned);
+        Assert.AreEqual(new VisibleRowSpan(50f, 350f), inset);
+        Assert.AreEqual(0f, zero.Width);
+        Assert.AreEqual(new VisibleRowSpan(100f, 200f), nested);
+    }
+
+    [TestMethod]
     public void Localization_UsesSts2LanguageCodesPlusVietnamese()
     {
         CollectionAssert.AreEqual(
