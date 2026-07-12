@@ -104,8 +104,8 @@ public static class NModMenuRowPatch
 
         container.AddChild(groupDropdown);
 
-        __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, groupDropdown);
-        Callable.From(() => UpdateCustomControlsLayout(__instance, container, groupDropdown)).CallDeferred();
+        __instance.Resized += () => UpdateCustomControlsLayout(__instance, container, upBtn, downBtn, groupDropdown);
+        Callable.From(() => UpdateCustomControlsLayout(__instance, container, upBtn, downBtn, groupDropdown)).CallDeferred();
     }
 
     internal static void RefreshVisibleModNames(NModdingScreen screen)
@@ -347,7 +347,12 @@ public static class NModMenuRowPatch
         return null;
     }
 
-    private static void UpdateCustomControlsLayout(NModMenuRow row, HBoxContainer container, OptionButton groupDropdown)
+    private static void UpdateCustomControlsLayout(
+        NModMenuRow row,
+        HBoxContainer container,
+        Button upButton,
+        Button downButton,
+        OptionButton groupDropdown)
     {
         if (!GodotObject.IsInstanceValid(row) || !GodotObject.IsInstanceValid(container))
             return;
@@ -360,6 +365,15 @@ public static class NModMenuRowPatch
         {
             groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownCompactWidth, ModdingScreenConstants.ToolbarControlHeight);
         }
+
+        upButton.Visible = true;
+        downButton.Visible = true;
+        float compactControlsWidth = container.GetCombinedMinimumSize().X;
+        bool showMoveButtons = ModdingScreenLayoutRules.ShouldShowRowMoveButtons(row.Size.X, compactControlsWidth);
+        upButton.Visible = showMoveButtons;
+        downButton.Visible = showMoveButtons;
+        if (!showMoveButtons)
+            groupDropdown.CustomMinimumSize = new Vector2(ModdingScreenConstants.RowDropdownNarrowWidth, ModdingScreenConstants.ToolbarControlHeight);
 
         float width = container.GetCombinedMinimumSize().X;
         float height = container.GetCombinedMinimumSize().Y;

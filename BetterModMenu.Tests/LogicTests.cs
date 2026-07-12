@@ -510,6 +510,22 @@ public class LogicTests
     }
 
     [TestMethod]
+    public void ShouldShowRowMoveButtons_PreservesGroupPickerOnNarrowRows()
+    {
+        const float compactControlsWidth = 184f;
+        const float exactThreshold =
+            compactControlsWidth +
+            ModdingScreenConstants.RowControlsRightPadding +
+            ModdingScreenConstants.RowNativeTickboxReserveWidth +
+            ModdingScreenConstants.RowMinimumCompactLeftContentWidth;
+
+        Assert.IsFalse(ModdingScreenLayoutRules.ShouldShowRowMoveButtons(rowWidth: 270f, compactControlsWidth));
+        Assert.IsFalse(ModdingScreenLayoutRules.ShouldShowRowMoveButtons(rowWidth: exactThreshold - 1f, compactControlsWidth));
+        Assert.IsTrue(ModdingScreenLayoutRules.ShouldShowRowMoveButtons(rowWidth: exactThreshold, compactControlsWidth));
+        Assert.IsTrue(ModdingScreenLayoutRules.ShouldShowRowMoveButtons(rowWidth: 0f, compactControlsWidth));
+    }
+
+    [TestMethod]
     public void Localization_UsesSts2LanguageCodesPlusVietnamese()
     {
         CollectionAssert.AreEqual(
