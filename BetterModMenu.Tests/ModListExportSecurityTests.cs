@@ -38,8 +38,8 @@ public class ModListExportSecurityTests
             string csv = ModListExportBuilder.BuildCsv(rows);
 
             string expected = string.Join(Environment.NewLine,
-                "Mod Id,Name,Version,Enabled,Group,Workshop Link",
-                "Formula.Mod,\"'=HYPERLINK(\"\"https://example.invalid\"\")\",'+1.2.3,TRUE,'-Injected Group,",
+                "Mod Id,Name,Version,Enabled,Group,Workshop Link,Alias,Notes",
+                "Formula.Mod,\"'=HYPERLINK(\"\"https://example.invalid\"\")\",'+1.2.3,TRUE,'-Injected Group,,,",
                 string.Empty);
             Assert.AreEqual(expected, csv);
         }
@@ -61,13 +61,15 @@ public class ModListExportSecurityTests
                 Version = "1.0.0",
                 Enabled = false,
                 Group = "Safe Group",
-                WorkshopUrl = "=HYPERLINK(\"https://example.invalid\")"
+                WorkshopUrl = "=HYPERLINK(\"https://example.invalid\")",
+                Alias = "+Alias",
+                Notes = "=cmd|'/C calc'!A0\nsecond line"
             }
         });
 
         string expected = string.Join(Environment.NewLine,
-            "Mod Id,Name,Version,Enabled,Group,Workshop Link",
-            "'\tTabbed.Mod,\"'\rCarriage Mod\",1.0.0,FALSE,Safe Group,\"'=HYPERLINK(\"\"https://example.invalid\"\")\"",
+            "Mod Id,Name,Version,Enabled,Group,Workshop Link,Alias,Notes",
+            "'\tTabbed.Mod,\"'\rCarriage Mod\",1.0.0,FALSE,Safe Group,\"'=HYPERLINK(\"\"https://example.invalid\"\")\",'+Alias,\"'=cmd|'/C calc'!A0\nsecond line\"",
             string.Empty);
         Assert.AreEqual(expected, csv);
     }

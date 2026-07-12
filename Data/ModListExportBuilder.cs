@@ -18,21 +18,24 @@ internal sealed class ModListExportRow
     public bool Enabled { get; init; }
     public string Group { get; init; } = string.Empty;
     public string WorkshopUrl { get; init; } = string.Empty;
+    public string Alias { get; init; } = string.Empty;
+    public string Notes { get; init; } = string.Empty;
 }
 
 internal static class ModListExportBuilder
 {
     public const string ErrorNoExportDirectory = "No export directory was provided.";
 
-    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group", "Workshop Link"];
+    private static readonly string[] Header = ["Mod Id", "Name", "Version", "Enabled", "Group", "Workshop Link", "Alias", "Notes"];
 
     public static List<ModListExportRow> BuildRows(
         IEnumerable<InstalledModExportInput> mods,
         IReadOnlyDictionary<string, string> assignedGroups,
-        string unassignedGroup)
+        string unassignedGroup,
+        IReadOnlyDictionary<string, ModAnnotation>? annotations = null)
     {
         return mods
-            .Select(mod => BuildRow(mod, assignedGroups, unassignedGroup))
+            .Select(mod => BuildRow(mod, assignedGroups, unassignedGroup, annotations))
             .OrderBy(row => row.Group, StringComparer.OrdinalIgnoreCase)
             .ThenBy(row => string.IsNullOrWhiteSpace(row.Name) ? row.ModId : row.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -51,7 +54,9 @@ internal static class ModListExportBuilder
                 row.Version,
                 row.Enabled ? "TRUE" : "FALSE",
                 row.Group,
-                row.WorkshopUrl);
+                row.WorkshopUrl,
+                row.Alias,
+                row.Notes);
         }
 
         return builder.ToString();
@@ -88,13 +93,17 @@ internal static class ModListExportBuilder
     private static ModListExportRow BuildRow(
         InstalledModExportInput mod,
         IReadOnlyDictionary<string, string> assignedGroups,
-        string unassignedGroup)
+        string unassignedGroup,
+        IReadOnlyDictionary<string, ModAnnotation>? annotations)
     {
         ModManifestInfo manifestInfo = new();
         if (!string.IsNullOrWhiteSpace(mod.ManifestPath) && File.Exists(mod.ManifestPath))
             ManifestScanner.TryReadManifestInfo(mod.ManifestPath, mod.ModId, out manifestInfo);
 
         string modId = string.IsNullOrWhiteSpace(manifestInfo.Id) ? mod.ModId : manifestInfo.Id;
+        ModAnnotation annotation = annotations != null && annotations.TryGetValue(modId, out ModAnnotation? value)
+            ? value
+            : new ModAnnotation();
         return new ModListExportRow
         {
             ModId = modId,
@@ -104,7 +113,9 @@ internal static class ModListExportBuilder
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
                 ? group
                 : unassignedGroup,
-            WorkshopUrl = mod.WorkshopUrl
+            WorkshopUrl = mod.WorkshopUrl,
+            Alias = annotation.Alias,
+            Notes = annotation.Notes
         };
     }
 

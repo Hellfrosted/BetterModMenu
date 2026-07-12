@@ -9,6 +9,8 @@ internal sealed class ModSearchDocument(string modId, string name)
     public string Name { get; } = name;
     public string Author { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public string Alias { get; init; } = string.Empty;
+    public string Notes { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public IReadOnlyList<string> Dependencies { get; init; } = Array.Empty<string>();
     public string Group { get; init; } = string.Empty;
@@ -99,13 +101,15 @@ internal static class ModSearchRules
         {
             new("id", document.ModId, ExactIdOrNameScore, PrefixIdOrNameScore, FuzzyIdScore, IncludeContainsForShortQuery: true),
             new("name", document.Name, ExactIdOrNameScore, PrefixIdOrNameScore, FuzzyNameScore, IncludeContainsForShortQuery: true),
+            new("alias", document.Alias, ExactIdOrNameScore, PrefixIdOrNameScore, FuzzyNameScore, IncludeContainsForShortQuery: true),
             new("author", document.Author, MetadataScore, MetadataScore - 40, MetadataScore - 90, IncludeContainsForShortQuery: false),
             new("version", document.Version, MetadataScore, MetadataScore - 40, 0, IncludeContainsForShortQuery: false),
             new("group", document.Group, MetadataScore, MetadataScore - 40, MetadataScore - 120, IncludeContainsForShortQuery: false),
             new("state", document.Enabled ? "enabled" : "disabled", MetadataScore, MetadataScore - 40, 0, IncludeContainsForShortQuery: false),
             new("Steam Workshop id", document.WorkshopId, WorkshopScore, WorkshopScore - 40, 0, IncludeContainsForShortQuery: true),
             new("Steam Workshop link", document.WorkshopUrl, WorkshopScore - 80, WorkshopScore - 100, 0, IncludeContainsForShortQuery: true),
-            new("description", document.Description, DescriptionScore, DescriptionScore - 40, DescriptionScore - 80, IncludeContainsForShortQuery: false)
+            new("description", document.Description, DescriptionScore, DescriptionScore - 40, DescriptionScore - 80, IncludeContainsForShortQuery: false),
+            new("notes", document.Notes, DescriptionScore, DescriptionScore - 40, DescriptionScore - 80, IncludeContainsForShortQuery: false)
         };
 
         foreach (string dependency in document.Dependencies)
@@ -225,6 +229,7 @@ internal static class ModSearchRules
         {
             "id" => new SearchReason(BmmText.SearchMatchModId, "Matched mod id"),
             "name" => new SearchReason(BmmText.SearchMatchModName, "Matched mod name"),
+            "alias" => new SearchReason(BmmText.SearchMatchAlias, "Matched alias"),
             "author" => new SearchReason(BmmText.SearchMatchAuthor, "Matched author"),
             "version" => new SearchReason(BmmText.SearchMatchVersion, "Matched version"),
             "group" => new SearchReason(BmmText.SearchMatchGroup, "Matched group"),
@@ -232,6 +237,7 @@ internal static class ModSearchRules
             "Steam Workshop id" => new SearchReason(BmmText.SearchMatchWorkshopId, "Matched Steam Workshop id"),
             "Steam Workshop link" => new SearchReason(BmmText.SearchMatchWorkshopLink, "Matched Steam Workshop link"),
             "description" => new SearchReason(BmmText.SearchMatchDescription, "Matched description"),
+            "notes" => new SearchReason(BmmText.SearchMatchNotes, "Matched notes"),
             "dependency" => new SearchReason(BmmText.SearchMatchDependency, "Matched dependency"),
             _ => new SearchReason(string.Empty, "Matched " + field.Name)
         };

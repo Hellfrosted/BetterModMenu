@@ -405,6 +405,64 @@ internal static class ModdingScreenDialogs
             onConfirmed);
     }
 
+    public static void ShowModAnnotationDialog(
+        NModdingScreen screen,
+        string modName,
+        ModAnnotation annotation,
+        Func<string, string, bool> onConfirmed)
+    {
+        var popup = new ConfirmationDialog
+        {
+            Title = F(BmmText.DialogAnnotationTitleFormat, "Alias / Notes — {0}", modName),
+            DialogText = string.Empty,
+            DialogHideOnOk = false
+        };
+        ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
+
+        var body = new VBoxContainer();
+        body.AddThemeConstantOverride("separation", 8);
+
+        var helpLabel = CreateReadableBodyLabel(
+            T(BmmText.DialogAnnotationHelp, "Aliases and notes are personal metadata. They are searchable, included in backups and CSV exports, and do not rename the installed mod."),
+            18);
+        helpLabel.CustomMinimumSize = new Vector2(620, 0);
+        body.AddChild(helpLabel);
+
+        var aliasLabel = CreateReadableBodyLabel(T(BmmText.DialogAnnotationAlias, "Alias"), 18);
+        body.AddChild(aliasLabel);
+        var aliasInput = new LineEdit
+        {
+            Text = annotation.Alias,
+            PlaceholderText = T(BmmText.DialogAnnotationAliasPlaceholder, "Personal name for this mod..."),
+            MaxLength = ModAnnotationRules.MaxAliasLength,
+            CustomMinimumSize = new Vector2(620, 0)
+        };
+        ModdingScreenVanillaStyle.ApplyLineEdit(aliasInput);
+        body.AddChild(aliasInput);
+
+        var notesLabel = CreateReadableBodyLabel(T(BmmText.DialogAnnotationNotes, "Notes"), 18);
+        body.AddChild(notesLabel);
+        var notesInput = new TextEdit
+        {
+            Text = annotation.Notes,
+            PlaceholderText = T(BmmText.DialogAnnotationNotesPlaceholder, "What this mod does, compatibility reminders, or setup notes..."),
+            CustomMinimumSize = new Vector2(620, 180),
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill
+        };
+        ModdingScreenVanillaStyle.ApplyTextEdit(notesInput);
+        body.AddChild(notesInput);
+
+        popup.AddChild(CreateStyledDialogShell(body, 660, 340));
+        popup.Confirmed += () =>
+        {
+            if (onConfirmed(aliasInput.Text, notesInput.Text))
+                popup.Hide();
+        };
+        ApplyReadableDialogButtons(popup, 20);
+        screen.AddChild(popup);
+        popup.PopupCentered(new Vector2I(720, 500));
+    }
+
     public static void ShowCloudBackupDialog(NModdingScreen screen, string currentDirectory, Action<string> onConfirmed)
     {
         ShowTextInputDialog(

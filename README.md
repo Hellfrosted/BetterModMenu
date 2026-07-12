@@ -1,6 +1,6 @@
 # Better Mod Menu
 
-Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) mod screen with profiles, custom groups, saved ordering, local backups, CSV exports, and log viewing.
+Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/) mod screen with profiles, custom groups, saved ordering, personal mod notes, local backups, CSV exports, and log viewing.
 
 ## Features
 
@@ -8,8 +8,9 @@ Better Mod Menu extends the [Slay the Spire 2](https://store.steampowered.com/ap
 - Create, rename, delete, and switch between mod profiles.
 - Organize mods into custom groups and toggle them together.
 - Save a preferred mod order for the next launch.
+- Add a personal alias and notes to any mod, then find them with the normal mod search.
 - Back up Better Mod Menu profile data and the current enabled-mod settings, with Steam Workshop links when available.
-- Export the installed mod list as an Excel-friendly CSV with versions, enabled state, group names, and Steam Workshop links when available.
+- Export the installed mod list as an Excel-friendly CSV with versions, enabled state, group names, aliases, notes, and Steam Workshop links when available.
 - View full Better Mod Menu log output from the mod screen with warnings and errors highlighted, level filters, plus a shortcut to open the log folder.
 - Color mod names from the supported Steam Workshop tags, and adjust tag or per-mod colors from the in-game `Style` editor.
 - Reopen the first-launch tutorial from the in-game `Help` button.
@@ -41,11 +42,12 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 - `Help` reopens the tutorial popup.
 - `Group` plus `Add` creates a custom group label. Use each mod row's group picker to put mods in that group.
 - Group headers can collapse the section, move or rename the group, delete only the group label, or enable/disable every mod in the group.
+- Select a mod and use `Alias / Notes` in its detail panel to record a personal name, compatibility reminder, or setup note. This metadata is searchable and included in backups and CSV exports; it does not rename or modify the installed mod.
 - Steam Workshop mods with recognized tags get colored names automatically. Local mods and untagged Workshop mods keep the normal name unless configured with `Style` or in save data.
 
 ## Notes
 
-- Load order changes are saved for the next launch.
+- The displayed list runs from top to bottom. Load order changes are saved for the next launch.
 - STS2 may still reorder dependency chains during startup.
 - On SteamOS, Bazzite, CachyOS, and similar Linux setups, `Open Folder` uses common desktop file openers such as `xdg-open`, `gio`, and KDE openers. It is most reliable in Desktop Mode; Gaming Mode or minimal window-manager sessions may not show a file manager.
 
@@ -53,6 +55,7 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 
 - Portable Mode stores `mod_profiles.json`, `mod_profiles.jsonc`, or `mod_profiles.json5` beside the mod files.
 - Otherwise, the file is stored under `mod_data/BetterModMenu/`.
+- Personal aliases and notes are stored in this profile file by mod id, so they survive uninstalling and reinstalling that mod.
 - Cloud-capable builds can mirror backups and CSV exports to a synced directory when `CloudBackups` is enabled in the profile save:
 
 ```json
@@ -66,6 +69,10 @@ Better Mod Menu does not add a separate title-screen button. Open the base game'
 ```
 
 In cloud-capable builds, the in-game `Cloud` action sets or clears the synced mirror folder.
+
+## Multiplayer Sync
+
+Before joining a multiplayer game, every player should use the same Slay the Spire 2 version and match each gameplay mod's id, version, enabled state, and top-to-bottom order. Restart the game after changing the list. Better Mod Menu makes the order and exported CSV easier to compare, but it does not override dependency ordering, synchronize files between players, or make different mod versions compatible.
 
 Mod name styles are saved in the same profile file. The in-game `Style` editor covers common color editing for supported Steam Workshop tags and per-mod overrides. The canonical Steam Workshop tags are exactly: `<none selected>`, `Acts`, `Ancients`, `Audio`, `Cards`, `Characters`, `Cosmetics`, `Events`, `Expansion`, `Extensions`, `Humor`, `Modifiers`, `Monsters`, `Potions`, `QoL`, `Relics`, `Rooms`, `Tools & APIs`, `Utility`, and `Misc`. `ModFormats` targets a specific mod id or displayed mod name and wins before tag formatting, which is useful for favorite-mod easter eggs. Then `DisabledTags` removes supported tags, `TagFormats` overrides the remaining supported tag formats, and the effective `TagPriority` picks which matching tag wins. Custom normalized priority entries are tried first, then the default priority order is used as fallback, including when `UseDefaultTagFormats` is `false`. Common mechanical aliases normalize to canonical tags, such as `Quality of Life` to `QoL`, `Tools and APIs` to `Tools & APIs`, singular forms like `Card` to `Cards`, and `Miscellaneous` to `Misc`. Unsupported tag names are ignored. Values can be any Godot RichTextLabel BBCode template that includes `{name}`, or a bare hex color.
 Set `Enabled` to `false` to keep the vanilla text and skip Workshop tag lookups.

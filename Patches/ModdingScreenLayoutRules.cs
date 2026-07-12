@@ -12,6 +12,11 @@ internal readonly record struct TopBarPresentation(
 
 internal static class ModdingScreenLayoutRules
 {
+    public static bool ShouldStackTopBar(float availableInlineWidth, float requiredWidth)
+    {
+        return availableInlineWidth < requiredWidth;
+    }
+
     public static bool ShouldShowRowMoveButtons(float rowWidth, float controlsWidth)
     {
         float trailingInset = ModdingScreenConstants.RowControlsRightPadding + ModdingScreenConstants.RowNativeTickboxReserveWidth;

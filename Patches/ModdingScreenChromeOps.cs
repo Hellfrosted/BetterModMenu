@@ -89,14 +89,22 @@ internal static class ModdingScreenChromeOps
         var scrollContainer = screen.GetNodeOrNull<Control>("%ModsScrollContainer");
         Vector2 screenOffset = screen.GlobalPosition;
 
+        PrepareInstalledModsTitle(titleNode);
+
         float groupBarHeight = GetGroupBarHeight(scrollContainer);
         float searchBarHeight = GetSearchBarHeight(scrollContainer);
+        bool stackTopBar = session.TopBarControls != null &&
+            GodotObject.IsInstanceValid(session.TopBarControls.Bar) &&
+            ShouldStackTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset);
+        float stackedTopBarHeight = stackTopBar
+            ? session.TopBarControls!.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap
+            : 0f;
 
         if (scrollContainer != null)
-            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
+            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight, stackedTopBarHeight);
 
         if (session.TopBarControls != null && GodotObject.IsInstanceValid(session.TopBarControls.Bar))
-            LayoutTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset);
+            LayoutTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset, groupBarHeight, stackTopBar);
 
         if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
         {
@@ -399,7 +407,9 @@ internal static class ModdingScreenChromeOps
         TopBarControls topBarControls,
         Control? titleNode,
         Control? scrollContainer,
-        Vector2 screenOffset)
+        Vector2 screenOffset,
+        float groupBarHeight,
+        bool stackTopBar)
     {
         var topBar = topBarControls.Bar;
         float x = ModdingScreenConstants.TopBarFallbackX;
@@ -409,16 +419,51 @@ internal static class ModdingScreenChromeOps
 
         if (titleNode != null && scrollContainer != null)
         {
-            x = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X + ModdingScreenConstants.TopBarGap;
-            y = titleNode.GlobalPosition.Y - screenOffset.Y;
             float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
-            width = Math.Max(ModdingScreenConstants.TopBarFallbackWidth, leftPanelRight - x - ModdingScreenConstants.TopBarTrailingPadding);
-            height = Math.Max(height, titleNode.Size.Y);
+            if (stackTopBar)
+            {
+                x = scrollContainer.GlobalPosition.X - screenOffset.X;
+                y = scrollContainer.GlobalPosition.Y - screenOffset.Y -
+                    groupBarHeight -
+                    ModdingScreenConstants.GroupBarListGap -
+                    height -
+                    ModdingScreenConstants.TopBarStackGap;
+                width = scrollContainer.Size.X;
+            }
+            else
+            {
+                x = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X + ModdingScreenConstants.TopBarGap;
+                y = titleNode.GlobalPosition.Y - screenOffset.Y;
+                width = Math.Max(0f, leftPanelRight - x - ModdingScreenConstants.TopBarTrailingPadding);
+                height = Math.Max(height, titleNode.Size.Y);
+            }
         }
 
         topBarControls.SetCompact(width < ModdingScreenConstants.TopBarCompactThreshold);
         topBar.Position = new Vector2(x, y);
         topBar.Size = new Vector2(width, height);
+    }
+
+    private static bool ShouldStackTopBar(TopBarControls topBarControls, Control? titleNode, Control? scrollContainer, Vector2 screenOffset)
+    {
+        if (titleNode == null || scrollContainer == null)
+            return false;
+
+        float titleRight = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X;
+        float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
+        float availableInlineWidth = leftPanelRight - titleRight - ModdingScreenConstants.TopBarGap - ModdingScreenConstants.TopBarTrailingPadding;
+        topBarControls.SetCompact(true);
+        return ModdingScreenLayoutRules.ShouldStackTopBar(availableInlineWidth, topBarControls.Bar.GetCombinedMinimumSize().X);
+    }
+
+    private static void PrepareInstalledModsTitle(Control? titleNode)
+    {
+        if (titleNode is not Label label)
+            return;
+
+        label.AutowrapMode = TextServer.AutowrapMode.Off;
+        label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        label.ClipText = true;
     }
 
     private static float GetGroupBarHeight(Control? scrollContainer)
@@ -438,7 +483,8 @@ internal static class ModdingScreenChromeOps
         ModdingScreenSession session,
         Control scrollContainer,
         float groupBarHeight,
-        float searchBarHeight)
+        float searchBarHeight,
+        float stackedTopBarHeight)
     {
         if (!session.OriginalModsScrollPosition.HasValue)
             session.OriginalModsScrollPosition = scrollContainer.Position;
@@ -448,7 +494,7 @@ internal static class ModdingScreenChromeOps
 
         Vector2 originalPosition = session.OriginalModsScrollPosition.Value;
         Vector2 originalSize = session.OriginalModsScrollSize.Value;
-        float reservedTopHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap;
+        float reservedTopHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap + stackedTopBarHeight;
         float reservedBottomHeight = searchBarHeight + ModdingScreenConstants.SearchBarListGap;
         scrollContainer.Position = new Vector2(originalPosition.X, originalPosition.Y + reservedTopHeight);
         scrollContainer.Size = new Vector2(originalSize.X, Math.Max(120f, originalSize.Y - reservedTopHeight - reservedBottomHeight));

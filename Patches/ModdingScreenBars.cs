@@ -6,12 +6,14 @@ namespace BetterModMenu.Patches;
 
 internal sealed class TopBarControls(
     HBoxContainer bar,
+    Label profileLabel,
     OptionButton profileDropdown,
     Button newProfileButton,
     Button renameProfileButton,
     Button deleteProfileButton)
 {
     public HBoxContainer Bar { get; } = bar;
+    public Label ProfileLabel { get; } = profileLabel;
     public OptionButton ProfileDropdown { get; } = profileDropdown;
     public Button NewProfileButton { get; } = newProfileButton;
     public Button RenameProfileButton { get; } = renameProfileButton;
@@ -20,15 +22,22 @@ internal sealed class TopBarControls(
     public void SetCompact(bool isCompact)
     {
         var presentation = ModdingScreenLayoutRules.GetTopBarPresentation(isCompact);
+        ProfileLabel.Visible = !isCompact;
+        ProfileDropdown.CustomMinimumSize = new Vector2(
+            isCompact ? ModdingScreenConstants.TopBarDropdownCompactWidth : ModdingScreenConstants.TopBarDropdownWidth,
+            ModdingScreenConstants.ToolbarControlHeight);
         NewProfileButton.Text = presentation.NewProfile.Text;
         NewProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePlus);
         NewProfileButton.TooltipText = ModdingScreenText.Get(presentation.NewProfile.TooltipKey, "New profile: copy the current enabled/disabled mods into a separate saved setup.");
+        NewProfileButton.AccessibilityName = NewProfileButton.TooltipText;
         RenameProfileButton.Text = presentation.RenameProfile.Text;
         RenameProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FilePenLine);
         RenameProfileButton.TooltipText = ModdingScreenText.Get(presentation.RenameProfile.TooltipKey, "Rename profile: change the selected profile's name without changing its mods.");
+        RenameProfileButton.AccessibilityName = RenameProfileButton.TooltipText;
         DeleteProfileButton.Text = presentation.DeleteProfile.Text;
         DeleteProfileButton.Icon = ModdingScreenIcons.Get(ModdingScreenIcon.FileX);
         DeleteProfileButton.TooltipText = ModdingScreenText.Get(presentation.DeleteProfile.TooltipKey, "Delete profile: remove the selected saved setup. Your installed mod files stay installed.");
+        DeleteProfileButton.AccessibilityName = DeleteProfileButton.TooltipText;
 
         var minSize = new Vector2(presentation.ButtonWidth, ModdingScreenConstants.ToolbarControlHeight);
         NewProfileButton.CustomMinimumSize = minSize;
@@ -163,7 +172,7 @@ internal static class ModdingScreenBars
         delProfileBtn.Pressed += onDeleteProfilePressed;
         topBar.AddChild(delProfileBtn);
 
-        return new TopBarControls(topBar, profileDropdown, newProfileBtn, renameProfileBtn, delProfileBtn);
+        return new TopBarControls(topBar, profileLabel, profileDropdown, newProfileBtn, renameProfileBtn, delProfileBtn);
     }
 
     private static void ApplyProfileIconButton(Button button)

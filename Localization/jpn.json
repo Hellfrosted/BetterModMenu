@@ -191,5 +191,17 @@
   "ERROR.NO_WRITABLE_CONFIG_PATH": "書き込み可能な Better Mod Menu 設定パスを解決できませんでした。",
   "ERROR.NO_BACKUP_DIRECTORY": "利用可能なバックアップフォルダーがありません。",
   "ERROR.NO_EXPORT_DIRECTORY": "利用可能なエクスポートフォルダーがありません。",
-  "ERROR.RESTORED_PROFILE_SAVE_WRITE_FAILED": "復元したプロファイル保存を書き込めませんでした。"
+  "ERROR.RESTORED_PROFILE_SAVE_WRITE_FAILED": "復元したプロファイル保存を書き込めませんでした。",
+  "DETAIL.ANNOTATION": "Alias / Notes",
+  "DETAIL.ANNOTATION.TOOLTIP": "Add a personal alias or notes for the selected mod.",
+  "SEARCH.MATCH.ALIAS": "Matched alias",
+  "SEARCH.MATCH.NOTES": "Matched notes",
+  "DIALOG.ANNOTATION.TITLE_FORMAT": "Alias / Notes — {0}",
+  "DIALOG.ANNOTATION.ALIAS": "Alias",
+  "DIALOG.ANNOTATION.ALIAS_PLACEHOLDER": "Personal name for this mod...",
+  "DIALOG.ANNOTATION.NOTES": "Notes",
+  "DIALOG.ANNOTATION.NOTES_PLACEHOLDER": "What this mod does, compatibility reminders, or setup notes...",
+  "DIALOG.ANNOTATION.HELP": "Aliases and notes are personal metadata. They are searchable, included in backups and CSV exports, and do not rename the installed mod.",
+  "ANNOTATION.SAVE_FAILED.TITLE": "Alias / Notes Not Saved",
+  "ANNOTATION.SAVE_FAILED.MESSAGE_FORMAT": "The alias and notes could not be saved. Your previous annotation is still in use.\n\nError:\n{0}"
 }
