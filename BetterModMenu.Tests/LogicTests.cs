@@ -555,14 +555,6 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void ShouldStackTopBar_UsesAvailableLocalizedTitleSpace()
-    {
-        Assert.IsTrue(ModdingScreenLayoutRules.ShouldStackTopBar(0f, 275f));
-        Assert.IsTrue(ModdingScreenLayoutRules.ShouldStackTopBar(274f, 275f));
-        Assert.IsFalse(ModdingScreenLayoutRules.ShouldStackTopBar(275f, 275f));
-    }
-
-    [TestMethod]
     public void ShouldShowRowMoveButtons_PreservesGroupPickerOnNarrowRows()
     {
         const float compactControlsWidth = 184f;

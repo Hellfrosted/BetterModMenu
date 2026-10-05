@@ -105,7 +105,7 @@ internal static class ModdingScreenChromeOps
             ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
 
         if (topBarControls != null)
-            LayoutTopBar(topBarControls, titleNode, scrollContainer, screenOffset, groupBarHeight, stackTopBar: true);
+            LayoutTopBar(topBarControls, scrollContainer, screenOffset);
 
         if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
         {
@@ -404,13 +404,7 @@ internal static class ModdingScreenChromeOps
             ModdingScreenConstants.ModsScrollbarOpticalCenterOffset;
     }
 
-    private static void LayoutTopBar(
-        TopBarControls topBarControls,
-        Control? titleNode,
-        Control? scrollContainer,
-        Vector2 screenOffset,
-        float groupBarHeight,
-        bool stackTopBar)
+    private static void LayoutTopBar(TopBarControls topBarControls, Control? scrollContainer, Vector2 screenOffset)
     {
         var topBar = topBarControls.Bar;
         float x = ModdingScreenConstants.TopBarFallbackX;
@@ -418,39 +412,16 @@ internal static class ModdingScreenChromeOps
         float width = ModdingScreenConstants.TopBarFallbackWidth;
         float height = topBar.GetCombinedMinimumSize().Y;
 
-        if (titleNode != null && scrollContainer != null)
+        if (scrollContainer?.GetParent() is Control modsPanel)
         {
-            float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
-            if (stackTopBar && scrollContainer.GetParent() is Control modsPanel)
-            {
-                x = modsPanel.GlobalPosition.X - screenOffset.X;
-                y = modsPanel.GlobalPosition.Y - screenOffset.Y - height - ModdingScreenConstants.TopBarStackGap;
-                width = modsPanel.Size.X;
-            }
-            else
-            {
-                x = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X + ModdingScreenConstants.TopBarGap;
-                y = titleNode.GlobalPosition.Y - screenOffset.Y;
-                width = Math.Max(0f, leftPanelRight - x - ModdingScreenConstants.TopBarTrailingPadding);
-                height = Math.Max(height, titleNode.Size.Y);
-            }
+            x = modsPanel.GlobalPosition.X - screenOffset.X;
+            y = modsPanel.GlobalPosition.Y - screenOffset.Y - height - ModdingScreenConstants.TopBarStackGap;
+            width = modsPanel.Size.X;
         }
 
         topBarControls.SetCompact(width < ModdingScreenConstants.TopBarCompactThreshold);
         topBar.Position = new Vector2(x, y);
         topBar.Size = new Vector2(width, height);
-    }
-
-    private static bool ShouldStackTopBar(TopBarControls topBarControls, Control? titleNode, Control? scrollContainer, Vector2 screenOffset)
-    {
-        if (titleNode == null || scrollContainer == null)
-            return false;
-
-        float titleRight = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X;
-        float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
-        float availableInlineWidth = leftPanelRight - titleRight - ModdingScreenConstants.TopBarGap - ModdingScreenConstants.TopBarTrailingPadding;
-        topBarControls.SetCompact(true);
-        return ModdingScreenLayoutRules.ShouldStackTopBar(availableInlineWidth, topBarControls.Bar.GetCombinedMinimumSize().X);
     }
 
     // Makes room for the top bar between the vanilla header and the mods panel
