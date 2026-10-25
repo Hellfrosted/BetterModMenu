@@ -45,3 +45,4 @@ decompiled/
 # Ignore built mod outputs in the root folder
 BetterModMenu.dll
 *.zip
+docs/research/sts2-modding-screen-compatibility.md
