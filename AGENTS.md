@@ -9,6 +9,10 @@ BetterModMenu is a C# Godot/.NET mod that extends the Slay the Spire 2 mod scree
   `dotnet build BetterModMenu.csproj -p:Sts2DllPath="<path-to-sts2.dll>"`.
 - Packaging and Steam Workshop upload are separate, explicit operations; follow
   [README.md](README.md) and do not infer permission to publish from a build request.
+- After every patch, copy the built `BetterModMenu.dll` and matching
+  `BetterModMenu.json` into the local game's `mods` directory so the change is
+  ready for human testing. This is local installation only; do not upload to
+  Steam Workshop unless explicitly requested.
 
 ## Local release paths
 

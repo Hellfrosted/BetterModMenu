@@ -20,7 +20,7 @@ public static class NModMenuRowPatch
     [HarmonyPostfix]
     public static void Postfix_Ready(NModMenuRow __instance)
     {
-        if (__instance.Mod == null || __instance.Mod.manifest == null) return;
+        if (__instance.Mod is null || __instance.Mod.manifest is null) return;
 
         var modId = __instance.Mod.manifest.id ?? "";
         if (string.IsNullOrEmpty(modId)) return;

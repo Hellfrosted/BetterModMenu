@@ -80,39 +80,49 @@ internal static class ModdingScreenChromeOps
     public static void UpdateLayout(NModdingScreen screen, ModdingScreenSession session)
     {
         var chromeRoot = session.ChromeRoot;
-        if (chromeRoot == null || !GodotObject.IsInstanceValid(chromeRoot))
+        if (session.IsUpdatingLayout ||
+            chromeRoot == null ||
+            !GodotObject.IsInstanceValid(chromeRoot))
             return;
 
-        chromeRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
-        var titleNode = screen.GetNodeOrNull<Control>("%InstalledModsTitle");
-        var scrollContainer = screen.GetNodeOrNull<Control>("%ModsScrollContainer");
-        Vector2 screenOffset = screen.GlobalPosition;
-
-        PrepareInstalledModsTitle(titleNode);
-
-        float groupBarHeight = GetGroupBarHeight(scrollContainer);
-        float searchBarHeight = GetSearchBarHeight(scrollContainer);
-        var topBarControls = session.TopBarControls is { } controls && GodotObject.IsInstanceValid(controls.Bar)
-            ? controls
-            : null;
-        if (scrollContainer != null)
-            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
-
-        if (topBarControls != null && scrollContainer?.GetParent() is Control modsPanel)
-            MakeRoomAboveModsPanel(session, modsPanel, scrollContainer, topBarControls.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap);
-
-        if (topBarControls != null)
-            LayoutTopBar(topBarControls, scrollContainer, screenOffset);
-
-        if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
+        session.IsUpdatingLayout = true;
+        try
         {
-            LayoutGroupBar(session.GroupBarControls, scrollContainer, screenOffset, groupBarHeight);
-            LayoutSearchBar(session.GroupBarControls, scrollContainer, screenOffset, searchBarHeight);
-        }
+            chromeRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        EnsureScrollbarPersistenceSignals(screen, session);
-        KeepModsScrollbarVisible(screen);
+            var titleNode = screen.GetNodeOrNull<Control>("%InstalledModsTitle");
+            var scrollContainer = screen.GetNodeOrNull<Control>("%ModsScrollContainer");
+            Vector2 screenOffset = screen.GlobalPosition;
+
+            PrepareInstalledModsTitle(titleNode);
+
+            float groupBarHeight = GetGroupBarHeight(scrollContainer);
+            float searchBarHeight = GetSearchBarHeight(scrollContainer);
+            var topBarControls = session.TopBarControls is { } controls && GodotObject.IsInstanceValid(controls.Bar)
+                ? controls
+                : null;
+            if (scrollContainer != null)
+                ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
+
+            if (topBarControls != null && scrollContainer?.GetParent() is Control modsPanel)
+                MakeRoomAboveModsPanel(session, modsPanel, scrollContainer, topBarControls.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap);
+
+            if (topBarControls != null)
+                LayoutTopBar(topBarControls, scrollContainer, screenOffset);
+
+            if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
+            {
+                LayoutGroupBar(session.GroupBarControls, scrollContainer, screenOffset, groupBarHeight);
+                LayoutSearchBar(session.GroupBarControls, scrollContainer, screenOffset, searchBarHeight);
+            }
+
+            EnsureScrollbarPersistenceSignals(screen, session);
+            KeepModsScrollbarVisible(screen);
+        }
+        finally
+        {
+            session.IsUpdatingLayout = false;
+        }
     }
 
     private static void ApplyScrollMaskClip(NModdingScreen screen)
@@ -428,6 +438,12 @@ internal static class ModdingScreenChromeOps
         Control scrollContainer,
         float height)
     {
+        if (session.AppliedTopBarRoomHeight is float appliedHeight &&
+            Math.Abs(appliedHeight - height) < 0.01f)
+        {
+            return;
+        }
+
         if (session.AppliedTopBarRoomHeight is float previousHeight)
         {
             modsPanel.Position -= new Vector2(0f, previousHeight);
