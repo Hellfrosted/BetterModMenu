@@ -8,8 +8,6 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenChromeOps
 {
-    private const string TopBarRoomMeta = "better_mod_menu_top_bar_room";
-
     private static readonly string[] LayoutControlPaths =
     {
         "%InstalledModsTitle",
@@ -98,11 +96,11 @@ internal static class ModdingScreenChromeOps
         var topBarControls = session.TopBarControls is { } controls && GodotObject.IsInstanceValid(controls.Bar)
             ? controls
             : null;
-        if (topBarControls != null && scrollContainer?.GetParent() is Control modsPanel)
-            MakeRoomAboveModsPanel(modsPanel, scrollContainer, topBarControls.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap);
-
         if (scrollContainer != null)
             ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
+
+        if (topBarControls != null && scrollContainer?.GetParent() is Control modsPanel)
+            MakeRoomAboveModsPanel(session, modsPanel, scrollContainer, topBarControls.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap);
 
         if (topBarControls != null)
             LayoutTopBar(topBarControls, scrollContainer, screenOffset);
@@ -424,14 +422,26 @@ internal static class ModdingScreenChromeOps
         topBar.Size = new Vector2(width, height);
     }
 
-    // Makes room for the top bar between the vanilla header and the mods panel
-    // Applied once per panel because layout runs repeatedly
-    private static void MakeRoomAboveModsPanel(Control modsPanel, Control scrollContainer, float height)
+    private static void MakeRoomAboveModsPanel(
+        ModdingScreenSession session,
+        Control modsPanel,
+        Control scrollContainer,
+        float height)
     {
-        if (modsPanel.HasMeta(TopBarRoomMeta))
-            return;
+        if (session.AppliedTopBarRoomHeight is float previousHeight)
+        {
+            modsPanel.Position -= new Vector2(0f, previousHeight);
+            modsPanel.Size += new Vector2(0f, previousHeight);
+            foreach (var child in modsPanel.GetChildren())
+            {
+                if (child is Control control && control != scrollContainer)
+                    control.Position += new Vector2(0f, previousHeight);
+            }
 
-        modsPanel.SetMeta(TopBarRoomMeta, height);
+            scrollContainer.Size += new Vector2(0f, previousHeight);
+        }
+
+        session.AppliedTopBarRoomHeight = height;
         float scrollHeight = scrollContainer.Size.Y;
         modsPanel.Position += new Vector2(0f, height);
         modsPanel.Size -= new Vector2(0f, height);
