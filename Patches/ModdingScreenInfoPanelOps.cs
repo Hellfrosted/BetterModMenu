@@ -20,10 +20,12 @@ internal static class ModdingScreenInfoPanelOps
             return;
 
         var root = EnsureActionRoot(infoContainer);
-        var reasonLabel = root.GetNode<Label>(MatchReasonName);
-        var configButton = root.GetNode<Button>($"{ActionRowName}/{ConfigButtonName}");
-        var annotationButton = root.GetNode<Button>($"{ActionRowName}/{AnnotationButtonName}");
-        var gameplayBadge = configButton.GetNode<Label>(GameplayBadgeName);
+        var reasonLabel = root.GetNodeOrNull<Label>(MatchReasonName);
+        var configButton = root.GetNodeOrNull<Button>($"{ActionRowName}/{ConfigButtonName}");
+        var annotationButton = root.GetNodeOrNull<Button>($"{ActionRowName}/{AnnotationButtonName}");
+        var gameplayBadge = configButton?.GetNodeOrNull<Label>(GameplayBadgeName);
+        if (reasonLabel == null || configButton == null || annotationButton == null || gameplayBadge == null)
+            return;
 
         string selectedModId = session.SelectedModId;
         var provider = string.IsNullOrWhiteSpace(selectedModId)

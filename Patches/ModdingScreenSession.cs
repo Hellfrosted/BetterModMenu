@@ -11,6 +11,7 @@ internal sealed class ModdingScreenSession
     public GroupBarControls? GroupBarControls { get; set; }
     public bool LayoutSignalsConnected { get; set; }
     public bool ModsScrollbarPersistenceSignalsConnected { get; set; }
+    public bool IsUpdatingLayout { get; set; }
     public float? AppliedTopBarRoomHeight { get; set; }
     public Vector2? OriginalModsScrollPosition { get; set; }
     public Vector2? OriginalModsScrollSize { get; set; }
@@ -28,6 +29,7 @@ internal sealed class ModdingScreenSession
         GroupBarControls = null;
         LayoutSignalsConnected = false;
         ModsScrollbarPersistenceSignalsConnected = false;
+        IsUpdatingLayout = false;
         AppliedTopBarRoomHeight = null;
         OriginalModsScrollPosition = null;
         OriginalModsScrollSize = null;
