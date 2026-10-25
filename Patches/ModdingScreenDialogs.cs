@@ -1,6 +1,7 @@
 using System;
 using BetterModMenu.Data;
 using Godot;
+using System.Runtime.InteropServices;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 
 namespace BetterModMenu.Patches;
@@ -163,13 +164,13 @@ internal static class ModdingScreenDialogs
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
-        popup.AddChild(CreateLogDialogBody(layout, content, () => OpenLogFolder(screen, logPath)));
+        popup.AddChild(CreateLogDialogBody(layout, content, logPath, () => OpenLogFolder(screen, logPath)));
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         screen.AddChild(popup);
         popup.PopupCentered(new Vector2I(layout.PopupWidth, layout.PopupHeight));
     }
 
-    private static Control CreateLogDialogBody(LogDialogLayout layout, string content, Action onOpenFolderPressed)
+    private static Control CreateLogDialogBody(LogDialogLayout layout, string content, string logPath, Action onOpenFolderPressed)
     {
         LogLevelFilter includedLevels = LogLevelFilter.All;
         string displayedContent = content;
@@ -248,6 +249,24 @@ internal static class ModdingScreenDialogs
         ModdingScreenVanillaStyle.ApplyButton(copyButton);
         copyButton.Pressed += () => DisplayServer.ClipboardSet(displayedContent);
         actionRow.AddChild(copyButton);
+
+        var reportButton = new Button
+        {
+            Text = T("LOG.COPY_REPORT", "Copy Report"),
+            TooltipText = T("LOG.COPY_REPORT.TOOLTIP", "Copy a diagnostic report with version, platform, and the displayed log.")
+        };
+        ModdingScreenVanillaStyle.ApplyButton(reportButton);
+        reportButton.Pressed += () =>
+        {
+            string report = LogDiagnosticReportBuilder.Build(
+                ModVersionProvider.CurrentVersion,
+                logPath,
+                System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+                RuntimeInformation.FrameworkDescription,
+                displayedContent);
+            DisplayServer.ClipboardSet(report);
+        };
+        actionRow.AddChild(reportButton);
 
         var openFolderButton = new Button
         {

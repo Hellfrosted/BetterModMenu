@@ -88,7 +88,18 @@ internal static class LogViewerService
         logPath = string.Empty;
         error = null;
 
-        string? path = candidatePaths.FirstOrDefault(File.Exists);
+        string? path = candidatePaths
+            .Where(File.Exists)
+            .Select((candidate, index) => new
+            {
+                Path = candidate,
+                Index = index,
+                LastWriteTimeUtc = GetLastWriteTimeUtc(candidate)
+            })
+            .OrderByDescending(candidate => candidate.LastWriteTimeUtc)
+            .ThenBy(candidate => candidate.Index)
+            .Select(candidate => candidate.Path)
+            .FirstOrDefault();
         if (string.IsNullOrWhiteSpace(path))
         {
             error = ErrorNoLogFileFound;
@@ -98,6 +109,22 @@ internal static class LogViewerService
         title = Path.GetFileName(path);
         logPath = path;
         return TryReadTail(path, maxLines, maxChars, out content, out error);
+    }
+
+    private static DateTime GetLastWriteTimeUtc(string path)
+    {
+        try
+        {
+            return File.GetLastWriteTimeUtc(path);
+        }
+        catch (IOException)
+        {
+            return DateTime.MinValue;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return DateTime.MinValue;
+        }
     }
 
     public static bool TryReadLatestLog(

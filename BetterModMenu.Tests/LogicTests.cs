@@ -1551,14 +1551,17 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void TryReadLatestLog_UsesFirstExistingCandidate()
+    public void TryReadLatestLog_UsesMostRecentlyWrittenCandidate()
     {
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string first = Path.Combine(tempDirectory, "missing.log");
+            string first = Path.Combine(tempDirectory, "older.log");
             string second = Path.Combine(tempDirectory, "BetterModMenu.log");
-            File.WriteAllText(second, "hello");
+            File.WriteAllText(first, "old");
+            File.WriteAllText(second, "new");
+            File.SetLastWriteTimeUtc(first, DateTime.UtcNow.AddMinutes(-2));
+            File.SetLastWriteTimeUtc(second, DateTime.UtcNow);
 
             bool read = LogViewerService.TryReadLatestLog(new[] { first, second }, 10, 100, out string title, out string content, out string logPath, out string? error);
 
@@ -1571,6 +1574,23 @@ public class LogicTests
         {
             Directory.Delete(tempDirectory, true);
         }
+    }
+
+    [TestMethod]
+    public void LogDiagnosticReportBuilder_IncludesRuntimeContextAndLogTail()
+    {
+        string report = LogDiagnosticReportBuilder.Build(
+            "1.1.4",
+            @"C:\logs\latest.log",
+            "SteamOS",
+            ".NET 9",
+            "stack trace");
+
+        StringAssert.Contains(report, "Better Mod Menu version: 1.1.4");
+        StringAssert.Contains(report, "Operating system: SteamOS");
+        StringAssert.Contains(report, "Runtime: .NET 9");
+        StringAssert.Contains(report, "Log file: C:\\logs\\latest.log");
+        StringAssert.Contains(report, "stack trace");
     }
 
     [TestMethod]
