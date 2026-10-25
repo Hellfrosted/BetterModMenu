@@ -21,8 +21,8 @@ internal static class ModdingScreenInfoPanelOps
 
         var root = EnsureActionRoot(infoContainer);
         var reasonLabel = root.GetNode<Label>(MatchReasonName);
-        var configButton = root.GetNode<Button>(ConfigButtonName);
-        var annotationButton = root.GetNode<Button>(AnnotationButtonName);
+        var configButton = root.GetNode<Button>($"{ActionRowName}/{ConfigButtonName}");
+        var annotationButton = root.GetNode<Button>($"{ActionRowName}/{AnnotationButtonName}");
         var gameplayBadge = configButton.GetNode<Label>(GameplayBadgeName);
 
         string selectedModId = session.SelectedModId;
