@@ -8,8 +8,6 @@ internal static class ModdingScreenConstants
     public const string TickboxPath = "Tickbox";
     public const string UnassignedGroup = "Unassigned";
 
-    public const float TopBarGap = 10f;
-    public const float TopBarTrailingPadding = 30f;
     public const float TopBarCompactThreshold = 470f;
     public const float TopBarFallbackX = 300f;
     public const float TopBarFallbackY = 55f;

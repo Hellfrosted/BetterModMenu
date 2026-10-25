@@ -33,11 +33,6 @@ internal static class ModdingScreenLayoutRules
         return new VisibleRowSpan(left, right);
     }
 
-    public static bool ShouldStackTopBar(float availableInlineWidth, float requiredWidth)
-    {
-        return availableInlineWidth < requiredWidth;
-    }
-
     public static bool ShouldShowRowMoveButtons(float rowWidth, float controlsWidth)
     {
         float trailingInset = ModdingScreenConstants.RowControlsRightPadding + ModdingScreenConstants.RowNativeTickboxReserveWidth;

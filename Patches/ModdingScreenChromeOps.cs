@@ -8,6 +8,8 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingScreenChromeOps
 {
+    private const string TopBarRoomMeta = "better_mod_menu_top_bar_room";
+
     private static readonly string[] LayoutControlPaths =
     {
         "%InstalledModsTitle",
@@ -93,18 +95,17 @@ internal static class ModdingScreenChromeOps
 
         float groupBarHeight = GetGroupBarHeight(scrollContainer);
         float searchBarHeight = GetSearchBarHeight(scrollContainer);
-        bool stackTopBar = session.TopBarControls != null &&
-            GodotObject.IsInstanceValid(session.TopBarControls.Bar) &&
-            ShouldStackTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset);
-        float stackedTopBarHeight = stackTopBar
-            ? session.TopBarControls!.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap
-            : 0f;
+        var topBarControls = session.TopBarControls is { } controls && GodotObject.IsInstanceValid(controls.Bar)
+            ? controls
+            : null;
+        if (topBarControls != null && scrollContainer?.GetParent() is Control modsPanel)
+            MakeRoomAboveModsPanel(modsPanel, scrollContainer, topBarControls.Bar.GetCombinedMinimumSize().Y + ModdingScreenConstants.TopBarStackGap);
 
         if (scrollContainer != null)
-            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight, stackedTopBarHeight);
+            ReserveModListChromeSpace(session, scrollContainer, groupBarHeight, searchBarHeight);
 
-        if (session.TopBarControls != null && GodotObject.IsInstanceValid(session.TopBarControls.Bar))
-            LayoutTopBar(session.TopBarControls, titleNode, scrollContainer, screenOffset, groupBarHeight, stackTopBar);
+        if (topBarControls != null)
+            LayoutTopBar(topBarControls, scrollContainer, screenOffset);
 
         if (session.GroupBarControls != null && GodotObject.IsInstanceValid(session.GroupBarControls.Bar))
         {
@@ -403,13 +404,7 @@ internal static class ModdingScreenChromeOps
             ModdingScreenConstants.ModsScrollbarOpticalCenterOffset;
     }
 
-    private static void LayoutTopBar(
-        TopBarControls topBarControls,
-        Control? titleNode,
-        Control? scrollContainer,
-        Vector2 screenOffset,
-        float groupBarHeight,
-        bool stackTopBar)
+    private static void LayoutTopBar(TopBarControls topBarControls, Control? scrollContainer, Vector2 screenOffset)
     {
         var topBar = topBarControls.Bar;
         float x = ModdingScreenConstants.TopBarFallbackX;
@@ -417,26 +412,11 @@ internal static class ModdingScreenChromeOps
         float width = ModdingScreenConstants.TopBarFallbackWidth;
         float height = topBar.GetCombinedMinimumSize().Y;
 
-        if (titleNode != null && scrollContainer != null)
+        if (scrollContainer?.GetParent() is Control modsPanel)
         {
-            float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
-            if (stackTopBar)
-            {
-                x = scrollContainer.GlobalPosition.X - screenOffset.X;
-                y = scrollContainer.GlobalPosition.Y - screenOffset.Y -
-                    groupBarHeight -
-                    ModdingScreenConstants.GroupBarListGap -
-                    height -
-                    ModdingScreenConstants.TopBarStackGap;
-                width = scrollContainer.Size.X;
-            }
-            else
-            {
-                x = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X + ModdingScreenConstants.TopBarGap;
-                y = titleNode.GlobalPosition.Y - screenOffset.Y;
-                width = Math.Max(0f, leftPanelRight - x - ModdingScreenConstants.TopBarTrailingPadding);
-                height = Math.Max(height, titleNode.Size.Y);
-            }
+            x = modsPanel.GlobalPosition.X - screenOffset.X;
+            y = modsPanel.GlobalPosition.Y - screenOffset.Y - height - ModdingScreenConstants.TopBarStackGap;
+            width = modsPanel.Size.X;
         }
 
         topBarControls.SetCompact(width < ModdingScreenConstants.TopBarCompactThreshold);
@@ -444,16 +424,23 @@ internal static class ModdingScreenChromeOps
         topBar.Size = new Vector2(width, height);
     }
 
-    private static bool ShouldStackTopBar(TopBarControls topBarControls, Control? titleNode, Control? scrollContainer, Vector2 screenOffset)
+    // Makes room for the top bar between the vanilla header and the mods panel
+    // Applied once per panel because layout runs repeatedly
+    private static void MakeRoomAboveModsPanel(Control modsPanel, Control scrollContainer, float height)
     {
-        if (titleNode == null || scrollContainer == null)
-            return false;
+        if (modsPanel.HasMeta(TopBarRoomMeta))
+            return;
 
-        float titleRight = titleNode.GlobalPosition.X - screenOffset.X + titleNode.Size.X;
-        float leftPanelRight = scrollContainer.GlobalPosition.X - screenOffset.X + scrollContainer.Size.X;
-        float availableInlineWidth = leftPanelRight - titleRight - ModdingScreenConstants.TopBarGap - ModdingScreenConstants.TopBarTrailingPadding;
-        topBarControls.SetCompact(true);
-        return ModdingScreenLayoutRules.ShouldStackTopBar(availableInlineWidth, topBarControls.Bar.GetCombinedMinimumSize().X);
+        modsPanel.SetMeta(TopBarRoomMeta, height);
+        float scrollHeight = scrollContainer.Size.Y;
+        modsPanel.Position += new Vector2(0f, height);
+        modsPanel.Size -= new Vector2(0f, height);
+        foreach (var child in modsPanel.GetChildren())
+        {
+            if (child is Control control && control != scrollContainer)
+                control.Position -= new Vector2(0f, height);
+        }
+        scrollContainer.Size = new Vector2(scrollContainer.Size.X, scrollHeight - height);
     }
 
     private static void PrepareInstalledModsTitle(Control? titleNode)
@@ -483,8 +470,7 @@ internal static class ModdingScreenChromeOps
         ModdingScreenSession session,
         Control scrollContainer,
         float groupBarHeight,
-        float searchBarHeight,
-        float stackedTopBarHeight)
+        float searchBarHeight)
     {
         if (!session.OriginalModsScrollPosition.HasValue)
             session.OriginalModsScrollPosition = scrollContainer.Position;
@@ -494,7 +480,7 @@ internal static class ModdingScreenChromeOps
 
         Vector2 originalPosition = session.OriginalModsScrollPosition.Value;
         Vector2 originalSize = session.OriginalModsScrollSize.Value;
-        float reservedTopHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap + stackedTopBarHeight;
+        float reservedTopHeight = groupBarHeight + ModdingScreenConstants.GroupBarListGap;
         float reservedBottomHeight = searchBarHeight + ModdingScreenConstants.SearchBarListGap;
         scrollContainer.Position = new Vector2(originalPosition.X, originalPosition.Y + reservedTopHeight);
         scrollContainer.Size = new Vector2(originalSize.X, Math.Max(120f, originalSize.Y - reservedTopHeight - reservedBottomHeight));
