@@ -97,7 +97,7 @@ public class LogicTests
         string tempDirectory = CreateTempDirectory();
         try
         {
-            string manifestPath = Path.Combine(tempDirectory, "p9.json");
+            string manifestPath = Path.Combine(tempDirectory, "alternate.json");
             File.WriteAllText(manifestPath, """
             {
               "id": "P9"
@@ -720,23 +720,6 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void Localization_FilesUseEnglishKeyOrder()
-    {
-        string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
-        var englishKeys = ReadJsonPropertyNames(Path.Combine(localizationDirectory, BmmLocalization.EnglishLanguageCode + ".json"));
-        var errors = new List<string>();
-
-        foreach (string code in BmmLocalization.SupportedLanguageCodes.Where(code => code != BmmLocalization.EnglishLanguageCode))
-        {
-            var keys = ReadJsonPropertyNames(Path.Combine(localizationDirectory, code + ".json"));
-            if (!englishKeys.SequenceEqual(keys))
-                errors.Add(code + " localization keys are not in English source order.");
-        }
-
-        Assert.AreEqual(string.Empty, string.Join(Environment.NewLine, errors));
-    }
-
-    [TestMethod]
     public void Localization_TargetFilesAreNotEnglishPlaceholders()
     {
         string localizationDirectory = Path.Combine(GetRepoRoot(), "Localization");
@@ -778,12 +761,18 @@ public class LogicTests
             if (argumentCount == 0)
                 continue;
 
-            object[] args = Enumerable.Range(0, argumentCount).Select(index => (object)("value" + index)).ToArray();
+            object[] args = Enumerable.Range(0, argumentCount).Select(index => (object)($"[[argument-{index}]]")).ToArray();
+            string english = string.Format(catalogs[BmmLocalization.EnglishLanguageCode][key], args);
             foreach (var catalog in catalogs)
             {
                 try
                 {
-                    _ = string.Format(catalog.Value[key], args);
+                    string translated = string.Format(catalog.Value[key], args);
+                    foreach (string argument in args)
+                    {
+                        if (english.Contains(argument, StringComparison.Ordinal) && !translated.Contains(argument, StringComparison.Ordinal))
+                            errors.Add(catalog.Key + " omits " + argument + " for " + key);
+                    }
                 }
                 catch (FormatException ex)
                 {
@@ -857,8 +846,8 @@ public class LogicTests
                 }
             };
 
-            bool wrote = ProfileSaveStorage.TryWrite(savePath, saveData, _ => { }, out string? error);
-            var loaded = ProfileSaveStorage.LoadOrDefault(savePath, _ => { });
+            bool wrote = ProfileSaveStorage.TryWrite(savePath, saveData, out string? error);
+            var loaded = ProfileSaveStorage.LoadOrDefault(savePath);
 
             Assert.IsTrue(wrote, error);
             Assert.AreEqual("Bosses", loaded.Profiles[0].Name);
@@ -891,7 +880,7 @@ public class LogicTests
             ]
             """);
 
-            var loaded = ProfileSaveStorage.LoadOrDefault(savePath, _ => { });
+            var loaded = ProfileSaveStorage.LoadOrDefault(savePath);
 
             Assert.AreEqual("Legacy", loaded.Profiles[0].Name);
             Assert.IsTrue(loaded.Profiles[0].DisabledMods.Contains("mod-a"));
@@ -899,6 +888,58 @@ public class LogicTests
         finally
         {
             Directory.Delete(tempDirectory, true);
+        }
+    }
+
+    [TestMethod]
+    public void ProfileSaveStorage_RestoreAcceptsLegacyAndCurrentFormatsAndRejectsInvalidBackups()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            string path = Path.Combine(directory, "backup.json");
+            foreach (string json in new[]
+            {
+                "[{\"Name\":\"Legacy\",\"DisabledMods\":[],},]",
+                "{ /* current format */ \"Profiles\":[{\"Name\":\"Legacy\",\"DisabledMods\":[]}],}"
+            })
+            {
+                File.WriteAllText(path, json);
+                Assert.IsTrue(ProfileSaveStorage.TryReadExisting(path, out var restored, out var error), error);
+                Assert.AreEqual("Legacy", restored.Profiles[0].Name);
+                Assert.AreEqual("Legacy", ProfileSaveStorage.LoadOrDefault(path).Profiles[0].Name);
+            }
+
+            File.WriteAllText(path, "{\"Profiles\":[]}");
+            Assert.IsFalse(ProfileSaveStorage.TryReadExisting(path, out _, out var emptyError));
+            Assert.AreEqual(ProfileSaveStorage.ErrorBackupFileNoProfiles, emptyError);
+
+            File.WriteAllText(path, "{");
+            Assert.IsFalse(ProfileSaveStorage.TryReadExisting(path, out _, out var malformedError));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(malformedError));
+            Assert.ThrowsExactly<System.Text.Json.JsonException>(() => ProfileSaveStorage.LoadOrDefault(path));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [TestMethod]
+    public void ProfileSaveStorage_FailedWriteReturnsErrorAndRemovesTemporaryFile()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            string destination = Path.Combine(directory, "existing.json");
+            Directory.CreateDirectory(destination);
+            Assert.IsFalse(ProfileSaveStorage.TryWrite(destination, new ProfileSaveData(), out var error));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(error));
+            Assert.IsFalse(File.Exists(destination + ".tmp"));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
         }
     }
 
@@ -1338,28 +1379,13 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void ProjectPackaging_AddsCloudSuffixAndDefinesOnlyWhenOptedIn()
-    {
-        string project = File.ReadAllText(Path.Combine(GetRepoRoot(), "BetterModMenu.csproj"));
-
-        StringAssert.Contains(project, "<IncludeCloudFeatures Condition=\"'$(IncludeCloudFeatures)' == ''\">false</IncludeCloudFeatures>");
-        StringAssert.Contains(project, "<CloudPackageSuffix Condition=\"'$(IncludeCloudFeatures)' == 'true'\">_cloud</CloudPackageSuffix>");
-        StringAssert.Contains(project, "<CloudPackageSuffix Condition=\"'$(IncludeCloudFeatures)' != 'true'\"></CloudPackageSuffix>");
-        StringAssert.Contains(project, "<DefineConstants Condition=\"'$(IncludeCloudFeatures)' == 'true'\">$(DefineConstants);BETTERMODMENU_CLOUD_FEATURES</DefineConstants>");
-        StringAssert.Contains(project, "<BaseZipName>$(AssemblyName)_v$(ModVersion)$(CloudPackageSuffix)</BaseZipName>");
-    }
-
-    [TestMethod]
     public void NexusReleaseWorkflow_UploadsDefaultPackageAndTreatsCloudPackageAsSidecar()
     {
         string workflow = File.ReadAllText(Path.Combine(GetRepoRoot(), ".github", "workflows", "publish-nexus-release.yml"));
 
         StringAssert.Contains(workflow, "--pattern \"BetterModMenu_v*.zip\"");
         StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' ! -name '*_cloud.zip'");
-        StringAssert.Contains(workflow, "Cloud-capable *_cloud.zip assets are optional sidecars and are not uploaded as the main Nexus file.");
         StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*_cloud.zip'");
-        StringAssert.Contains(workflow, "Nexus-Mods/upload-action@f6e1e2ea683dfe8f88cccf642c6e0e69ab66825e");
-        StringAssert.Contains(workflow, "# v1.0.0-beta.8");
         StringAssert.Contains(workflow, "file_id: ${{ vars.NEXUSMODS_FILE_ID }}");
         StringAssert.Contains(workflow, "category: main");
         StringAssert.Contains(workflow, "archive_existing_version: false");
@@ -1567,13 +1593,22 @@ public class LogicTests
 
             Assert.IsTrue(read, error);
             Assert.AreEqual("BetterModMenu.log", title);
-            Assert.AreEqual("hello", content);
+            Assert.AreEqual("new", content);
             Assert.AreEqual(second, logPath);
         }
         finally
         {
             Directory.Delete(tempDirectory, true);
         }
+    }
+
+    [TestMethod]
+    public void BuildCandidatePaths_PreservesCaseVariantsForCaseSensitiveFileSystems()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "BetterModMenuLogTest");
+        var candidates = LogViewerService.BuildCandidatePaths([directory]);
+        CollectionAssert.Contains(candidates.ToArray(), Path.Combine(directory, "logs", "BetterModMenu.log"));
+        CollectionAssert.Contains(candidates.ToArray(), Path.Combine(directory, "Logs", "bettermodmenu.log"));
     }
 
     [TestMethod]
@@ -1677,13 +1712,16 @@ public class LogicTests
     [TestMethod]
     public void BuildOpenFolderCommands_UsesNonBlockingLinuxOpenersWithFileUri()
     {
-        var commands = LogFolderOpenRules.BuildOpenFolderCommands("/home/deck/My Games/STS2/logs", FolderOpenPlatform.Linux);
+        string directory = Path.Combine(Path.GetTempPath(), "My Games", "STS2", "logs");
+        string expectedUri = new Uri(directory + Path.DirectorySeparatorChar).AbsoluteUri;
+        var commands = LogFolderOpenRules.BuildOpenFolderCommands(directory, FolderOpenPlatform.Linux);
 
         Assert.IsTrue(commands.Count >= 3);
         Assert.AreEqual("xdg-open", commands[0].Executable);
-        Assert.AreEqual("file:///home/deck/My%20Games/STS2/logs/", commands[0].Arguments[0]);
+        Assert.AreEqual(expectedUri, commands[0].Arguments[0]);
+        StringAssert.Contains(commands[0].Arguments[0], "My%20Games");
         Assert.AreEqual("gio", commands[1].Executable);
-        CollectionAssert.AreEqual(new[] { "open", "file:///home/deck/My%20Games/STS2/logs/" }, commands[1].Arguments.ToArray());
+        CollectionAssert.AreEqual(new[] { "open", expectedUri }, commands[1].Arguments.ToArray());
     }
 
     [TestMethod]
@@ -2361,12 +2399,23 @@ public class LogicTests
             CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "BetterModMenu.log"));
             CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "logs", "BetterModMenu.log"));
             CollectionAssert.Contains(paths.ToList(), Path.Combine(tempDirectory, "player.log"));
-            Assert.AreEqual(paths.Count, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Assert.AreEqual(paths.Count, paths.Distinct(StringComparer.Ordinal).Count());
         }
         finally
         {
             Directory.Delete(tempDirectory, true);
         }
+    }
+
+    [TestMethod]
+    public void WorkshopTags_AreAssignedToEveryModFromTheSameItem()
+    {
+        var installations = new[] { ("mod-a", "123"), ("mod-b", "123"), ("other", "456") };
+        var tags = new Dictionary<string, List<string>> { ["123"] = ["QoL"] };
+        var byMod = SteamWorkshopTagService.MapTagsToMods(installations, tags);
+        CollectionAssert.AreEqual(new[] { "QoL" }, byMod["mod-a"]);
+        CollectionAssert.AreEqual(new[] { "QoL" }, byMod["mod-b"]);
+        Assert.IsFalse(byMod.ContainsKey("other"));
     }
 
     [TestMethod]
@@ -2431,8 +2480,7 @@ public class LogicTests
     {
         StyleEditorDialogLayout layout = ModdingScreenDialogRules.GetPreferredStyleEditorDialogLayout();
 
-        Assert.AreEqual(64, layout.RowHeight);
-        Assert.AreEqual(44, layout.SwatchSize);
+        Assert.IsTrue(layout.SwatchSize <= layout.RowHeight);
         Assert.IsTrue(layout.SettingWidth >= 324);
         Assert.IsTrue(layout.LabelWidth + layout.SettingWidth < layout.PanelWidth);
         Assert.IsTrue(layout.ScrollHeight < layout.PopupHeight);

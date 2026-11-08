@@ -33,7 +33,7 @@ internal static class LogViewerService
     public static IReadOnlyList<string> BuildCandidatePaths(IEnumerable<string?> baseDirectories)
     {
         var paths = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (string? baseDirectory in baseDirectories)
         {

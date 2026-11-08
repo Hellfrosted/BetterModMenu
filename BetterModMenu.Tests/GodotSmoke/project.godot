@@ -1,0 +1,9 @@
+config_version=5
+
+[application]
+config/name="BetterModMenu Editor Smoke"
+run/main_scene="res://Smoke.tscn"
+config/features=PackedStringArray("4.5", "C#")
+
+[dotnet]
+project/assembly_name="GodotSmoke"

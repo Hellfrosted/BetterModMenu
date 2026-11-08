@@ -38,10 +38,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Localization\*.json" />
   </ItemGroup>
-  <!-- Custom Target to run after Build -->
   <Target Name="PackageMod" AfterTargets="Build" Condition="'$(PackageModOnBuild)' == 'true'">
     <PropertyGroup>
-      <!-- Extract version from JSON -->
       <JsonFileContent>$([System.IO.File]::ReadAllText('$(ProjectDir)BetterModMenu.json'))</JsonFileContent>
       <ModVersionRegex>&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;</ModVersionRegex>
       <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($(JsonFileContent), $(ModVersionRegex)).Groups[1].Value)</ModVersion>
@@ -50,19 +48,15 @@
       <ZipFilePath>$(ArtifactsDir)$(BaseZipName).zip</ZipFilePath>
     </PropertyGroup>
 
-    <!-- Prepare the staging directory for the zip -->
     <MakeDir Directories="$(ArtifactsDir)" />
     <RemoveDir Directories="$(ModStagingDir)" />
     <MakeDir Directories="$(ModStagingDir)" />
 
-    <!-- Copy the DLL and JSON file to the staging directory -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModStagingDir)" />
     <Copy SourceFiles="$(ProjectDir)BetterModMenu.json" DestinationFolder="$(ModStagingDir)" />
 
-    <!-- Create the zip file -->
     <ZipDirectory SourceDirectory="$(ModStagingDir)" DestinationFile="$(ZipFilePath)" Overwrite="true" />
     
-    <!-- Clean up the staging directory -->
     <RemoveDir Directories="$(ModStagingDir)" />
     
     <Message Text="Successfully packaged: $(ZipFilePath)" Importance="High" />

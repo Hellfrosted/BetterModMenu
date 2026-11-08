@@ -29,6 +29,10 @@ internal static class ModdingScreenActionFlow
     {
         ModdingScreenContext.TrackCurrentScreen(screen);
         var session = ModdingScreenContext.GetSession(screen);
+        bool tagsChanged = ProfileManager.PublishWorkshopTags();
+        tagsChanged |= ProfileManager.RequestWorkshopTags(ProfileManager.ModNameStyles, retryFailure: true);
+        if (screen.GetNodeOrNull<WorkshopTagRefreshNode>("BetterModMenuWorkshopTagRefresh") == null)
+            screen.AddChild(new WorkshopTagRefreshNode { Name = "BetterModMenuWorkshopTagRefresh", Screen = screen });
         ModdingScreenChromeOps.PrepareScreen(
             screen,
             session,
@@ -53,6 +57,8 @@ internal static class ModdingScreenActionFlow
 
         RefreshProfileDropdown(screen);
         RefreshGroupsUI(screen, refreshGroupsUI, renameGroup, moveGroup, toggleAllInGroup);
+        if (tagsChanged)
+            NModdingScreenPatch.RefreshModNameStyles(screen);
         UpdateChromeLayout(screen);
         Callable.From(() =>
         {

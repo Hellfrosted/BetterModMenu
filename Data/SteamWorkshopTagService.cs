@@ -9,6 +9,9 @@ internal static class SteamWorkshopTagService
     private const int MaxBatchSize = 100;
 
     public static Dictionary<string, List<string>> FetchTagsByPublishedFileId(IEnumerable<string> publishedFileIds)
+        => FetchTagsByPublishedFileIdAsync(publishedFileIds).GetAwaiter().GetResult();
+
+    public static async Task<Dictionary<string, List<string>>> FetchTagsByPublishedFileIdAsync(IEnumerable<string> publishedFileIds)
     {
         var distinctIds = publishedFileIds
             .Where(id => !string.IsNullOrWhiteSpace(id) && id.All(char.IsDigit))
@@ -24,9 +27,9 @@ internal static class SteamWorkshopTagService
         {
             var batch = distinctIds.Skip(start).Take(MaxBatchSize).ToList();
             using var content = new FormUrlEncodedContent(BuildRequestFields(batch));
-            using var response = client.PostAsync(PublishedFileDetailsUrl, content).GetAwaiter().GetResult();
+            using var response = await client.PostAsync(PublishedFileDetailsUrl, content).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             foreach (var entry in ParseTagsByPublishedFileId(json))
                 tagsByFileId[entry.Key] = entry.Value;
         }
@@ -69,6 +72,19 @@ internal static class SteamWorkshopTagService
         }
 
         return tagsByFileId;
+    }
+
+    public static Dictionary<string, List<string>> MapTagsToMods(
+        IEnumerable<(string ModId, string PublishedFileId)> installations,
+        IReadOnlyDictionary<string, List<string>> tagsByFileId)
+    {
+        var tagsByModId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var (modId, publishedFileId) in installations)
+        {
+            if (tagsByFileId.TryGetValue(publishedFileId, out var tags))
+                tagsByModId[modId] = new List<string>(tags);
+        }
+        return tagsByModId;
     }
 
     private static IEnumerable<KeyValuePair<string, string>> BuildRequestFields(IReadOnlyList<string> publishedFileIds)

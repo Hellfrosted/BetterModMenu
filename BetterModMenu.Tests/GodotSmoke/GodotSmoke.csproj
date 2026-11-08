@@ -1,0 +1,19 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>GodotSmoke</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Sts2DllPath Condition="'$(Sts2DllPath)' == ''">$(STS2_DLL_PATH)</Sts2DllPath>
+    <ModOutput>$(MSBuildThisFileDirectory)..\..\.godot\mono\temp\bin\Debug\</ModOutput>
+  </PropertyGroup>
+  <Target Name="CheckDependencies" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Sts2DllPath)')" Text="Set Sts2DllPath or STS2_DLL_PATH to the game's sts2.dll." />
+    <Error Condition="!Exists('$(ModOutput)BetterModMenu.dll')" Text="Build BetterModMenu.csproj before running the Godot smoke test." />
+  </Target>
+  <ItemGroup>
+    <Reference Include="BetterModMenu"><HintPath>$(ModOutput)BetterModMenu.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="sts2"><HintPath>$(Sts2DllPath)</HintPath><Private>true</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$([System.IO.Path]::GetDirectoryName('$(Sts2DllPath)'))\0Harmony.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+</Project>

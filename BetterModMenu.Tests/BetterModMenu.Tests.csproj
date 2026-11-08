@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="GodotSmoke\**\*.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.10.4" />
     <PackageReference Include="MSTest.TestFramework" Version="3.10.4" />
@@ -38,6 +39,7 @@
     <Compile Include="..\Data\ProfileSaveStorage.cs" Link="Data\ProfileSaveStorage.cs" />
     <Compile Include="..\Data\ProfileStateRules.cs" Link="Data\ProfileStateRules.cs" />
     <Compile Include="..\Data\SteamWorkshopTagService.cs" Link="Data\SteamWorkshopTagService.cs" />
+    <Compile Include="..\Data\WorkshopTagCacheCoordinator.cs" Link="Data\WorkshopTagCacheCoordinator.cs" />
     <Compile Include="..\Data\SteamWorkshopLinkResolver.cs" Link="Data\SteamWorkshopLinkResolver.cs" />
     <Compile Include="..\Data\TutorialContentBuilder.cs" Link="Data\TutorialContentBuilder.cs" />
     <Compile Include="..\Data\TutorialStateRules.cs" Link="Data\TutorialStateRules.cs" />
@@ -47,5 +49,7 @@
     <Compile Include="..\Patches\ModdingScreenConstants.cs" Link="Patches\ModdingScreenConstants.cs" />
     <Compile Include="..\Patches\ModdingScreenGroupLayoutBuilder.cs" Link="Patches\ModdingScreenGroupLayoutBuilder.cs" />
     <Compile Include="..\Patches\ModOrderRules.cs" Link="Patches\ModOrderRules.cs" />
+    <Compile Include="..\Patches\ModdingScreenProfileOps.cs" Link="Patches\ModdingScreenProfileOps.cs" />
+    <Compile Include="..\Patches\WorkshopTagRefreshNode.cs" Link="Patches\WorkshopTagRefreshNode.cs" />
   </ItemGroup>
 </Project>

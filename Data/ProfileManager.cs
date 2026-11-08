@@ -30,34 +30,28 @@ public static class ProfileManager
     public static string GetUserConfigPathForExtension(string extension) => ConfigPaths.GetUserConfigPathForExtension(extension);
     public static void DeleteOtherConfigVariants(string pathToKeep) => ConfigPaths.DeleteOtherConfigVariants(pathToKeep);
 
-    public static List<ModProfile> Profiles { get; set; } = new();
-    public static int CurrentProfileIndex { get; set; } = 0;
-
-    public static List<string> CustomGroups { get; set; } = new();
-    public static Dictionary<string, string> ModGroups { get; set; } = new();
-    public static HashSet<string> CollapsedGroups { get; set; } = new();
-    public static TutorialState Tutorial { get; set; } = new();
-    public static CloudBackupSettings CloudBackups { get; set; } = new();
-    public static ModNameStyleSettings ModNameStyles { get; set; } = new();
-    public static Dictionary<string, ModAnnotation> ModAnnotations { get; set; } = new();
+    private static ProfileSaveData State = new();
+    public static List<ModProfile> Profiles { get => State.Profiles; set => State.Profiles = value; }
+    public static int CurrentProfileIndex { get => State.CurrentProfileIndex; set => State.CurrentProfileIndex = value; }
+    public static List<string> CustomGroups { get => State.CustomGroups; set => State.CustomGroups = value; }
+    public static Dictionary<string, string> ModGroups { get => State.ModGroups; set => State.ModGroups = value; }
+    public static HashSet<string> CollapsedGroups { get => State.CollapsedGroups; set => State.CollapsedGroups = value; }
+    public static TutorialState Tutorial { get => State.Tutorial; set => State.Tutorial = value; }
+    public static CloudBackupSettings CloudBackups { get => State.CloudBackups; set => State.CloudBackups = value; }
+    public static ModNameStyleSettings ModNameStyles { get => State.ModNameStyles; set => State.ModNameStyles = value; }
+    public static Dictionary<string, ModAnnotation> ModAnnotations { get => State.ModAnnotations; set => State.ModAnnotations = value; }
     public static Dictionary<string, bool> ModGameplayImpactCache { get; set; } = new();
     public static Dictionary<string, List<string>> ModWorkshopTagsCache { get; set; } = new();
     private static bool WorkshopTagCacheAttempted { get; set; }
+    private static readonly WorkshopTagCacheCoordinator WorkshopTags = new(SteamWorkshopTagService.FetchTagsByPublishedFileIdAsync);
 
     public static void ResetState()
     {
-        Profiles = new();
-        CurrentProfileIndex = 0;
-        CustomGroups = new();
-        ModGroups = new();
-        CollapsedGroups = new();
-        Tutorial = new();
-        CloudBackups = new();
-        ModNameStyles = new();
-        ModAnnotations = new();
+        State = new();
         ModGameplayImpactCache = new();
         ModWorkshopTagsCache = new();
         WorkshopTagCacheAttempted = false;
+        WorkshopTags.Reset();
         LastPersistenceError = null;
         LastBackupError = null;
     }
@@ -82,9 +76,6 @@ public static class ProfileManager
             CurrentProfileIndex = Profiles.Count - 1;
     }
 
-    /// <summary>
-    /// Reads the current game mod states and writes them into the given profile's DisabledMods.
-    /// </summary>
     public static void SnapshotIntoProfile(ModProfile profile)
     {
         var options = SaveManager.Instance?.SettingsSave?.ModSettings;
@@ -97,9 +88,6 @@ public static class ProfileManager
         }
     }
 
-    /// <summary>
-    /// Reads the current game state into the active profile without writing to disk.
-    /// </summary>
     public static void SnapshotCurrentState()
     {
         SnapshotIntoProfile(CurrentProfile);
@@ -151,18 +139,12 @@ public static class ProfileManager
         return false;
     }
 
-    /// <summary>
-    /// Auto-save helper for live game changes such as enabling/disabling mods.
-    /// </summary>
     public static bool SnapshotCurrentStateAndSave()
     {
         SnapshotCurrentState();
         return SaveInMemoryState();
     }
 
-    /// <summary>
-    /// Writes the current live game state to a specific save path.
-    /// </summary>
     public static bool SaveCurrentStateToPath(string path)
     {
         SnapshotCurrentState();
@@ -172,8 +154,11 @@ public static class ProfileManager
     public static bool SaveToPath(string path)
     {
         LastPersistenceError = null;
-        if (ProfileSaveStorage.TryWrite(path, CaptureSaveData(), ConfigPaths.SetActiveConfigExtensionFromPath, out string? error))
+        if (ProfileSaveStorage.TryWrite(path, State, out string? error))
+        {
+            ConfigPaths.SetActiveConfigExtensionFromPath(path);
             return true;
+        }
 
         LastPersistenceError = error;
         try
@@ -197,7 +182,9 @@ public static class ProfileManager
             if (File.Exists(savePath))
                 BackupExistingSaveOnce(savePath, ProfileBackupReason.RunStart, out _);
 
-            ApplySaveData(ProfileSaveStorage.LoadOrDefault(savePath, ConfigPaths.SetActiveConfigExtensionFromPath));
+            ApplySaveData(ProfileSaveStorage.LoadOrDefault(savePath));
+            if (File.Exists(savePath))
+                ConfigPaths.SetActiveConfigExtensionFromPath(savePath);
         }
         catch (JsonException ex)
         {
@@ -240,7 +227,7 @@ public static class ProfileManager
     internal static bool TryRestoreProfileBackup(string backupPath, out string? error)
     {
         error = null;
-        var previousState = CaptureSaveData();
+        var previousState = State;
 
         if (!TryReadProfileSaveData(backupPath, out var restoredState, out error))
         {
@@ -318,32 +305,9 @@ public static class ProfileManager
         return BackupExistingSave(savePath, reason, out _);
     }
 
-    private static ProfileSaveData CaptureSaveData()
-    {
-        return ProfileSaveStorage.Capture(
-            Profiles,
-            CurrentProfileIndex,
-            CustomGroups,
-            ModGroups,
-            CollapsedGroups,
-            Tutorial,
-            CloudBackups,
-            ModNameStyles,
-            ModAnnotations);
-    }
-
     private static void ApplySaveData(ProfileSaveData saveData)
     {
-        var normalized = ProfileSaveStorage.Normalize(saveData);
-        Profiles = normalized.Profiles;
-        CurrentProfileIndex = normalized.CurrentProfileIndex;
-        CustomGroups = normalized.CustomGroups;
-        ModGroups = normalized.ModGroups;
-        CollapsedGroups = normalized.CollapsedGroups;
-        Tutorial = normalized.Tutorial;
-        CloudBackups = normalized.CloudBackups;
-        ModNameStyles = normalized.ModNameStyles;
-        ModAnnotations = normalized.ModAnnotations;
+        State = ProfileSaveStorage.Normalize(saveData);
         NormalizeProfileIndex();
     }
 
@@ -454,14 +418,55 @@ public static class ProfileManager
 
     public static void BuildWorkshopTagCache()
     {
+        WorkshopTags.Reset();
         WorkshopTagCacheAttempted = ProfileWorkshopTagCacheBuilder.Rebuild(ModWorkshopTagsCache, ModLogger);
+        if (WorkshopTagCacheAttempted && ProfileWorkshopTagCacheBuilder.GetInstallations() is { } installations)
+            WorkshopTags.Seed(installations, ModWorkshopTagsCache);
     }
 
-    public static void BuildWorkshopTagCacheIfNeeded()
+    public static void BuildWorkshopTagCacheIfNeeded() => BuildWorkshopTagCacheIfNeeded(ModNameStyles);
+
+    private static void BuildWorkshopTagCacheIfNeeded(ModNameStyleSettings settings)
     {
-        if (WorkshopTagCacheAttempted || !ModNameStyleRules.RequiresWorkshopTags(ModNameStyles))
+        if (WorkshopTagCacheAttempted || !ModNameStyleRules.RequiresWorkshopTags(settings))
             return;
 
         BuildWorkshopTagCache();
+    }
+
+    internal static bool RequestWorkshopTags(ModNameStyleSettings settings, bool retryFailure = false)
+    {
+        if (!ModNameStyleRules.RequiresWorkshopTags(settings))
+            return false;
+        var installations = ProfileWorkshopTagCacheBuilder.GetInstallations();
+        if (installations == null || !WorkshopTags.Request(installations, retryFailure))
+            return false;
+
+        bool hadCachedTags = ModWorkshopTagsCache.Count > 0;
+        ModWorkshopTagsCache.Clear();
+        WorkshopTagCacheAttempted = false;
+        return hadCachedTags;
+    }
+
+    internal static bool PublishWorkshopTags()
+    {
+        if (WorkshopTags.TryPublish(out string? error))
+        {
+            ModWorkshopTagsCache = new Dictionary<string, List<string>>(WorkshopTags.Tags, StringComparer.Ordinal);
+            WorkshopTagCacheAttempted = true;
+            return true;
+        }
+        if (error != null)
+            ModLogger.Error($"Failed to read Steam Workshop tags: {error}");
+        return false;
+    }
+
+    public static IEnumerable<string> GetWorkshopTags(string modId)
+    {
+        if (!string.IsNullOrWhiteSpace(modId) && ModWorkshopTagsCache.TryGetValue(modId, out var tags))
+        {
+            foreach (string tag in tags)
+                yield return tag;
+        }
     }
 }

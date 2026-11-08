@@ -21,6 +21,7 @@ internal static class ModNameStyleEditorDialog
         var workingSettings = ModNameStyleEditorRules.Clone(previousSettings);
         string initialModKey = PickInitialModKey(screen);
         string selectedTag = PickInitialTag(initialModKey);
+        bool tagChosenByUser = false;
 
         var popup = new ConfirmationDialog
         {
@@ -98,6 +99,8 @@ internal static class ModNameStyleEditorDialog
 
         void RefreshModControls()
         {
+            if (ProfileManager.RequestWorkshopTags(workingSettings))
+                NModdingScreenPatch.RefreshModNameStyles(screen);
             string modKey = modKeyInput.Text.Trim();
             if (TryGetModOverrideColor(workingSettings, modKey, out string color))
             {
@@ -109,18 +112,25 @@ internal static class ModNameStyleEditorDialog
                 SetSwatchColor(modSwatch, modColorInput.Text);
             }
 
+            RefreshModPreview();
+        }
+
+        void RefreshModPreview()
+        {
+            string modKey = modKeyInput.Text.Trim();
             string previewModKey = string.IsNullOrWhiteSpace(modKey) ? PreviewModId : modKey;
             string displayName = FindDisplayName(screen, previewModKey);
             string preview = ModNameStyleEditorRules.BuildPreviewBbCode(
                 previewModKey,
                 displayName,
-                GetWorkshopTags(previewModKey),
+                ProfileManager.GetWorkshopTags(previewModKey),
                 workingSettings);
             modPreview.ParseBbcode(preview);
         }
 
         void ApplyTagColor()
         {
+            tagChosenByUser = true;
             if (!ModNameStyleEditorRules.TrySetTagColor(workingSettings, selectedTag, tagColorInput.Text, out string supportedTag, out string normalizedColor))
             {
                 SetStatus(T(BmmText.StyleStatusInvalidTagColor, "Use #rgb, #rrggbb, or #rrggbbaa for tag colors."), error: true);
@@ -136,6 +146,7 @@ internal static class ModNameStyleEditorDialog
 
         void DisableSelectedTag()
         {
+            tagChosenByUser = true;
             if (!ModNameStyleEditorRules.TryDisableTagColor(workingSettings, selectedTag, out string supportedTag))
             {
                 SetStatus(T(BmmText.StyleStatusChooseTag, "Choose a supported Workshop tag first."), error: true);
@@ -149,6 +160,7 @@ internal static class ModNameStyleEditorDialog
 
         void ResetSelectedTag()
         {
+            tagChosenByUser = true;
             if (!ModNameStyleEditorRules.TryResetTagColor(workingSettings, selectedTag, out string supportedTag))
             {
                 SetStatus(T(BmmText.StyleStatusChooseTag, "Choose a supported Workshop tag first."), error: true);
@@ -255,12 +267,18 @@ internal static class ModNameStyleEditorDialog
         };
         tagDropdown.ItemSelected += index =>
         {
+            tagChosenByUser = true;
             selectedTag = tagDropdown.GetItemText((int)index);
             SetStatus(string.Empty);
             RefreshAll();
         };
         tagColorInput.TextSubmitted += _ => ApplyTagColor();
-        tagColorInput.TextChanged += text => SetSwatchColor(tagSwatch, text);
+        tagColorInput.TextChanged += text =>
+        {
+            if (tagColorInput.HasFocus())
+                tagChosenByUser = true;
+            SetSwatchColor(tagSwatch, text);
+        };
         applyTagButton.Pressed += ApplyTagColor;
         disableTagButton.Pressed += DisableSelectedTag;
         resetTagButton.Pressed += ResetSelectedTag;
@@ -275,6 +293,7 @@ internal static class ModNameStyleEditorDialog
         removeModButton.Pressed += RemoveModOverride;
         resetAllButton.Pressed += () =>
         {
+            tagChosenByUser = true;
             ModNameStyleEditorRules.ResetToDefaults(workingSettings);
             selectedTag = ModNameStyleRules.GetDefaultTagFormats().Keys.First();
             SetStatus(T(BmmText.StyleStatusDefaultsStaged, "Defaults staged."));
@@ -306,6 +325,32 @@ internal static class ModNameStyleEditorDialog
             statusLabel);
 
         popup.AddChild(body);
+        var session = ModdingScreenContext.GetSession(screen);
+        Action refreshPreview = () =>
+        {
+            if (GodotObject.IsInstanceValid(popup) && popup.Visible)
+            {
+                if (!tagChosenByUser && !tagColorInput.HasFocus() && modKeyInput.Text.Trim() == initialModKey)
+                {
+                    selectedTag = PickInitialTag(initialModKey);
+                    SelectTag(tagDropdown, selectedTag);
+                    RefreshTagControls();
+                }
+                RefreshModPreview();
+            }
+        };
+        session.WorkshopTagsChanged += refreshPreview;
+        popup.TreeExited += () => session.WorkshopTagsChanged -= refreshPreview;
+        popup.VisibilityChanged += () =>
+        {
+            if (!popup.Visible)
+            {
+                session.WorkshopTagsChanged -= refreshPreview;
+                popup.QueueFree();
+            }
+        };
+        if (ProfileManager.RequestWorkshopTags(workingSettings, retryFailure: true))
+            NModdingScreenPatch.RefreshModNameStyles(screen);
         ApplyDialogButtons(popup, layout.ButtonFontSize);
         popup.GetOkButton().Visible = false;
         popup.GetCancelButton().Visible = false;
@@ -714,14 +759,10 @@ internal static class ModNameStyleEditorDialog
 
     private static string PickInitialTag(string modKey)
     {
-        if (!string.IsNullOrWhiteSpace(modKey) &&
-            ProfileManager.ModWorkshopTagsCache.TryGetValue(modKey, out var tags))
+        foreach (string tag in ProfileManager.GetWorkshopTags(modKey))
         {
-            foreach (string tag in tags)
-            {
-                if (ModNameStyleEditorRules.TryCanonicalizeTag(tag, out string supportedTag))
-                    return supportedTag;
-            }
+            if (ModNameStyleEditorRules.TryCanonicalizeTag(tag, out string supportedTag))
+                return supportedTag;
         }
 
         return ModNameStyleRules.GetDefaultTagFormats().Keys.First();
@@ -741,17 +782,6 @@ internal static class ModNameStyleEditorDialog
         }
 
         return string.IsNullOrWhiteSpace(modKey) ? PreviewDisplayName : modKey;
-    }
-
-    private static IEnumerable<string> GetWorkshopTags(string modKey)
-    {
-        if (!string.IsNullOrWhiteSpace(modKey) &&
-            ProfileManager.ModWorkshopTagsCache.TryGetValue(modKey, out var tags))
-        {
-            return tags;
-        }
-
-        return Enumerable.Empty<string>();
     }
 
     private static IEnumerable<NModMenuRow> EnumerateVisibleRows(NModdingScreen screen)

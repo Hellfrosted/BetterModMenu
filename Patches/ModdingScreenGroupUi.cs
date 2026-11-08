@@ -96,17 +96,12 @@ internal static class ModdingScreenGroupUi
             Version = manifest?.version ?? string.Empty,
             Dependencies = manifest?.dependencies?.Select(dependency => dependency.id).Where(id => !string.IsNullOrWhiteSpace(id)).ToArray() ?? Array.Empty<string>(),
             Group = assignedGroups.TryGetValue(modId, out string? group) && !string.IsNullOrWhiteSpace(group)
-                ? GetSearchGroupName(group)
-                : GetSearchGroupName(ModdingScreenConstants.UnassignedGroup),
+                ? ModdingGroupStateOps.GetDisplayGroupName(group)
+                : ModdingGroupStateOps.GetDisplayGroupName(ModdingScreenConstants.UnassignedGroup),
             Enabled = IsRowEnabled(row),
             WorkshopId = workshopId,
             WorkshopUrl = workshopUrl
         };
-    }
-
-    private static string GetSearchGroupName(string groupName)
-    {
-        return ModdingGroupStateOps.GetDisplayGroupName(groupName);
     }
 
     private static bool IsRowEnabled(NModMenuRow row)

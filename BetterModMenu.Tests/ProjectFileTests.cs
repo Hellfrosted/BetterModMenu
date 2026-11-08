@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace BetterModMenu.Tests;
 
@@ -10,11 +11,6 @@ public class ProjectFileTests
     [TestMethod]
     public void RunSteamWorkshopUpload_StagesContentAndRunsUploaderFromUploaderRoot()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Assert.Inconclusive("This test uses a shell-script fake ModUploader.exe.");
-        }
-
         using TempDirectory temp = new();
         string uploaderRoot = Path.Combine(temp.Path, "ModUploader-win-x64");
         string workshopDir = Path.Combine(uploaderRoot, "workshop", "BetterModMenu");
@@ -26,7 +22,7 @@ public class ProjectFileTests
         Directory.CreateDirectory(Path.GetDirectoryName(fakeDll)!);
         File.WriteAllText(Path.Combine(workshopDir, "workshop.json"), "{}");
         File.WriteAllText(fakeDll, "fake dll");
-        WriteFakeUploader(Path.Combine(uploaderRoot, "ModUploader.exe"));
+        BuildFakeUploader(temp.Path, uploaderRoot);
 
         DotnetResult result = RunDotnet(
             "msbuild",
@@ -90,7 +86,7 @@ public class ProjectFileTests
         Directory.CreateDirectory(workshopDir);
         Directory.CreateDirectory(Path.GetDirectoryName(fakeDll)!);
         File.WriteAllText(fakeDll, "fake dll");
-        WriteFakeUploader(Path.Combine(uploaderRoot, "ModUploader.exe"));
+        File.WriteAllText(Path.Combine(uploaderRoot, "ModUploader.exe"), "placeholder");
 
         DotnetResult result = RunDotnet(
             "msbuild",
@@ -110,11 +106,6 @@ public class ProjectFileTests
     [TestMethod]
     public void RunSteamWorkshopUpload_FailsBeforeUploaderWhenContentHasNestedUnexpectedFiles()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Assert.Inconclusive("This test uses a shell-script fake ModUploader.exe.");
-        }
-
         using TempDirectory temp = new();
         string uploaderRoot = Path.Combine(temp.Path, "ModUploader-win-x64");
         string workshopDir = Path.Combine(uploaderRoot, "workshop", "BetterModMenu");
@@ -128,7 +119,7 @@ public class ProjectFileTests
         File.WriteAllText(Path.Combine(workshopDir, "workshop.json"), "{}");
         File.WriteAllText(Path.Combine(staleDir, "stale.txt"), "stale");
         File.WriteAllText(fakeDll, "fake dll");
-        WriteFakeUploader(Path.Combine(uploaderRoot, "ModUploader.exe"));
+        File.WriteAllText(Path.Combine(uploaderRoot, "ModUploader.exe"), "placeholder");
 
         DotnetResult result = RunDotnet(
             "msbuild",
@@ -148,19 +139,62 @@ public class ProjectFileTests
     [TestMethod]
     public void UploadSteamWorkshop_IsExplicitAndBuildBacked()
     {
-        string project = File.ReadAllText(ProjectPath);
-
-        StringAssert.Contains(project, "<Target Name=\"UploadSteamWorkshop\" DependsOnTargets=\"Build;RunSteamWorkshopUpload\" />");
-        Assert.IsFalse(project.Contains("AfterTargets=\"Build\" Condition=\"'$(UploadSteamWorkshop)'", StringComparison.Ordinal));
-        Assert.IsFalse(project.Contains("BeforeTargets=\"Build\" Condition=\"'$(UploadSteamWorkshop)'", StringComparison.Ordinal));
+        var targets = XDocument.Load(ProjectPath).Descendants("Target").ToArray();
+        var upload = targets.Single(target => (string?)target.Attribute("Name") == "UploadSteamWorkshop");
+        string[] dependencies = ((string?)upload.Attribute("DependsOnTargets") ?? "").Split(';', StringSplitOptions.TrimEntries);
+        CollectionAssert.Contains(dependencies, "Build");
+        CollectionAssert.Contains(dependencies, "RunSteamWorkshopUpload");
+        foreach (var target in targets.Where(target => (string?)target.Attribute("Name") is "UploadSteamWorkshop" or "RunSteamWorkshopUpload"))
+        {
+            Assert.IsNull(target.Attribute("AfterTargets"));
+            Assert.IsNull(target.Attribute("BeforeTargets"));
+        }
     }
 
     [TestMethod]
-    public void LocalizationCatalogs_AreEmbeddedIntoMainAssembly()
+    public void LocalizationCatalogs_AreEvaluatedAsEmbeddedResources()
     {
-        string project = File.ReadAllText(ProjectPath);
+        using var evaluated = QueryProject("-getItem:EmbeddedResource");
+        var resources = evaluated.RootElement.GetProperty("Items").GetProperty("EmbeddedResource")
+            .EnumerateArray().Select(item => Path.GetFullPath(item.GetProperty("FullPath").GetString()!))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string catalog in Directory.EnumerateFiles(Path.Combine(RepoRoot, "Localization"), "*.json"))
+            Assert.IsTrue(resources.Contains(Path.GetFullPath(catalog)), $"Catalog not embedded: {catalog}");
+    }
 
-        StringAssert.Contains(project, "<EmbeddedResource Include=\"Localization\\*.json\" />");
+    [TestMethod]
+    public void CloudPackagingSettings_AreEnabledOnlyWhenOptedIn()
+    {
+        using var defaults = QueryProject("-getProperty:IncludeCloudFeatures,CloudPackageSuffix,DefineConstants");
+        using var cloud = QueryProject("-getProperty:IncludeCloudFeatures,CloudPackageSuffix,DefineConstants", "-p:IncludeCloudFeatures=true");
+        var defaultProperties = defaults.RootElement.GetProperty("Properties");
+        var cloudProperties = cloud.RootElement.GetProperty("Properties");
+        Assert.AreEqual("false", defaultProperties.GetProperty("IncludeCloudFeatures").GetString());
+        Assert.AreEqual("", defaultProperties.GetProperty("CloudPackageSuffix").GetString());
+        Assert.IsFalse(defaultProperties.GetProperty("DefineConstants").GetString()!.Split(';').Contains("BETTERMODMENU_CLOUD_FEATURES"));
+        Assert.AreEqual("_cloud", cloudProperties.GetProperty("CloudPackageSuffix").GetString());
+        CollectionAssert.Contains(cloudProperties.GetProperty("DefineConstants").GetString()!.Split(';'), "BETTERMODMENU_CLOUD_FEATURES");
+    }
+
+    private static JsonDocument QueryProject(params string[] arguments)
+    {
+        ProcessStartInfo startInfo = new("dotnet")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            WorkingDirectory = RepoRoot
+        };
+        startInfo.ArgumentList.Add("msbuild");
+        startInfo.ArgumentList.Add(ProjectPath);
+        foreach (string argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start dotnet.");
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.AreEqual(0, process.ExitCode, error + output);
+        return JsonDocument.Parse(output);
     }
 
     private static string ProjectPath => Path.Combine(RepoRoot, "BetterModMenu.csproj");
@@ -202,22 +236,39 @@ public class ProjectFileTests
         return new DotnetResult(process.ExitCode, stdout + stderr);
     }
 
-    private static void WriteFakeUploader(string path)
+    private static void BuildFakeUploader(string tempDirectory, string uploaderRoot)
     {
-        File.WriteAllText(
-            path,
-            """
-            #!/usr/bin/env bash
-            {
-              pwd
-              printf '%s\n' "$@"
-            } > "$MOD_UPLOADER_CAPTURE"
-            """);
-
+        string projectDirectory = Path.Combine(tempDirectory, "fake-uploader");
+        Directory.CreateDirectory(projectDirectory);
+        string project = Path.Combine(projectDirectory, "FakeUploader.csproj");
+        File.WriteAllText(project, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup></Project>");
+        File.WriteAllText(Path.Combine(projectDirectory, "Program.cs"),
+            "File.WriteAllLines(Environment.GetEnvironmentVariable(\"MOD_UPLOADER_CAPTURE\")!, new[] { Environment.CurrentDirectory }.Concat(args));");
+        ProcessStartInfo startInfo = new("dotnet")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            WorkingDirectory = projectDirectory
+        };
+        startInfo.ArgumentList.Add("build");
+        startInfo.ArgumentList.Add(project);
+        startInfo.ArgumentList.Add("--nologo");
+        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start dotnet.");
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.AreEqual(0, process.ExitCode, error + output);
+        string outputDirectory = Path.Combine(projectDirectory, "bin", "Debug", "net8.0");
+        foreach (string file in Directory.EnumerateFiles(outputDirectory))
+            File.Copy(file, Path.Combine(uploaderRoot, Path.GetFileName(file)));
+        string sourceExecutable = Path.Combine(outputDirectory, OperatingSystem.IsWindows() ? "FakeUploader.exe" : "FakeUploader");
+        string targetExecutable = Path.Combine(uploaderRoot, "ModUploader.exe");
+        File.Copy(sourceExecutable, targetExecutable);
         if (!OperatingSystem.IsWindows())
         {
             File.SetUnixFileMode(
-                path,
+                targetExecutable,
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
