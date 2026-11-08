@@ -27,6 +27,8 @@ public static class NModdingScreenPatch
     {
         var session = ModdingScreenContext.GetSession(__instance);
         session.SelectedModId = row.Mod?.manifest?.id ?? string.Empty;
+        row.FocusMode = Control.FocusModeEnum.All;
+        row.GrabFocus();
         ModdingScreenInfoPanelOps.Refresh(__instance, session);
     }
 

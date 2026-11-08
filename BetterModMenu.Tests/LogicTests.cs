@@ -1339,19 +1339,14 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void BuildBody_DescribesV16ActionsWithoutRuntimeSpecificInstructions()
+    public void BuildPages_OrganizesHelpIntoShortTopics()
     {
-        string body = TutorialContentBuilder.BuildBody();
-
-        StringAssert.Contains(body, "profiles");
-        StringAssert.Contains(body, "Portable Mode");
-        StringAssert.Contains(body, "Backup");
-        StringAssert.Contains(body, "CSV");
-        StringAssert.Contains(body, "Logs");
-        StringAssert.Contains(body, "level toggles");
-        StringAssert.Contains(body, "Load lets you choose");
-        Assert.IsFalse(body.Contains("timestamped safety", StringComparison.OrdinalIgnoreCase));
-        StringAssert.Contains(body, "cloud behavior stays opt-in");
+        var pages = TutorialContentBuilder.BuildPages((_, fallback) => fallback);
+        Assert.AreEqual(4, pages.Count);
+        StringAssert.Contains(pages[1].Body, "Up or Down");
+        StringAssert.Contains(pages[2].Body, "Load");
+        StringAssert.Contains(pages[3].Body, "CSV");
+        Assert.IsTrue(pages.All(page => page.Body.Length < 350));
     }
 
     [TestMethod]

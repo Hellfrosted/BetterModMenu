@@ -33,6 +33,8 @@ internal static class ModdingScreenActionFlow
         tagsChanged |= ProfileManager.RequestWorkshopTags(ProfileManager.ModNameStyles, retryFailure: true);
         if (screen.GetNodeOrNull<WorkshopTagRefreshNode>("BetterModMenuWorkshopTagRefresh") == null)
             screen.AddChild(new WorkshopTagRefreshNode { Name = "BetterModMenuWorkshopTagRefresh", Screen = screen });
+        if (screen.GetNodeOrNull<ModOrderKeyboardNode>("BetterModMenuOrderKeyboard") == null)
+            screen.AddChild(new ModOrderKeyboardNode { Name = "BetterModMenuOrderKeyboard", Screen = screen });
         ModdingScreenChromeOps.PrepareScreen(
             screen,
             session,

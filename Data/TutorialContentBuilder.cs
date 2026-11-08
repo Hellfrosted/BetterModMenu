@@ -1,23 +1,25 @@
 namespace BetterModMenu.Data;
 
+internal readonly record struct TutorialPage(string Title, string Body);
+
 internal static class TutorialContentBuilder
 {
-    public static string BuildBody()
+    public static IReadOnlyList<TutorialPage> BuildPages(Func<string, string, string> text)
     {
-        return BuildBody((_, fallback) => fallback);
-    }
-
-    public static string BuildBody(Func<string, string, string> text)
-    {
-        return string.Join("\n\n",
-            text(BmmText.TutorialIntro, "Better Mod Menu helps you keep different mod setups without rebuilding your list by hand every time."),
-            text(BmmText.TutorialOpen, "Open it from Slay the Spire 2's built-in Modding screen. Better Mod Menu adds its Profile, Group, Backup, CSV, Logs, Style, and Help controls to that screen."),
-            text(BmmText.TutorialProfiles, "Profiles are saved mod setups. Switch profiles to turn a saved set of mods on or off. New copies what is enabled right now into a new profile; Rename changes only the profile name; Del removes the selected profile."),
-            text(BmmText.TutorialGroups, "Groups are labels for organizing the list. Type a group name, press Add, then use each mod row's group picker to move mods into that group. Group headers can collapse the section, move the group, rename it, delete it, or turn every mod in the group on or off together. Select a mod and use Alias / Notes to save searchable personal metadata."),
-            text(BmmText.TutorialPortable, "Portable Mode stores Better Mod Menu's save file beside the mod files. Leave it off for the normal game save location; turn it on when you want this mod setup to travel with a copied game or mod folder."),
-            text(BmmText.TutorialBackup, "Backup saves copies of your Better Mod Menu profiles, groups, and the game's current enabled-mod settings, including Steam Workshop links when available. Load lets you choose a profile and group backup to restore. CSV creates a spreadsheet-friendly list of installed mods, versions, enabled state, group names, and Steam Workshop links when available."),
-            text(BmmText.TutorialStyle, "Style customizes mod name colors inside the game. You can use the default Steam Workshop tag colors, override one supported tag, disable a tag color, or set a color for one specific mod id or displayed mod name."),
-            text(BmmText.TutorialLogs, "The Logs button opens full Better Mod Menu log output with warnings and errors highlighted when you need to see what happened. Use its level toggles to show or hide debug, info, warning, error, and unclassified lines. Use Open Folder in the log viewer to open the folder that contains the log file."),
-            text(BmmText.TutorialCloud, "Cloud-capable builds can mirror backups and CSV exports to a synced folder, but cloud behavior stays opt-in."));
+        return
+        [
+            new(text(BmmText.ProfileLabel, "Profiles"),
+                text(BmmText.TutorialProfiles, "Switch profiles to change your enabled mods. New copies your current setup.")),
+            new(text(BmmText.GroupLabel, "Groups"), string.Join("\n\n",
+                text(BmmText.TutorialGroups, "Add a group, then choose it on a mod's row. Use the group header to collapse or toggle the group."),
+                text("TUTORIAL.ORDER_SHORT", "Select a mod and press Up or Down to change its saved order. Dependencies may change the final load order."))),
+            new(text(BmmText.Backup, "Backup"),
+                text(BmmText.TutorialBackup, "Backup saves your profiles and groups. Load restores a backup; it can also clean up old backups.")),
+            new(text("TUTORIAL.MORE_SHORT", "More"), string.Join("\n\n",
+                text(BmmText.TutorialPortable, "Portable Mode keeps the menu save beside the mod."),
+                text(BmmText.TutorialStyle, "Style changes mod name colors."),
+                text(BmmText.TutorialLogs, "Logs shows warnings and errors. CSV exports your mod list."),
+                text(BmmText.TutorialCloud, "Cloud builds can copy backups and CSV exports to a synced folder.")))
+        ];
     }
 }
