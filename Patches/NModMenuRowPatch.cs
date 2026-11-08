@@ -79,22 +79,10 @@ public static class NModMenuRowPatch
 
         groupDropdown.ItemSelected += (idx) =>
         {
-            bool hadPreviousAssignment = Data.ProfileManager.ModGroups.TryGetValue(modId, out string? previousAssignedGroup);
             string previousVisibleGroup = ModdingGroupStateOps.GetAssignedGroup(modId);
             string selectedGroup = ModdingGroupStateOps.GetDropdownGroupValue(groupDropdown, (int)idx);
-
-            if (selectedGroup == ModdingScreenConstants.UnassignedGroup)
-                Data.ProfileManager.ModGroups.Remove(modId);
-            else
-                Data.ProfileManager.ModGroups[modId] = selectedGroup;
-
-            if (!Data.ProfileManager.SaveInMemoryState())
+            if (!ModdingGroupStateOps.TryAssignGroup(modId, selectedGroup))
             {
-                if (hadPreviousAssignment && previousAssignedGroup != null)
-                    Data.ProfileManager.ModGroups[modId] = previousAssignedGroup;
-                else
-                    Data.ProfileManager.ModGroups.Remove(modId);
-
                 ModdingGroupStateOps.SyncGroupDropdown(groupDropdown, previousVisibleGroup);
                 return;
             }
@@ -160,7 +148,7 @@ public static class NModMenuRowPatch
         if (nameNode == null)
             return;
 
-        var styleTags = BuildStyleTags(modId).ToArray();
+        var styleTags = ProfileManager.GetWorkshopTags(modId).ToArray();
         if (!ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
         {
             RestorePlainModName(row, nameNode, displayName);
@@ -283,15 +271,6 @@ public static class NModMenuRowPatch
         }
     }
 
-    private static IEnumerable<string> BuildStyleTags(string modId)
-    {
-        ProfileManager.BuildWorkshopTagCacheIfNeeded();
-        if (!ProfileManager.ModWorkshopTagsCache.TryGetValue(modId, out var tags))
-            yield break;
-
-        foreach (string tag in tags)
-            yield return tag;
-    }
 
     private static bool TryParseColor(string value, out Color color)
     {

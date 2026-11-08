@@ -120,20 +120,10 @@ internal static class ProfileBackupService
                 .Select(NormalizeExtension)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var expiredBackups = Directory
+            PruneAutomaticBackups(Directory
                 .EnumerateFiles(backupDirectory, baseName + ".*")
                 .Select(path => new FileInfo(path))
-                .Where(file => extensions.Contains(file.Extension))
-                .Where(file =>
-                    TryGetGeneratedBackupReason(file.Name, baseName, out var reason) &&
-                    reason is ProfileBackupReason.RunStart or ProfileBackupReason.Resume)
-                .OrderByDescending(file => file.LastWriteTimeUtc)
-                .ThenByDescending(file => file.Name, StringComparer.Ordinal)
-                .Skip(retentionCount)
-                .ToList();
-
-            foreach (var backup in expiredBackups)
-                backup.Delete();
+                .Where(file => extensions.Contains(file.Extension)), baseName, retentionCount);
 
             return true;
         }
@@ -142,6 +132,19 @@ internal static class ProfileBackupService
             error = ex.Message;
             return false;
         }
+    }
+
+    internal static void PruneAutomaticBackups(IEnumerable<FileInfo> files, string baseName, int retentionCount)
+    {
+        var expiredBackups = files
+            .Where(file => TryGetGeneratedBackupReason(file.Name, baseName, out var reason) &&
+                reason is ProfileBackupReason.RunStart or ProfileBackupReason.Resume)
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .ThenByDescending(file => file.Name, StringComparer.Ordinal)
+            .Skip(retentionCount)
+            .ToList();
+        foreach (var backup in expiredBackups)
+            backup.Delete();
     }
 
     internal static bool TryGetGeneratedBackupReason(string fileName, string expectedBaseName, out ProfileBackupReason reason)

@@ -63,8 +63,7 @@ internal static class ModSettingsBackupService
 
     public static string BuildBackupFileName(ProfileBackupReason reason, DateTimeOffset timestamp)
     {
-        string reasonSlug = reason.ToString().ToLowerInvariant();
-        return $"mod_settings.{timestamp.UtcDateTime:yyyyMMdd-HHmmss}.{reasonSlug}.json";
+        return ProfileBackupService.BuildBackupFileName("mod_settings.json", reason, timestamp);
     }
 
     public static bool TryPruneAutomaticBackups(string directory, int retentionCount, out string? error)
@@ -78,19 +77,9 @@ internal static class ModSettingsBackupService
             if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
                 return true;
 
-            var expiredBackups = Directory
+            ProfileBackupService.PruneAutomaticBackups(Directory
                 .EnumerateFiles(directory, "mod_settings.*.json")
-                .Select(path => new FileInfo(path))
-                .Where(file =>
-                    ProfileBackupService.TryGetGeneratedBackupReason(file.Name, "mod_settings", out var reason) &&
-                    reason is ProfileBackupReason.RunStart or ProfileBackupReason.Resume)
-                .OrderByDescending(file => file.LastWriteTimeUtc)
-                .ThenByDescending(file => file.Name, StringComparer.Ordinal)
-                .Skip(retentionCount)
-                .ToList();
-
-            foreach (var backup in expiredBackups)
-                backup.Delete();
+                .Select(path => new FileInfo(path)), "mod_settings", retentionCount);
 
             return true;
         }

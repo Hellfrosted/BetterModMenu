@@ -20,6 +20,7 @@ internal sealed class ModdingScreenSession
     public string SelectedModId { get; set; } = string.Empty;
     public TopBarControls? TopBarControls { get; set; }
     public int TickboxSuppressionDepth { get; set; }
+    public Action? WorkshopTagsChanged { get; set; }
 
     public void Reset()
     {
@@ -38,5 +39,6 @@ internal sealed class ModdingScreenSession
         SelectedModId = string.Empty;
         TopBarControls = null;
         TickboxSuppressionDepth = 0;
+        WorkshopTagsChanged = null;
     }
 }

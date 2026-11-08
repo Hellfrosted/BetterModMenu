@@ -76,7 +76,6 @@ internal static class ModdingScreenText
         }
         catch
         {
-            // Fall back to Godot's locale below.
         }
 
         try

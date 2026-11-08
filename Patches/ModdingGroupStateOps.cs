@@ -8,6 +8,24 @@ namespace BetterModMenu.Patches;
 
 internal static class ModdingGroupStateOps
 {
+    public static bool TryAssignGroup(string modId, string groupName)
+    {
+        bool hadPrevious = ProfileManager.ModGroups.TryGetValue(modId, out string? previousGroup);
+        if (groupName == ModdingScreenConstants.UnassignedGroup)
+            ProfileManager.ModGroups.Remove(modId);
+        else
+            ProfileManager.ModGroups[modId] = groupName;
+
+        if (ProfileManager.SaveInMemoryState())
+            return true;
+
+        if (hadPrevious && previousGroup != null)
+            ProfileManager.ModGroups[modId] = previousGroup;
+        else
+            ProfileManager.ModGroups.Remove(modId);
+        return false;
+    }
+
     public static bool TryAddGroup(string groupName)
     {
         if (!ModdingGroupRules.CanAdd(ProfileManager.CustomGroups, groupName, out string trimmedName))

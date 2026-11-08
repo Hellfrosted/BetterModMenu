@@ -10,6 +10,19 @@ namespace BetterModMenu.Patches;
 internal static class ModdingScreenProfileOps
 {
     public static bool TryApplyProfileSelection(int index, bool snapshotCurrentProfile, out ModProfile? profile)
+        => TryApplyProfileSelection(index, snapshotCurrentProfile, false, out profile);
+
+    public static bool TryDeleteCurrentProfile(out ModProfile? profile)
+    {
+        profile = null;
+        if (ProfileManager.Profiles.Count <= 1)
+            return false;
+
+        int replacementIndex = Math.Min(ProfileManager.CurrentProfileIndex, ProfileManager.Profiles.Count - 2);
+        return TryApplyProfileSelection(replacementIndex, false, true, out profile);
+    }
+
+    private static bool TryApplyProfileSelection(int index, bool snapshotCurrentProfile, bool deleteCurrentProfile, out ModProfile? profile)
     {
         profile = null;
         var previousProfiles = CloneProfiles(ProfileManager.Profiles);
@@ -19,6 +32,9 @@ internal static class ModdingScreenProfileOps
 
         try
         {
+            if (deleteCurrentProfile)
+                ProfileManager.Profiles.RemoveAt(ProfileManager.CurrentProfileIndex);
+
             if (snapshotCurrentProfile)
                 ProfileManager.SnapshotCurrentState();
 
@@ -121,21 +137,6 @@ internal static class ModdingScreenProfileOps
 
         ProfileManager.CurrentProfile.Name = previousName;
         return false;
-    }
-
-    public static int? DeleteCurrentProfile()
-    {
-        if (ProfileManager.Profiles.Count <= 1)
-            return null;
-
-        int removedIndex = ProfileManager.CurrentProfileIndex;
-        ProfileManager.Profiles.RemoveAt(removedIndex);
-
-        int replacementIndex = removedIndex;
-        if (replacementIndex >= ProfileManager.Profiles.Count)
-            replacementIndex = ProfileManager.Profiles.Count - 1;
-
-        return replacementIndex;
     }
 
     private static List<ModProfile> CloneProfiles(IReadOnlyList<ModProfile> profiles)

@@ -214,7 +214,7 @@ public static class NModdingScreenPatch
         ModNameStyleEditorDialog.Show(screen, () => RefreshModNameStyles(screen));
     }
 
-    private static void RefreshModNameStyles(NModdingScreen screen)
+    internal static void RefreshModNameStyles(NModdingScreen screen)
     {
         if (!ModdingScreenContext.IsCurrentScreen(screen))
             return;
@@ -330,6 +330,11 @@ public static class NModdingScreenPatch
         if (!ModdingScreenProfileOps.TryApplyProfileSelection(index, snapshotCurrentProfile, out var profile) || profile == null)
             return;
 
+        RefreshAfterProfileSelection(profile);
+    }
+
+    private static void RefreshAfterProfileSelection(ModProfile profile)
+    {
         RefreshProfileDropdown();
 
         if (TryGetCurrentScreen(out var screen) && screen != null)
@@ -369,8 +374,7 @@ public static class NModdingScreenPatch
 
     private static void OnDelProfilePressed()
     {
-        int? replacementIndex = ModdingScreenProfileOps.DeleteCurrentProfile();
-        if (replacementIndex.HasValue)
-            ApplyProfileSelection(replacementIndex.Value, snapshotCurrentProfile: false);
+        if (ModdingScreenProfileOps.TryDeleteCurrentProfile(out var profile) && profile != null)
+            RefreshAfterProfileSelection(profile);
     }
 }

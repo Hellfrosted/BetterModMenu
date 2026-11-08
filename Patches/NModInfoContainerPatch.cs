@@ -50,7 +50,7 @@ public static class NModInfoContainerPatch
         if (TitleField?.GetValue(container) is not RichTextLabel title)
             return;
 
-        var styleTags = BuildStyleTags(modId);
+        var styleTags = ProfileManager.GetWorkshopTags(modId);
         if (ModNameStyleRules.TryBuildBbCode(modId, displayName, styleTags, ProfileManager.ModNameStyles, out string bbCode))
         {
             title.BbcodeEnabled = true;
@@ -62,13 +62,4 @@ public static class NModInfoContainerPatch
         title.Text = displayName;
     }
 
-    private static IEnumerable<string> BuildStyleTags(string modId)
-    {
-        ProfileManager.BuildWorkshopTagCacheIfNeeded();
-        if (!ProfileManager.ModWorkshopTagsCache.TryGetValue(modId, out var tags))
-            yield break;
-
-        foreach (string tag in tags)
-            yield return tag;
-    }
 }
