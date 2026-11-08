@@ -53,6 +53,7 @@ internal static class ModdingScreenDialogs
 
     public static void ShowBackupSelectionDialog(NModdingScreen screen, IReadOnlyList<ProfileBackupEntry> backups, Action<string> onConfirmed)
     {
+        var visibleBackups = backups.ToList();
         TutorialDialogLayout layout = ModdingScreenDialogRules.GetPreferredTutorialDialogLayout();
         var popup = new ConfirmationDialog
         {
@@ -107,21 +108,31 @@ internal static class ModdingScreenDialogs
         pageRow.AddChild(olderButton);
         body.AddChild(pageRow);
 
+        var cleanupButton = new Button
+        {
+            Text = T("DIALOG.LOAD_BACKUP.CLEANUP", "Delete backups 3+ days old"),
+            TooltipText = T("DIALOG.LOAD_BACKUP.CLEANUP_TOOLTIP", "Keep the newest 2 manual backups and newest automatic backup. Unrecognized backups are kept.")
+        };
+        ModdingScreenVanillaStyle.ApplyButton(cleanupButton);
+        body.AddChild(cleanupButton);
+
         int requestedPageIndex = 0;
         int pageStartIndex = 0;
         void RefreshPage()
         {
-            BackupSelectionPage page = ModdingScreenDialogRules.GetBackupSelectionPage(backups.Count, requestedPageIndex, BackupChoicesPerPage);
+            BackupSelectionPage page = ModdingScreenDialogRules.GetBackupSelectionPage(visibleBackups.Count, requestedPageIndex, BackupChoicesPerPage);
             requestedPageIndex = page.PageIndex;
             pageStartIndex = page.StartIndex;
             backupDropdown.Clear();
             for (int i = 0; i < page.ItemCount; i++)
-                backupDropdown.AddItem(BuildBackupDisplayLabel(backups[page.StartIndex + i]), i);
+                backupDropdown.AddItem(BuildBackupDisplayLabel(visibleBackups[page.StartIndex + i]), i);
             if (page.ItemCount > 0)
                 backupDropdown.Select(0);
 
             int firstVisible = page.ItemCount == 0 ? 0 : page.StartIndex + 1;
-            pageLabel.Text = $"{firstVisible}-{page.StartIndex + page.ItemCount} / {backups.Count}";
+            pageLabel.Text = $"{firstVisible}-{page.StartIndex + page.ItemCount} / {visibleBackups.Count}";
+            backupDropdown.Disabled = visibleBackups.Count == 0;
+            popup.GetOkButton().Disabled = visibleBackups.Count == 0;
             newerButton.Disabled = page.PageIndex == 0;
             olderButton.Disabled = page.PageIndex + 1 >= page.PageCount;
         }
@@ -136,6 +147,21 @@ internal static class ModdingScreenDialogs
             requestedPageIndex++;
             RefreshPage();
         };
+        cleanupButton.Pressed += () => ShowConfirmDialog(screen,
+            T("DIALOG.LOAD_BACKUP.CLEANUP_CONFIRM_TITLE", "Delete Old Backups?"),
+            T("DIALOG.LOAD_BACKUP.CLEANUP_CONFIRM", "Delete profile backups last modified 3 or more days ago? The newest 2 manual backups and newest automatic backup will be kept."),
+            () =>
+            {
+                bool success = ProfileBackupService.TryDeleteOldBackups(ProfileManager.SavePath, ProfileManager.ConfigExtensions, DateTimeOffset.UtcNow, out int deleted, out string? error);
+                ProfileBackupService.TryListBackups(ProfileManager.SavePath, ProfileManager.ConfigExtensions, out var refreshed, out string? listError);
+                visibleBackups.Clear();
+                visibleBackups.AddRange(refreshed);
+                RefreshPage();
+                string message = success && listError == null
+                    ? F("DIALOG.LOAD_BACKUP.CLEANUP_RESULT", "Deleted {0} old backup(s).", deleted)
+                    : F("DIALOG.LOAD_BACKUP.CLEANUP_ERROR", "Deleted {0} backup(s), but cleanup or refresh could not finish:\n{1}", deleted, error ?? listError ?? "Unknown error");
+                ShowInfoDialog(screen, T("DIALOG.LOAD_BACKUP.CLEANUP_RESULT_TITLE", "Backup Cleanup"), message);
+            });
         RefreshPage();
 
         popup.AddChild(CreateStyledDialogShell(body, 560));
@@ -144,11 +170,11 @@ internal static class ModdingScreenDialogs
         {
             int selectedIndex = backupDropdown.Selected;
             int backupIndex = pageStartIndex + selectedIndex;
-            if (selectedIndex >= 0 && backupIndex < backups.Count)
-                onConfirmed(backups[backupIndex].Path);
+            if (selectedIndex >= 0 && backupIndex < visibleBackups.Count)
+                onConfirmed(visibleBackups[backupIndex].Path);
         };
         screen.AddChild(popup);
-        popup.PopupCentered(new Vector2I(640, 220));
+        popup.PopupCentered(new Vector2I(640, 300));
     }
 
     public static void ShowLogDialog(NModdingScreen screen, string title, string content, string logPath)
@@ -379,16 +405,25 @@ internal static class ModdingScreenDialogs
         };
         ModdingScreenVanillaStyle.ApplyDialogWindow(popup);
 
-        var scroll = new ScrollContainer
+        var pages = TutorialContentBuilder.BuildPages(ModdingScreenText.Get);
+        var tabs = new TabContainer
         {
             CustomMinimumSize = new Vector2(layout.ContentWidth, layout.ContentHeight),
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        var label = CreateReadableBodyLabel(TutorialContentBuilder.BuildBody(ModdingScreenText.Get), layout.BodyFontSize);
-        label.CustomMinimumSize = new Vector2(layout.ContentWidth, 0);
-        scroll.AddChild(label);
-        popup.AddChild(CreateStyledDialogShell(scroll, layout.ContentWidth + 32, layout.ContentHeight + 24));
+        foreach (var page in pages)
+        {
+            var scroll = new ScrollContainer
+            {
+                Name = page.Title,
+                HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled
+            };
+            var label = CreateReadableBodyLabel(page.Body, layout.BodyFontSize);
+            label.CustomMinimumSize = new Vector2(layout.ContentWidth - 32, 0);
+            scroll.AddChild(label);
+            tabs.AddChild(scroll);
+        }
+        popup.AddChild(CreateStyledDialogShell(tabs, layout.ContentWidth + 32, layout.ContentHeight + 24));
         popup.AddThemeFontSizeOverride("font_size", layout.BodyFontSize);
         ApplyReadableDialogButtons(popup, layout.ButtonFontSize);
         popup.Confirmed += onDismissed;
@@ -445,9 +480,11 @@ internal static class ModdingScreenDialogs
             T(BmmText.DialogAnnotationHelp, "Aliases and notes are personal metadata. They are searchable, included in backups and CSV exports, and do not rename the installed mod."),
             18);
         helpLabel.CustomMinimumSize = new Vector2(620, 0);
+        helpLabel.SizeFlagsVertical = Control.SizeFlags.Fill;
         body.AddChild(helpLabel);
 
         var aliasLabel = CreateReadableBodyLabel(T(BmmText.DialogAnnotationAlias, "Alias"), 18);
+        aliasLabel.SizeFlagsVertical = Control.SizeFlags.Fill;
         body.AddChild(aliasLabel);
         var aliasInput = new LineEdit
         {
@@ -460,6 +497,7 @@ internal static class ModdingScreenDialogs
         body.AddChild(aliasInput);
 
         var notesLabel = CreateReadableBodyLabel(T(BmmText.DialogAnnotationNotes, "Notes"), 18);
+        notesLabel.SizeFlagsVertical = Control.SizeFlags.Fill;
         body.AddChild(notesLabel);
         var notesInput = new TextEdit
         {

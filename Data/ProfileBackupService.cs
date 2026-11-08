@@ -147,6 +147,38 @@ internal static class ProfileBackupService
             backup.Delete();
     }
 
+    public static bool TryDeleteOldBackups(string savePath, IReadOnlyCollection<string> configExtensions, DateTimeOffset now, out int deletedCount, out string? error)
+    {
+        deletedCount = 0;
+        error = null;
+        if (!TryListBackups(savePath, configExtensions, out var backups, out error))
+            return error == null;
+
+        try
+        {
+            int manualSeen = 0, automaticSeen = 0;
+            foreach (var backup in backups)
+            {
+                bool protectedBackup = backup.Reason switch
+                {
+                    ProfileBackupReason.Manual => ++manualSeen <= 2,
+                    ProfileBackupReason.Resume or ProfileBackupReason.RunStart => ++automaticSeen <= 1,
+                    _ => true
+                };
+                if (protectedBackup || File.GetLastWriteTimeUtc(backup.Path) > now.UtcDateTime.AddDays(-3))
+                    continue;
+                File.Delete(backup.Path);
+                deletedCount++;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     internal static bool TryGetGeneratedBackupReason(string fileName, string expectedBaseName, out ProfileBackupReason reason)
     {
         reason = default;
