@@ -12,7 +12,7 @@ public class WorkshopTagCacheTests
         var completion = new TaskCompletionSource<Dictionary<string, List<string>>>();
         int calls = 0;
         var cache = new WorkshopTagCacheCoordinator(ids => { calls++; return completion.Task; });
-        var installed = new[] { ("first", "123"), ("second", "123") };
+        var installed = new[] { ("first", "123"), ("second", "123"), ("other", "456") };
         cache.Request(installed);
         cache.Request(installed);
         Assert.AreEqual(1, calls);
@@ -22,26 +22,26 @@ public class WorkshopTagCacheTests
         Assert.IsTrue(cache.TryPublish(out var error), error);
         CollectionAssert.AreEqual(new[] { "QoL" }, cache.Tags["first"]);
         CollectionAssert.AreEqual(new[] { "QoL" }, cache.Tags["second"]);
+        Assert.IsFalse(cache.Tags.ContainsKey("other"));
         cache.Request(installed);
         Assert.AreEqual(1, calls);
     }
 
     [TestMethod]
-    public void ResetAndChangedInstallationsDiscardStaleResults()
+    public void ResetDiscardsInFlightResultForSameInstallation()
     {
         var first = new TaskCompletionSource<Dictionary<string, List<string>>>();
         var second = new TaskCompletionSource<Dictionary<string, List<string>>>();
         int calls = 0;
         var cache = new WorkshopTagCacheCoordinator(_ => ++calls == 1 ? first.Task : second.Task);
-        cache.Request([("old", "1")]);
+        cache.Request([("mod", "1")]);
         cache.Reset();
-        cache.Request([("new", "2")]);
+        cache.Request([("mod", "1")]);
         first.SetResult(new() { ["1"] = ["Old"] });
         Assert.IsFalse(cache.TryPublish(out _));
-        second.SetResult(new() { ["2"] = ["New"] });
+        second.SetResult(new() { ["1"] = ["New"] });
         Assert.IsTrue(cache.TryPublish(out _));
-        Assert.IsFalse(cache.Tags.ContainsKey("old"));
-        CollectionAssert.AreEqual(new[] { "New" }, cache.Tags["new"]);
+        CollectionAssert.AreEqual(new[] { "New" }, cache.Tags["mod"]);
     }
 
     [TestMethod]

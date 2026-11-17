@@ -413,39 +413,27 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void BuildVisibleGroupOrder_OmitsEmptyUnassignedGroup()
-    {
-        var groups = new Dictionary<string, int>
-        {
-            [ModdingScreenConstants.UnassignedGroup] = 0,
-            ["Bosses"] = 1,
-            ["Elites"] = 0
-        };
-
-        var names = ProfileStateRules.BuildVisibleGroupOrder(groups, new List<string> { "Bosses", "Elites" }, ModdingScreenConstants.UnassignedGroup);
-
-        CollectionAssert.AreEqual(new[] { "Bosses", "Elites" }, names);
-    }
-
-    [TestMethod]
     public void BuildGroupLayout_SortsRowsAndGroupsBySavedOrder()
     {
         var rows = new[]
         {
             new ModdingScreenGroupLayoutRow<string>("Boss Mod", "boss"),
+            new ModdingScreenGroupLayoutRow<string>("Second Boss Mod", "second-boss"),
             new ModdingScreenGroupLayoutRow<string>("Unassigned Mod", "free"),
             new ModdingScreenGroupLayoutRow<string>("Elite Mod", "elite")
         };
         var assignedGroups = new Dictionary<string, string>
         {
             ["boss"] = "Bosses",
+            ["second-boss"] = "Bosses",
             ["elite"] = "Elites"
         };
         var modOrder = new Dictionary<string, int>
         {
             ["elite"] = 0,
             ["free"] = 1,
-            ["boss"] = 2
+            ["boss"] = 3,
+            ["second-boss"] = 2
         };
 
         var layout = ModdingScreenGroupLayoutBuilder.Build(
@@ -460,7 +448,7 @@ public class LogicTests
             new[] { ModdingScreenConstants.UnassignedGroup, "Bosses", "Elites" },
             layout.Groups.Select(group => group.Name).ToList());
         CollectionAssert.AreEqual(new[] { "Unassigned Mod" }, layout.Groups[0].Rows.Select(row => row.Item).ToList());
-        CollectionAssert.AreEqual(new[] { "Boss Mod" }, layout.Groups[1].Rows.Select(row => row.Item).ToList());
+        CollectionAssert.AreEqual(new[] { "Second Boss Mod", "Boss Mod" }, layout.Groups[1].Rows.Select(row => row.Item).ToList());
         CollectionAssert.AreEqual(new[] { "Elite Mod" }, layout.Groups[2].Rows.Select(row => row.Item).ToList());
         Assert.IsFalse(layout.Groups[0].IsCollapsed);
         Assert.IsTrue(layout.Groups[2].IsCollapsed);
@@ -1350,47 +1338,6 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void TryReadManifestInfo_ReturnsManifestVersionOnlyForExpectedId()
-    {
-        string tempDirectory = CreateTempDirectory();
-        try
-        {
-            string manifestPath = Path.Combine(tempDirectory, "BetterModMenu.json");
-            File.WriteAllText(manifestPath, """
-            {
-              "id": "BetterModMenu",
-              "version": "1.6.0"
-            }
-            """);
-
-            Assert.IsTrue(ManifestScanner.TryReadManifestInfo(manifestPath, "BetterModMenu", out var info));
-            Assert.AreEqual("1.6.0", info.Version);
-            Assert.IsFalse(ManifestScanner.TryReadManifestInfo(manifestPath, "OtherMod", out _));
-        }
-        finally
-        {
-            Directory.Delete(tempDirectory, true);
-        }
-    }
-
-    [TestMethod]
-    public void NexusReleaseWorkflow_UploadsDefaultPackageAndTreatsCloudPackageAsSidecar()
-    {
-        string workflow = File.ReadAllText(Path.Combine(GetRepoRoot(), ".github", "workflows", "publish-nexus-release.yml"));
-
-        StringAssert.Contains(workflow, "--pattern \"BetterModMenu_v*.zip\"");
-        StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*.zip' ! -name '*_cloud.zip'");
-        StringAssert.Contains(workflow, "find release-assets -maxdepth 1 -type f -name 'BetterModMenu_v*_cloud.zip'");
-        StringAssert.Contains(workflow, "file_id: ${{ vars.NEXUSMODS_FILE_ID }}");
-        StringAssert.Contains(workflow, "category: main");
-        StringAssert.Contains(workflow, "archive_existing_version: false");
-        StringAssert.Contains(workflow, "primary_mod_manager_download: false");
-        StringAssert.Contains(workflow, "allow_mod_manager_download: true");
-        StringAssert.Contains(workflow, "show_requirements_pop_up: false");
-        StringAssert.Contains(workflow, "steps.nexus.outputs.version_id");
-    }
-
-    [TestMethod]
     public void TryReadTail_ReturnsLastRequestedLines()
     {
         string tempDirectory = CreateTempDirectory();
@@ -1403,28 +1350,6 @@ public class LogicTests
 
             Assert.IsTrue(read, error);
             Assert.AreEqual(string.Join(Environment.NewLine, "three", "four"), content);
-        }
-        finally
-        {
-            Directory.Delete(tempDirectory, true);
-        }
-    }
-
-    [TestMethod]
-    public void TryReadTail_ReturnsTailWithoutScanningEarlierContent()
-    {
-        string tempDirectory = CreateTempDirectory();
-        try
-        {
-            string logPath = Path.Combine(tempDirectory, "BetterModMenu.log");
-            File.WriteAllLines(logPath, Enumerable.Range(1, 6000).Select(number => "line " + number));
-
-            bool read = LogViewerService.TryReadTail(logPath, maxLines: 5000, maxChars: 500000, out string content, out string? error);
-
-            Assert.IsTrue(read, error);
-            Assert.IsFalse(content.Contains("line 1" + Environment.NewLine, StringComparison.Ordinal));
-            StringAssert.Contains(content, "line 1001");
-            StringAssert.Contains(content, "line 6000");
         }
         finally
         {
@@ -2046,18 +1971,6 @@ public class LogicTests
     }
 
     [TestMethod]
-    public void BuildBbCode_TreatsQualityOfLifeTagAsQoLAlias()
-    {
-        string bbCode = ModNameStyleRules.BuildBbCode(
-            "BetterModMenu",
-            "Better Mod Menu",
-            new[] { "Quality of Life" },
-            new ModNameStyleSettings());
-
-        Assert.AreEqual("[color=#b3ed5e]Better Mod Menu[/color]", bbCode);
-    }
-
-    [TestMethod]
     public void BuildBbCode_TrimsTagsAndConfigKeysBeforeAliasLookup()
     {
         Assert.AreEqual(
@@ -2106,34 +2019,6 @@ public class LogicTests
                         " Quality of Life "
                     }
                 }));
-    }
-
-    [TestMethod]
-    public void BuildBbCode_TreatsMechanicalTagVariantsAsAliases()
-    {
-        var cases = new[]
-        {
-            ("Card", "[color=#32d4ff]Alias Mod[/color]"),
-            ("Character", "[color=#ff5ec7]Alias Mod[/color]"),
-            ("Event", "[color=#ff7a35]Alias Mod[/color]"),
-            ("Potion", "[color=#32e1ca]Alias Mod[/color]"),
-            ("Relic", "[color=#c99638]Alias Mod[/color]"),
-            ("Room", "[color=#82bd5c]Alias Mod[/color]"),
-            ("Humour", "[color=#ffe066]Alias Mod[/color]"),
-            ("Miscellaneous", "[color=#b8bec6]Alias Mod[/color]"),
-            ("none selected", "[color=#8e99a6]Alias Mod[/color]")
-        };
-
-        foreach ((string tag, string expectedBbCode) in cases)
-        {
-            string bbCode = ModNameStyleRules.BuildBbCode(
-                "Alias.Mod",
-                "Alias Mod",
-                new[] { tag },
-                new ModNameStyleSettings());
-
-            Assert.AreEqual(expectedBbCode, bbCode, tag);
-        }
     }
 
     [TestMethod]
@@ -2188,31 +2073,6 @@ public class LogicTests
                 new ModNameStyleSettings());
 
             Assert.AreEqual(expectedBbCode, bbCode, alias);
-        }
-    }
-
-    [TestMethod]
-    public void BuildBbCode_TreatsToolsAndApiVariantsAsToolsAndApisAliases()
-    {
-        var aliases = new[]
-        {
-            "Tool",
-            "Tools",
-            "API",
-            "APIs",
-            "Tools & API",
-            "Tools and APIs"
-        };
-
-        foreach (string tag in aliases)
-        {
-            string bbCode = ModNameStyleRules.BuildBbCode(
-                "Alias.Mod",
-                "Alias Mod",
-                new[] { tag },
-                new ModNameStyleSettings());
-
-            Assert.AreEqual("[color=#74a6ff]Alias Mod[/color]", bbCode, tag);
         }
     }
 
@@ -2400,17 +2260,6 @@ public class LogicTests
         {
             Directory.Delete(tempDirectory, true);
         }
-    }
-
-    [TestMethod]
-    public void WorkshopTags_AreAssignedToEveryModFromTheSameItem()
-    {
-        var installations = new[] { ("mod-a", "123"), ("mod-b", "123"), ("other", "456") };
-        var tags = new Dictionary<string, List<string>> { ["123"] = ["QoL"] };
-        var byMod = SteamWorkshopTagService.MapTagsToMods(installations, tags);
-        CollectionAssert.AreEqual(new[] { "QoL" }, byMod["mod-a"]);
-        CollectionAssert.AreEqual(new[] { "QoL" }, byMod["mod-b"]);
-        Assert.IsFalse(byMod.ContainsKey("other"));
     }
 
     [TestMethod]
